@@ -72,7 +72,7 @@ export default function Home() {
 <div className="w-full lg:w-1/2 flex flex-col gap-8">
 <div>
 <h4 className="font-v-headline-md text-v-headline-md text-v-on-background mb-4">Empowering <span className="text-v-primary">Curious Minds</span> in Our City</h4>
-<p className="font-v-body-md text-v-body-md text-v-on-surface-variant">The Krishna Library is the city's most trusted public resource, dedicated to transforming curiosity into confident, lifelong learning. We combine extensive traditional collections with modern digital labs to bring out the best in every visitor.</p>
+<p className="font-v-body-md text-v-body-md text-v-on-surface-variant">The Krishna Library is the city&apos;s most trusted public resource, dedicated to transforming curiosity into confident, lifelong learning. We combine extensive traditional collections with modern digital labs to bring out the best in every visitor.</p>
 </div>
 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 <div className="bg-v-surface-container-lowest p-6 rounded-lg shadow-sm border border-v-outline-variant/30 hover:shadow-md hover:-translate-y-1 transition-all">
@@ -149,7 +149,7 @@ export default function Home() {
 <p className="font-v-label-md text-v-label-md text-v-primary">University Scholar</p>
 </div>
 </div>
-<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant italic">"The quiet study rooms and access to premium academic databases at Krishna Library were crucial for my final year thesis. I couldn't have done it without this resource!"</p>
+<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant italic">&quot;The quiet study rooms and access to premium academic databases at Krishna Library were crucial for my final year thesis. I couldn&apos;t have done it without this resource!&quot;</p>
 </div>
 <div className="bg-v-surface-container-lowest p-6 rounded-2xl shadow-sm border border-v-outline-variant/20">
 <div className="flex items-center gap-4 mb-4">
@@ -159,7 +159,7 @@ export default function Home() {
 <p className="font-v-label-md text-v-label-md text-v-primary">Self-Taught Developer</p>
 </div>
 </div>
-<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant italic">"I learned to code using the library's free internet and tech workshop materials. The supportive environment here completely changed my career trajectory."</p>
+<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant italic">&quot;I learned to code using the library&apos;s free internet and tech workshop materials. The supportive environment here completely changed my career trajectory.&quot;</p>
 </div>
 <div className="bg-v-surface-container-lowest p-6 rounded-2xl shadow-sm border border-v-outline-variant/20">
 <div className="flex items-center gap-4 mb-4">
@@ -169,7 +169,7 @@ export default function Home() {
 <p className="font-v-label-md text-v-label-md text-v-primary">Small Business Owner</p>
 </div>
 </div>
-<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant italic">"Attending the adult literacy and business networking events here gave me the confidence and skills to launch my own local bakery. It's truly a community hub."</p>
+<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant italic">&quot;Attending the adult literacy and business networking events here gave me the confidence and skills to launch my own local bakery. It&apos;s truly a community hub.&quot;</p>
 </div>
 </div>
 </div>
@@ -190,7 +190,7 @@ export default function Home() {
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 </div>
-<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">"Best public library in the city. The facilities are modern and the staff is incredibly helpful."</p>
+<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">&quot;Best public library in the city. The facilities are modern and the staff is incredibly helpful.&quot;</p>
 <p className="font-label-sm text-v-primary font-bold">- Alex M.</p>
 </div>
 {/*  Review 2  */}
@@ -202,7 +202,7 @@ export default function Home() {
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 </div>
-<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">"Great quiet spaces for studying. I come here every weekend to work on my projects."</p>
+<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">&quot;Great quiet spaces for studying. I come here every weekend to work on my projects.&quot;</p>
 <p className="font-label-sm text-v-primary font-bold">- Jamie T.</p>
 </div>
 {/*  Review 3  */}
@@ -214,7 +214,7 @@ export default function Home() {
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 </div>
-<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">"The children's programs are amazing! My kids look forward to the reading hour every week."</p>
+<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">&quot;The children&apos;s programs are amazing! My kids look forward to the reading hour every week.&quot;</p>
 <p className="font-label-sm text-v-primary font-bold">- Samantha R.</p>
 </div>
 {/*  Review 4  */}
@@ -226,7 +226,7 @@ export default function Home() {
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 </div>
-<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">"An invaluable resource for the community. The digital collection is extensive and easy to use."</p>
+<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">&quot;An invaluable resource for the community. The digital collection is extensive and easy to use.&quot;</p>
 <p className="font-label-sm text-v-primary font-bold">- Marcus B.</p>
 </div>
 </div>
@@ -240,7 +240,7 @@ export default function Home() {
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 </div>
-<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">"Best public library in the city. The facilities are modern and the staff is incredibly helpful."</p>
+<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">&quot;Best public library in the city. The facilities are modern and the staff is incredibly helpful.&quot;</p>
 <p className="font-label-sm text-v-primary font-bold">- Alex M.</p>
 </div>
 <div className="bg-v-surface-container-lowest p-4 rounded-lg shadow-sm border border-v-outline-variant/10 min-w-[300px]">
@@ -251,7 +251,7 @@ export default function Home() {
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 </div>
-<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">"Great quiet spaces for studying. I come here every weekend to work on my projects."</p>
+<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">&quot;Great quiet spaces for studying. I come here every weekend to work on my projects.&quot;</p>
 <p className="font-label-sm text-v-primary font-bold">- Jamie T.</p>
 </div>
 <div className="bg-v-surface-container-lowest p-4 rounded-lg shadow-sm border border-v-outline-variant/10 min-w-[300px]">
@@ -262,7 +262,7 @@ export default function Home() {
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 </div>
-<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">"The children's programs are amazing! My kids look forward to the reading hour every week."</p>
+<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">&quot;The children&apos;s programs are amazing! My kids look forward to the reading hour every week.&quot;</p>
 <p className="font-label-sm text-v-primary font-bold">- Samantha R.</p>
 </div>
 <div className="bg-v-surface-container-lowest p-4 rounded-lg shadow-sm border border-v-outline-variant/10 min-w-[300px]">
@@ -273,7 +273,7 @@ export default function Home() {
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
 </div>
-<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">"An invaluable resource for the community. The digital collection is extensive and easy to use."</p>
+<p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant mb-2">&quot;An invaluable resource for the community. The digital collection is extensive and easy to use.&quot;</p>
 <p className="font-label-sm text-v-primary font-bold">- Marcus B.</p>
 </div>
 </div>
