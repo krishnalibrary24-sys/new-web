@@ -37,68 +37,65 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#010409]">
-      {/* Ambient Orbs */}
-      <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-orange-600/[0.15] rounded-full blur-[150px] pointer-events-none animate-pulse-glow" />
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-amber-500/[0.1] rounded-full blur-[120px] pointer-events-none animate-pulse-glow" style={{ animationDelay: '1.5s' }} />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-v-surface">
 
       {/* Back Link */}
-      <Link href="/" className="absolute top-6 left-6 flex items-center gap-2 text-on-surface-variant hover:text-white transition-colors group z-20">
+      <Link href="/" className="absolute top-6 left-6 flex items-center gap-2 text-v-on-surface-variant hover:text-v-primary transition-colors group z-20">
         <span className="material-symbols-outlined text-lg transition-transform group-hover:-translate-x-1">arrow_back</span>
-        <span className="font-manrope font-semibold text-sm">Back to Library</span>
+        <span className="font-v-label-md text-v-label-md">Back to Library</span>
       </Link>
 
       {/* Login Card */}
-      <div className="glass-pane-elevated p-8 md:p-10 rounded-3xl w-full max-w-[420px] relative z-10">
+      <div className="bg-v-surface-container-lowest p-8 md:p-10 rounded-2xl w-full max-w-[420px] relative z-10 shadow-lg border border-v-outline-variant/20">
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center border border-primary/20 shadow-[0_0_24px_rgba(191,194,255,0.1)]">
-            <span className="material-symbols-outlined text-primary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>shield_person</span>
+          <div className="w-14 h-14 rounded-2xl bg-v-primary-fixed flex items-center justify-center">
+            <span className="material-symbols-outlined text-v-primary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>shield_person</span>
           </div>
         </div>
         
-        <h1 className="text-2xl font-bold text-white text-center mb-1 font-manrope tracking-tight">Staff Portal</h1>
-        <p className="text-on-surface-variant text-center mb-8 text-sm">Authorized personnel only</p>
+        <h1 className="font-v-headline-md text-v-headline-md text-v-on-background text-center mb-1 tracking-tight">Staff Portal</h1>
+        <p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant text-center mb-8">Authorized personnel only</p>
 
         <form onSubmit={handleLogin} className="space-y-5">
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-xl text-center font-medium animate-fade-in-fast">
-              <span className="material-symbols-outlined text-sm align-middle mr-1">error</span>
+            <div className="bg-v-error-container text-v-on-error-container text-sm p-3 rounded-xl text-center font-medium animate-fade-in-fast font-v-body-sm flex items-center justify-center gap-2">
+              <span className="material-symbols-outlined text-sm align-middle">error</span>
               {error}
             </div>
           )}
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block pl-1">Staff ID</label>
+            <label className="font-v-label-md text-v-label-md text-v-on-surface-variant uppercase tracking-wider block">Staff ID</label>
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-lg">badge</span>
+              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-v-outline text-lg">badge</span>
               <input 
                 type="text" 
                 required
                 value={staffId}
                 onChange={(e) => setStaffId(e.target.value)}
-                className="w-full bg-white/[0.04] border border-white/[0.08] hover:border-white/[0.15] focus:border-primary/50 rounded-xl px-4 py-3 pl-11 text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all backdrop-blur-md shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
+                className="w-full bg-v-surface-bright border border-v-outline-variant/50 hover:border-v-primary/50 focus:border-v-primary rounded-xl px-4 py-3 pl-11 text-v-on-background placeholder-v-outline-variant focus:outline-none focus:ring-1 focus:ring-v-primary transition-all font-v-body-sm text-v-body-sm"
                 placeholder="e.g. ADMIN-01"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block pl-1">Password</label>
+            <label className="font-v-label-md text-v-label-md text-v-on-surface-variant uppercase tracking-wider block">Password</label>
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-lg">lock</span>
+              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-v-outline text-lg">lock</span>
               <input 
                 type={showPassword ? "text" : "password"} 
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-white/[0.04] border border-white/[0.08] hover:border-white/[0.15] focus:border-primary/50 rounded-xl px-4 py-3 pl-11 pr-11 text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all backdrop-blur-md shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
+                className="w-full bg-v-surface-bright border border-v-outline-variant/50 hover:border-v-primary/50 focus:border-v-primary rounded-xl px-4 py-3 pl-11 pr-11 text-v-on-background placeholder-v-outline-variant focus:outline-none focus:ring-1 focus:ring-v-primary transition-all font-v-body-sm text-v-body-sm"
                 placeholder="••••••••"
               />
               <button 
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 hover:text-on-surface-variant transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-v-outline hover:text-v-on-surface-variant transition-colors"
               >
                 <span className="material-symbols-outlined text-lg">{showPassword ? 'visibility_off' : 'visibility'}</span>
               </button>
@@ -108,7 +105,7 @@ export default function LoginPage() {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full btn-primary py-3.5 flex justify-center items-center gap-2 disabled:opacity-60 mt-2"
+            className="w-full bg-v-primary text-v-on-primary py-3.5 rounded-lg font-v-label-lg text-v-label-lg shadow-sm hover:bg-v-primary-container hover:text-v-on-primary-container transition-colors flex justify-center items-center gap-2 disabled:opacity-60 mt-4"
           >
             {loading ? (
               <>
@@ -124,16 +121,16 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-white/[0.06] text-center">
-          <p className="text-xs text-on-surface-variant">
+        <div className="mt-8 pt-6 border-t border-v-outline-variant/20 text-center">
+          <p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant">
             Need help? Contact the system administrator.
           </p>
         </div>
 
         {/* Test Credentials */}
-        <div className="mt-5 glass-pane-elevated !p-4 border-t-0">
-          <h3 className="text-white font-bold mb-3 text-[10px] uppercase tracking-[0.2em] text-center opacity-80">Demo Credentials</h3>
-          <div className="grid grid-cols-1 gap-1.5 font-mono text-[11px]">
+        <div className="mt-6 bg-v-surface-container-low rounded-xl p-4 border border-v-outline-variant/20">
+          <h3 className="text-v-on-surface-variant font-v-label-md text-v-label-md mb-3 uppercase tracking-widest text-center">Demo Credentials</h3>
+          <div className="grid grid-cols-1 gap-2">
             {[
               { role: 'Admin', id: 'ADMIN-01', pass: 'admin123' },
               { role: 'Bengali', id: 'BENGALI-01', pass: 'bengali123' },
@@ -143,10 +140,10 @@ export default function LoginPage() {
                 key={cred.id}
                 type="button"
                 onClick={() => { setStaffId(cred.id); setPassword(cred.pass); }}
-                className="flex justify-between items-center px-4 py-2.5 rounded-xl hover:bg-white/[0.08] transition-all text-left border border-white/[0.02] hover:border-white/[0.1] hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)] group"
+                className="flex justify-between items-center px-4 py-2 rounded-lg hover:bg-v-surface-container-high transition-all text-left border border-transparent hover:border-v-outline-variant/30 group"
               >
-                <span className="text-on-surface-variant font-medium group-hover:text-white transition-colors uppercase tracking-wider text-[9px]">{cred.role}</span>
-                <span className="text-white/60 font-black group-hover:text-primary transition-colors tracking-widest">{cred.id}</span>
+                <span className="text-v-on-surface-variant font-v-label-md text-[10px] group-hover:text-v-on-background transition-colors uppercase tracking-wider">{cred.role}</span>
+                <span className="text-v-on-surface-variant font-mono text-[11px] font-bold group-hover:text-v-primary transition-colors tracking-widest">{cred.id}</span>
               </button>
             ))}
           </div>
