@@ -1,0 +1,594 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════
+   VISITOR NAV — all nav styles live here (not inline) to
+   prevent React hydration mismatches
+   ═══════════════════════════════════════════════════════════ */
+@keyframes kl-nav-fade-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes kl-menu-in {
+  from { opacity: 0; transform: scaleY(0.96); }
+  to   { opacity: 1; transform: scaleY(1); }
+}
+@keyframes kl-ink {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes kl-link-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Desktop nav links container ── */
+.kl-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ── Individual nav link ── */
+.kl-nav-link {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #434652;
+  text-decoration: none;
+  padding: 5px 11px;
+  border-radius: 6px;
+  position: relative;
+  white-space: nowrap;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.kl-nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 11px;
+  right: 11px;
+  height: 2px;
+  background: #003178;
+  border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.kl-nav-link:hover {
+  color: #003178;
+  background: rgba(0, 49, 120, 0.05);
+}
+.kl-nav-link--active {
+  font-weight: 700;
+  color: #003178;
+  background: rgba(0, 49, 120, 0.05);
+}
+.kl-nav-link--active::after {
+  transform: scaleX(1);
+  animation: kl-ink 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Staff Login ghost button ── */
+.kl-staff-btn {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #003178;
+  text-decoration: none;
+  padding: 7px 14px;
+  border: 1.5px solid rgba(0, 49, 120, 0.25);
+  border-radius: 8px;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  background: transparent;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.kl-staff-btn:hover {
+  background: rgba(0, 49, 120, 0.06);
+  border-color: rgba(0, 49, 120, 0.5);
+}
+
+/* ── Enroll Now CTA button ── */
+.kl-enroll-btn {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 8px 18px;
+  background: linear-gradient(135deg, #003178 0%, #0d47a1 100%);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 49, 120, 0.30);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.kl-enroll-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.kl-enroll-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 49, 120, 0.42);
+}
+.kl-enroll-btn:hover::before { opacity: 1; }
+.kl-enroll-btn:active { transform: scale(0.97); }
+
+/* ── Hamburger button ── */
+.kl-hamburger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-left: 4px;
+}
+.kl-ham-line {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: #003178;
+  border-radius: 2px;
+  transition:
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.18s ease,
+    transform 0.22s ease;
+}
+
+/* ── Mobile menu dropdown ── */
+.kl-mobile-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(252, 248, 255, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(0, 49, 120, 0.08);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10);
+  padding: 10px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transform-origin: top;
+  animation: kl-menu-in 0.22s ease both;
+}
+.kl-mobile-link {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #434652;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.18s ease;
+  animation: kl-link-in 0.3s ease both;
+}
+.kl-mobile-link:hover {
+  color: #003178;
+  background: rgba(0, 49, 120, 0.05);
+}
+.kl-mobile-link--active {
+  font-weight: 700;
+  color: #003178;
+  background: rgba(0, 49, 120, 0.07);
+  border-left-color: #003178;
+}
+.kl-mobile-ctas {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 49, 120, 0.08);
+}
+.kl-mobile-staff {
+  flex: 1;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #003178;
+  text-decoration: none;
+  padding: 10px 16px;
+  border: 1.5px solid rgba(0, 49, 120, 0.3);
+  border-radius: 8px;
+  text-align: center;
+  transition: background 0.2s ease;
+}
+.kl-mobile-staff:hover { background: rgba(0,49,120,0.05); }
+.kl-mobile-enroll {
+  flex: 1;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-decoration: none;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #003178 0%, #0d47a1 100%);
+  border-radius: 8px;
+  text-align: center;
+  transition: opacity 0.2s ease;
+}
+.kl-mobile-enroll:hover { opacity: 0.9; }
+
+
+
+/* ═══════════════════════════════════════════════════════════
+   KRISHNA LIBRARY — PREMIUM DESIGN SYSTEM (INFINITY FLOW)
+   ═══════════════════════════════════════════════════════════ */
+
+@layer base {
+  /* ─── DESIGN.md Color System (Light / Corporate) ─── */
+  :root {
+    /* Backgrounds */
+    --background:     270 100% 99%;   /* #fcf8ff */
+    --foreground:     240 27%  14%;   /* #1a1a2e  on-background */
+    --card:           0   0%  100%;   /* #ffffff  surface-container-lowest */
+    --card-foreground: 240 27% 14%;
+    --popover:        0   0%  100%;
+    --popover-foreground: 240 27% 14%;
+
+    /* Primary — Deep Navy Blue #003178 */
+    --primary:        218 100% 24%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary — Vibrant Red #b7131a */
+    --secondary:      358 80%  39%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Tertiary — Amber Gold accent */
+    --accent:         36  100% 63%;   /* #fdac29 on-tertiary-container */
+    --accent-foreground: 240 27% 14%;
+
+    /* Muted / Surface */
+    --muted:          255 100% 97%;   /* #f5f2ff surface-container-low */
+    --muted-foreground: 233 11%  31%; /* #434652 on-surface-variant */
+
+    /* Borders */
+    --border:         232 6%  47%;    /* #737783 outline */
+    --input:          231 20% 80%;    /* #c3c6d4 outline-variant */
+    --ring:           218 100% 24%;   /* primary */
+    --radius:         0.5rem;
+
+    /* Destructive */
+    --destructive:    357 73%  42%;   /* #ba1a1a */
+    --destructive-foreground: 0 0% 100%;
+  }
+
+  /* Keep dark vars for dashboard (staff portal stays dark) */
+  .dark {
+    --background: 222 47% 4%;
+    --foreground: 46.15 9.77% 73.92%;
+    --card: 222 47% 2%;
+    --card-foreground: 48 33.33% 97.06%;
+    --popover: 222 47% 1%;
+    --popover-foreground: 60 5.45% 89.22%;
+    --primary: 225 100% 88%;
+    --primary-foreground: 222 47% 4%;
+    --secondary: 48 33.33% 97.06%;
+    --secondary-foreground: 60 2.13% 18.43%;
+    --muted: 222 47% 10%;
+    --muted-foreground: 51.43 8.86% 69.02%;
+    --accent: 48 10.64% 9.22%;
+    --accent-foreground: 51.43 25.93% 94.71%;
+    --destructive: 0 84.24% 60.20%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 47% 15%;
+    --input: 222 47% 20%;
+    --ring: 210 74.80% 49.80%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-none outline-none;
+    box-sizing: border-box;
+  }
+  html {
+    scroll-behavior: smooth;
+    background-color: hsl(var(--background));
+  }
+  body {
+    @apply text-foreground;
+    background-color: hsl(var(--background));
+    /* DESIGN.md: Lexend for body text */
+    font-family: 'Lexend', system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.6;
+    color: #1a1a2e;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* DESIGN.md: Montserrat for all headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #1a1a2e;
+  }
+  /* Buttons & labels inherit Montserrat for authority */
+  button, .btn, label, nav a {
+    font-family: 'Montserrat', system-ui, sans-serif;
+  }
+}
+
+/* ─── Infinity Flow Utilities ─── */
+.section-infinity-mask {
+  mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+}
+
+.global-noise {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.03;
+  pointer-events: none;
+  mix-blend-overlay: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+.global-infinity-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-color: #010409;
+}
+
+.glow-boundary {
+  position: absolute;
+  width: 100%;
+  height: 600px;
+  background: radial-gradient(circle at center, rgba(191,194,255,0.03) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 2;
+  filter: blur(100px);
+}
+
+/* ─── Smooth Transitions (scoped, not universal) ─── */
+a, button, input, select, textarea, .transition-base {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Scrollbar Styling ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   GLASS SYSTEM — Layered depth with frosted glass
+   ═══════════════════════════════════════════════════════════ */
+
+.glass-pane {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.2);
+  transform: translateZ(0);
+}
+
+.glass-pane-elevated {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  transform: translateZ(0);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   BADGE SYSTEM 
+   ═══════════════════════════════════════════════════════════ */
+
+.badge {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold;
+}
+.badge-success {
+  @apply bg-emerald-500/15 text-emerald-400 border border-emerald-500/10;
+}
+.badge-warning {
+  @apply bg-amber-500/15 text-amber-400 border border-amber-500/10;
+}
+.badge-danger {
+  @apply bg-red-500/15 text-red-400 border border-red-500/10;
+}
+.badge-info {
+  @apply bg-primary/15 text-primary border border-primary/10;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR 
+   ═══════════════════════════════════════════════════════════ */
+
+.sidebar-link {
+  @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium relative;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+.sidebar-link:hover {
+  @apply bg-white/[0.04] text-white;
+}
+.sidebar-link.active {
+  @apply bg-primary/10 text-primary;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FORM & INPUT SYSTEM
+   ═══════════════════════════════════════════════════════════ */
+
+.input-premium {
+  @apply w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-primary/50 hover:border-white/[0.15] transition-all backdrop-blur-md shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)];
+}
+.input-premium::placeholder {
+  @apply text-white/30;
+}
+.input-success {
+  @apply border-emerald-500/30 focus:ring-emerald-500/50 bg-emerald-500/[0.02];
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LOADER PENCIL ANIMATION (preserved)
+   ═══════════════════════════════════════════════════════════ */
+
+.pencil {
+  display: block;
+  width: 10em;
+  height: 10em;
+}
+
+.pencil__body1,
+.pencil__body2,
+.pencil__body3,
+.pencil__eraser,
+.pencil__eraser-skew,
+.pencil__point,
+.pencil__rotate,
+.pencil__stroke {
+  animation-duration: 3s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.pencil__body1,
+.pencil__body2,
+.pencil__body3 {
+  transform: rotate(-90deg);
+}
+
+.pencil__body1 { animation-name: pencilBody1; }
+.pencil__body2 { animation-name: pencilBody2; }
+.pencil__body3 { animation-name: pencilBody3; }
+
+.pencil__eraser {
+  animation-name: pencilEraser;
+  transform: rotate(-90deg) translate(49px,0);
+}
+
+.pencil__eraser-skew {
+  animation-name: pencilEraserSkew;
+  animation-timing-function: ease-in-out;
+}
+
+.pencil__point {
+  animation-name: pencilPoint;
+  transform: rotate(-90deg) translate(49px,-30px);
+}
+
+.pencil__rotate { animation-name: pencilRotate; }
+
+.pencil__stroke {
+  animation-name: pencilStroke;
+  transform: translate(100px,100px) rotate(-113deg);
+}
+
+@keyframes pencilBody1 {
+  from, to { stroke-dashoffset: 351.86; transform: rotate(-90deg); }
+  50% { stroke-dashoffset: 150.8; transform: rotate(-225deg); }
+}
+
+@keyframes pencilBody2 {
+  from, to { stroke-dashoffset: 406.84; transform: rotate(-90deg); }
+  50% { stroke-dashoffset: 174.36; transform: rotate(-225deg); }
+}
+
+@keyframes pencilBody3 {
+  from, to { stroke-dashoffset: 296.88; transform: rotate(-90deg); }
+  50% { stroke-dashoffset: 127.23; transform: rotate(-225deg); }
+}
+
+@keyframes pencilEraser {
+  from, to { transform: rotate(-45deg) translate(49px,0); }
+  50% { transform: rotate(0deg) translate(49px,0); }
+}
+
+@keyframes pencilEraserSkew {
+  from, 32.5%, 67.5%, to { transform: skewX(0); }
+  35%, 65% { transform: skewX(-4deg); }
+  37.5%, 62.5% { transform: skewX(8deg); }
+  40%, 45%, 50%, 55%, 60% { transform: skewX(-15deg); }
+  42.5%, 47.5%, 52.5%, 57.5% { transform: skewX(15deg); }
+}
+
+@keyframes pencilPoint {
+  from, to { transform: rotate(-90deg) translate(49px,-30px); }
+  50% { transform: rotate(-225deg) translate(49px,-30px); }
+}
+
+@keyframes pencilRotate {
+  from { transform: translate(100px,100px) rotate(0); }
+  to { transform: translate(100px,100px) rotate(720deg); }
+}
+
+@keyframes pencilStroke {
+  from { stroke-dashoffset: 439.82; transform: translate(100px,100px) rotate(-113deg); }
+  50% { stroke-dashoffset: 164.93; transform: translate(100px,100px) rotate(-113deg); }
+  75%, to { stroke-dashoffset: 439.82; transform: translate(100px,100px) rotate(112deg); }
+}
+
+/* ─── Material Icons ─── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ─── Lenis Smooth Scroll ─── */
+html.lenis, html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}

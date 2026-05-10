@@ -1,0 +1,631 @@
+<html class="light" lang="en"><head></head><body class="bg-background text-on-background font-body-md antialiased selection:bg-primary-container selection:text-on-primary-container">```html
+
+
+
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Krishna Library - Visitor Page</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&amp;family=Montserrat:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#0d47a1",
+                        "outline-variant": "#c3c6d4",
+                        "outline": "#737783",
+                        "surface-variant": "#e2e0fc",
+                        "secondary-fixed-dim": "#ffb4ac",
+                        "on-error": "#ffffff",
+                        "secondary-fixed": "#ffdad6",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#db322f",
+                        "surface-container": "#efecff",
+                        "surface-tint": "#2b5bb5",
+                        "on-tertiary-fixed": "#2a1800",
+                        "surface-bright": "#fcf8ff",
+                        "tertiary": "#4c2f00",
+                        "surface-dim": "#dad7f3",
+                        "surface-container-highest": "#e2e0fc",
+                        "inverse-primary": "#b0c6ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#fdac29",
+                        "tertiary-container": "#6b4400",
+                        "surface": "#fcf8ff",
+                        "on-primary": "#ffffff",
+                        "primary-fixed": "#d9e2ff",
+                        "on-surface-variant": "#434652",
+                        "on-tertiary-fixed-variant": "#643f00",
+                        "on-secondary-fixed": "#410002",
+                        "on-primary-container": "#a1bbff",
+                        "on-primary-fixed": "#001945",
+                        "inverse-surface": "#2f2e43",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#b0c6ff",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-surface": "#1a1a2e",
+                        "on-secondary-fixed-variant": "#93000d",
+                        "primary": "#0d47a1",
+                        "background": "#fcf8ff",
+                        "surface-container-high": "#e8e5ff",
+                        "inverse-on-surface": "#f2efff",
+                        "tertiary-fixed-dim": "#ffb957",
+                        "tertiary-fixed": "#ffddb5",
+                        "secondary-container": "#db322f",
+                        "on-background": "#1a1a2e",
+                        "on-primary-fixed-variant": "#00429c",
+                        "error": "#ba1a1a",
+                        "on-secondary-container": "#fffbff",
+                        "surface-container-low": "#f5f2ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "80px",
+                        "sm": "12px",
+                        "xs": "4px",
+                        "md": "24px",
+                        "lg": "48px",
+                        "container-max": "1280px",
+                        "gutter": "24px",
+                        "base": "8px"
+                    },
+                    "fontFamily": {
+                        "display-mobile": ["Montserrat"],
+                        "body-sm": ["Lexend"],
+                        "headline-md": ["Montserrat"],
+                        "label-lg": ["Montserrat"],
+                        "display": ["Montserrat"],
+                        "body-lg": ["Lexend"],
+                        "label-md": ["Montserrat"],
+                        "headline-sm": ["Montserrat"],
+                        "body-md": ["Lexend"],
+                        "headline-lg": ["Montserrat"]
+                    },
+                    "fontSize": {
+                        "display-mobile": ["36px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "label-lg": ["14px", { "lineHeight": "1", "fontWeight": "700" }],
+                        "display": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-md": ["12px", { "lineHeight": "1", "fontWeight": "600" }],
+                        "headline-sm": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.3", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .bg-wash { background-color: #F5F7FF; }
+        }
+        
+        .marquee-container {
+            display: flex;
+            overflow: hidden;
+            user-select: none;
+            gap: 2rem;
+        }
+
+        .marquee-content {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-around;
+            min-width: 100%;
+            gap: 2rem;
+            animation: scroll 40s linear infinite;
+        }
+
+        @keyframes scroll {
+            from {
+                transform: translateX(0);
+            }
+            to {
+                transform: translateX(calc(-100% - 2rem));
+            }
+        }
+    </style>
+<!-- TopNavBar -->
+<nav class="bg-surface dark:bg-inverse-surface shadow-sm sticky top-0 z-50">
+<div class="flex justify-between items-center max-w-container-max mx-auto px-gutter py-md w-full">
+<div class="flex items-center">
+<img alt="Krishna Library Logo" class="w-auto h-20" src="https://lh3.googleusercontent.com/aida/ADBb0ujXoAabGgq_q5aD16vZVFO1dgjI6KHFawizn5CaSBr1Q4u1ndoQh_smcAWKy_Og8fAYAzUm3nrDf4Kav7NnXXU6oM4_eK7Yn5uhMwZJt7Jprzxd34IvO7Io5OQQ_IKNFXhc3iRP-4lBoqyRGm2EGrAppk3qKec6pSK0k7iYFFhkNI-zyD_u8G2FLDoKOMTNLanKCIbgeblj4m1grlnlN2PUht0fWs2krs_3QXPbfBT8een4Er7Pu6uMnasijmhmYe-I-BglUyU0Sw"/>
+</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-primary dark:text-primary-fixed-dim border-b-2 border-primary font-bold pb-1 text-label-lg font-label-lg hover:text-secondary dark:hover:text-secondary-fixed transition-colors" href="#">Find a Branch</a>
+<a class="text-on-surface-variant dark:text-outline-variant font-medium text-label-lg font-label-lg hover:text-secondary dark:hover:text-secondary-fixed transition-colors" href="#">Events</a>
+<a class="text-on-surface-variant dark:text-outline-variant font-medium text-label-lg font-label-lg hover:text-secondary dark:hover:text-secondary-fixed transition-colors" href="#">Services</a>
+<a class="text-on-surface-variant dark:text-outline-variant font-medium text-label-lg font-label-lg hover:text-secondary dark:hover:text-secondary-fixed transition-colors" href="#">About</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="hidden md:block text-primary font-label-lg px-4 py-2 hover:text-secondary transition-colors">Staff Login</button>
+<button class="bg-secondary text-on-secondary px-6 py-2 rounded-full font-label-lg shadow-sm hover:bg-secondary-container transition-colors active:scale-95 duration-150 ease-in-out">ENROLL NOW</button>
+</div>
+</div>
+</nav>
+<main>
+<!-- 1. Hero Section -->
+<section class="relative bg-primary min-h-[500px] md:min-h-[600px] flex items-center overflow-hidden">
+<div class="absolute inset-0 z-0">
+<img alt="Main library interior" class="w-full h-full object-cover opacity-20" data-alt="A wide shot of a magnificent, modern library interior bathed in natural sunlight. Tall bookshelves stretch upwards, filled with colorful spines, while sleek, contemporary reading tables dot the floor. The lighting is bright and inviting, creating an energetic and organized atmosphere. The overall style is modern and accessible, with a hint of high-contrast vibrant accents reflecting a community hub." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdL47acyjbc9qC_Et1un-VtKvSwE4CHkJZN70GoMwj3AZ8P0MjFBtVYeto13QRAhz01LghTbKvGLNHszssr1wp1w1iNS_Q4mTcqewB_9QDgA8_uQUWECe9-gjls8ZHJn4tndB6VcxxXtiDftO5Ab4hj00nvIGhWNxNfPRnfEzPZ45RkqMJh55e4Rfr2R7wUsbu48N5jQIeI3IeSCCfIplTZE0YlWddh1mocbOLJ9ge5doa4sEtb0hJOfnlFYDHH4pQcoM4vs5DXBgQ"/>
+</div>
+<div class="relative z-10 max-w-container-max mx-auto px-gutter py-12 md:py-xl text-center md:text-left flex flex-col items-center md:items-start text-on-primary">
+<div class="inline-block bg-tertiary-fixed-dim text-tertiary-fixed-variant font-label-md px-3 py-1 rounded-full mb-4 md:mb-6 uppercase tracking-wider font-bold">10+ Years of Excellence</div>
+<h1 class="font-display text-headline-lg md:text-display mb-4 md:mb-6 max-w-4xl text-on-primary shadow-sm drop-shadow-md">
+                    Explore, Learn, and Grow with <br/>Our Community.
+                </h1>
+<p class="font-body-md md:font-body-lg text-body-md md:text-body-lg mb-6 md:mb-8 max-w-2xl text-primary-fixed-dim drop-shadow">
+                    A network of 10+ branches across the city dedicated to lifelong learning, digital literacy, and providing a safe space for everyone to thrive.
+                </p>
+<div class="flex flex-col sm:flex-row gap-3 md:gap-4 w-full sm:w-auto">
+<button class="bg-secondary text-on-secondary px-6 py-3 md:px-8 md:py-4 rounded-full font-label-lg shadow-md hover:bg-secondary-container transition-transform hover:-translate-y-1">Find Your Nearest Branch</button>
+<button class="bg-transparent border-2 border-primary-fixed-dim text-primary-fixed-dim px-6 py-3 md:px-8 md:py-4 rounded-full font-label-lg hover:bg-primary-fixed hover:text-primary transition-colors">Join the Library</button>
+</div>
+</div>
+</section>
+<div class="bg-primary-container py-4 md:py-8 shadow-inner w-full">
+<div class="max-w-container-max mx-auto px-4 md:px-gutter flex justify-between items-center">
+<div class="flex flex-col items-center text-center">
+<span class="font-display text-headline-sm md:text-headline-lg text-on-tertiary-container">1M+</span>
+<span class="text-[10px] md:font-label-md font-bold text-on-primary-container uppercase tracking-wide">Books &amp; Media</span>
+</div>
+<div class="w-px h-8 md:h-10 bg-primary-fixed/30"></div>
+<div class="flex flex-col items-center text-center">
+<span class="font-display text-headline-sm md:text-headline-lg text-on-tertiary-container">200k+</span>
+<span class="text-[10px] md:font-label-md font-bold text-on-primary-container uppercase tracking-wide">Active Members</span>
+</div>
+<div class="w-px h-8 md:h-10 bg-primary-fixed/30"></div>
+<div class="flex flex-col items-center text-center">
+<span class="font-display text-headline-sm md:text-headline-lg text-on-tertiary-container">12</span>
+<span class="text-[10px] md:font-label-md font-bold text-on-primary-container uppercase tracking-wide">City Branches</span>
+</div>
+<div class="w-px h-8 md:h-10 bg-primary-fixed/30"></div>
+<div class="flex flex-col items-center text-center">
+<span class="font-display text-headline-sm md:text-headline-lg text-on-tertiary-container">500+</span>
+<span class="text-[10px] md:font-label-md font-bold text-on-primary-container uppercase tracking-wide">Monthly Events</span>
+</div>
+</div>
+</div>
+<!-- 2. About Us Section -->
+<section class="py-xl bg-surface">
+<div class="max-w-container-max mx-auto px-gutter">
+<div class="text-center mb-12">
+<h2 class="font-headline-sm text-primary uppercase tracking-wider mb-2 font-bold">About Us</h2>
+<h3 class="font-display text-display-mobile md:text-headline-lg text-on-background">More Than Just <span class="text-secondary border-b-4 border-secondary pb-1">Books</span></h3>
+</div>
+<div class="flex flex-col lg:flex-row gap-lg items-center">
+<div class="w-full lg:w-1/2 relative rounded-xl overflow-hidden shadow-lg group">
+<img alt="Community Workspace" class="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-500" data-alt="A brightly lit, modern community workspace inside a library. Diverse groups of people are collaborating at large wooden tables with laptops. The environment is energetic, organized, and welcoming. High-contrast elements, like a vivid orange accent wall, break up the pristine white and deep navy tones, emphasizing a vibrant community engine atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1KKLVmUFWPPE4-o5rp5D8R2VnBE2Sp4iXZVH7JwL4csbPiPIKWIIN1_VYK_6K3TwmA35EYZYAIFSxK-JXIx7vKl-dDWeTvHQeSS1YJW4MmOcV9ZVlBui8-twpE64sf7vi3agO0J9GdhVEpOLeLZathhHs72shS-r44ib1DqjPNAe1MFA6V4tHr4YBvPwwUuKfjXbAVITpxPa2pgUTtU8gV9iy4_k4rp86UbQAW5Mf-V2oJAUi_KQDh36CKGqMbroIpSfvOiy8SWHk"/>
+<div class="absolute bottom-4 right-4 bg-primary text-on-primary px-4 py-2 rounded-lg shadow-md font-label-lg flex items-center gap-2">
+<span class="material-symbols-outlined">wifi</span> Free High-Speed Wi-Fi
+                        </div>
+</div>
+<div class="w-full lg:w-1/2 flex flex-col gap-8">
+<div>
+<h4 class="font-headline-md text-on-background mb-4">Empowering <span class="text-primary">Curious Minds</span> in Our City</h4>
+<p class="font-body-md text-on-surface-variant">The Krishna Library is the city's most trusted public resource, dedicated to transforming curiosity into confident, lifelong learning. We combine extensive traditional collections with modern digital labs to bring out the best in every visitor.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-sm border border-outline-variant/30 hover:shadow-md hover:-translate-y-1 transition-all">
+<div class="w-12 h-12 bg-surface-variant rounded-full flex items-center justify-center mb-4 text-primary">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>visibility</span>
+</div>
+<h5 class="font-headline-sm text-on-background mb-2">Our Vision</h5>
+<p class="font-body-sm text-on-surface-variant">Empowering every resident to reach their highest academic and personal potential.</p>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-sm border border-outline-variant/30 hover:shadow-md hover:-translate-y-1 transition-all">
+<div class="w-12 h-12 bg-surface-variant rounded-full flex items-center justify-center mb-4 text-primary">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>favorite</span>
+</div>
+<h5 class="font-headline-sm text-on-background mb-2">Our Mission</h5>
+<p class="font-body-sm text-on-surface-variant">Quality resources with accessible facilities, dedication, and deep community care.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. Branches & Why Choose Us Section -->
+<section class="py-xl bg-surface-container-low">
+<div class="max-w-container-max mx-auto px-gutter">
+<div class="text-center mb-12">
+<span class="inline-block bg-primary-fixed px-3 py-1 rounded-full text-primary font-label-md uppercase tracking-wider mb-2">Why Us</span>
+<h2 class="font-display text-display-mobile md:text-headline-lg text-on-background">Why Choose <span class="text-secondary border-b-4 border-secondary pb-1">Krishna Library</span></h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/20 flex flex-col items-center text-center hover:-translate-y-1 transition-transform">
+<div class="w-16 h-16 bg-primary-fixed rounded-full flex items-center justify-center text-primary mb-4">
+<span class="material-symbols-outlined text-3xl">library_books</span>
+</div>
+<h3 class="font-headline-sm text-on-background mb-2">Extensive Collection</h3>
+<p class="font-body-sm text-on-surface-variant">Over 1 million physical and digital resources available across all our branches.</p>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/20 flex flex-col items-center text-center hover:-translate-y-1 transition-transform">
+<div class="w-16 h-16 bg-secondary-fixed rounded-full flex items-center justify-center text-secondary mb-4">
+<span class="material-symbols-outlined text-3xl">devices</span>
+</div>
+<h3 class="font-headline-sm text-on-background mb-2">24/7 Digital Library</h3>
+<p class="font-body-sm text-on-surface-variant">Access e-books, audiobooks, and research databases anytime, anywhere.</p>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/20 flex flex-col items-center text-center hover:-translate-y-1 transition-transform">
+<div class="w-16 h-16 bg-tertiary-fixed rounded-full flex items-center justify-center text-tertiary mb-4">
+<span class="material-symbols-outlined text-3xl">support_agent</span>
+</div>
+<h3 class="font-headline-sm text-on-background mb-2">Expert Support</h3>
+<p class="font-body-sm text-on-surface-variant">Our dedicated librarians are here to help you research, learn, and discover.</p>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/20 flex flex-col items-center text-center hover:-translate-y-1 transition-transform">
+<div class="w-16 h-16 bg-primary-fixed-dim rounded-full flex items-center justify-center text-primary mb-4">
+<span class="material-symbols-outlined text-3xl">meeting_room</span>
+</div>
+<h3 class="font-headline-sm text-on-background mb-2">Safe Community Spaces</h3>
+<p class="font-body-sm text-on-surface-variant">Modern, clean, and welcoming environments for studying, collaborating, and reading.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. Achiever Students Section -->
+<section class="py-xl bg-wash">
+<div class="max-w-container-max mx-auto px-gutter">
+<div class="text-center mb-12">
+<span class="inline-block bg-primary-fixed px-3 py-1 rounded-full text-primary font-label-md uppercase tracking-wider mb-2">Success Stories</span>
+<h2 class="font-display text-display-mobile md:text-headline-lg text-on-background">Our <span class="text-secondary border-b-4 border-secondary pb-1">Achievers</span></h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/20">
+<div class="flex items-center gap-4 mb-4">
+<img alt="Student" class="w-16 h-16 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXIyldosztmi8fNPYHddI3Ddsv7gSvYSw5EolHH-DQnTg4GfkF2Ng-ZPSCTwr1eUIHeVcVllJJbD17V6s1Ydd6_rAfMZFs6Qounf8a9P-WhPdR34KrWk0I6a6JlF6RnvzRlapPaiica1iWLhhRQBg5EMN_cPIml1df-in3jeIPiDj1OgKWBX6KyOZ5sFhvdBRUH9eNVvUoQ7itGs22Fm46XyOFDb3whdrbuxA_9pCBIqxqO5XbMUlmPbLgcmIo4IEnewxsmwYl-rIS"/>
+<div>
+<h4 class="font-headline-sm text-on-background">Sarah Jenkins</h4>
+<p class="font-label-md text-primary">University Scholar</p>
+</div>
+</div>
+<p class="font-body-sm text-on-surface-variant italic">"The quiet study rooms and access to premium academic databases at Krishna Library were crucial for my final year thesis. I couldn't have done it without this resource!"</p>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/20">
+<div class="flex items-center gap-4 mb-4">
+<img alt="Student" class="w-16 h-16 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB92wRJryR1hxdOU_xyKytgYaOMN0ksIkUqwf7KH_UbthE8L1d-7yZhnbSenN90WxMcrTGvXvgwIz5bkQq_9P-1gK12khzdGzwdW8Rw_Nh1QyPf5mk815rFYHp21OsoQaehunSP369cj5fczztRNGJDOCRehOwbL_IxZTvdMeLP1rv6DBlgf2NbWSaRfT-c_JFx0004hev3cHEbyxTS_ZEEfyIF0FBvn4InRGgNhNT7SmMkX3SO0gyaPc1ZDMDRLrLo6IvrhuPXf0Ng"/>
+<div>
+<h4 class="font-headline-sm text-on-background">David Chen</h4>
+<p class="font-label-md text-primary">Self-Taught Developer</p>
+</div>
+</div>
+<p class="font-body-sm text-on-surface-variant italic">"I learned to code using the library's free internet and tech workshop materials. The supportive environment here completely changed my career trajectory."</p>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/20">
+<div class="flex items-center gap-4 mb-4">
+<img alt="Student" class="w-16 h-16 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVCmcTA0DQW06Gn1_OIIDGJB_yFZ4EZWZhx4Q5QKlp0PrZBGBUwWtBC4zcoQYzjZ_7ow_yuVIzlWpMMMjKPiK0_8DLUr737mXshjJUGSabVlIK6mlNZAqTehs_NQ2Rsy4TyUjyAq5g519hNI24ugz_zIU44RHLPp0KnL_v9GpO1KS2ivq2fCGINOnwSfajgoM8tFCWoHQNH3sbSV4PEQKx5r3nqIwSeFmtFT4dU1-tqo307Me9kY4hlCPxw7TpQkEN9H2XEm4eGI52"/>
+<div>
+<h4 class="font-headline-sm text-on-background">Maria Garcia</h4>
+<p class="font-label-md text-primary">Small Business Owner</p>
+</div>
+</div>
+<p class="font-body-sm text-on-surface-variant italic">"Attending the adult literacy and business networking events here gave me the confidence and skills to launch my own local bakery. It's truly a community hub."</p>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. Google Review Marquee -->
+<section class="py-12 bg-surface border-y border-outline-variant/20 overflow-hidden">
+<div class="max-w-container-max mx-auto px-gutter mb-6 text-center">
+<h3 class="font-headline-sm text-on-background flex items-center justify-center gap-2">Loved by Our Community <span class="material-symbols-outlined text-secondary">star</span></h3>
+</div>
+<div class="marquee-container">
+<div class="marquee-content">
+<!-- Review 1 -->
+<div class="bg-surface-container-lowest p-4 rounded-lg shadow-sm border border-outline-variant/10 min-w-[300px]">
+<div class="flex text-on-tertiary-container mb-2 text-sm">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+</div>
+<p class="font-body-sm text-on-surface-variant mb-2">"Best public library in the city. The facilities are modern and the staff is incredibly helpful."</p>
+<p class="font-label-sm text-primary font-bold">- Alex M.</p>
+</div>
+<!-- Review 2 -->
+<div class="bg-surface-container-lowest p-4 rounded-lg shadow-sm border border-outline-variant/10 min-w-[300px]">
+<div class="flex text-on-tertiary-container mb-2 text-sm">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+</div>
+<p class="font-body-sm text-on-surface-variant mb-2">"Great quiet spaces for studying. I come here every weekend to work on my projects."</p>
+<p class="font-label-sm text-primary font-bold">- Jamie T.</p>
+</div>
+<!-- Review 3 -->
+<div class="bg-surface-container-lowest p-4 rounded-lg shadow-sm border border-outline-variant/10 min-w-[300px]">
+<div class="flex text-on-tertiary-container mb-2 text-sm">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+</div>
+<p class="font-body-sm text-on-surface-variant mb-2">"The children's programs are amazing! My kids look forward to the reading hour every week."</p>
+<p class="font-label-sm text-primary font-bold">- Samantha R.</p>
+</div>
+<!-- Review 4 -->
+<div class="bg-surface-container-lowest p-4 rounded-lg shadow-sm border border-outline-variant/10 min-w-[300px]">
+<div class="flex text-on-tertiary-container mb-2 text-sm">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+</div>
+<p class="font-body-sm text-on-surface-variant mb-2">"An invaluable resource for the community. The digital collection is extensive and easy to use."</p>
+<p class="font-label-sm text-primary font-bold">- Marcus B.</p>
+</div>
+</div>
+<!-- Duplicate for seamless scrolling -->
+<div aria-hidden="true" class="marquee-content">
+<div class="bg-surface-container-lowest p-4 rounded-lg shadow-sm border border-outline-variant/10 min-w-[300px]">
+<div class="flex text-on-tertiary-container mb-2 text-sm">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+</div>
+<p class="font-body-sm text-on-surface-variant mb-2">"Best public library in the city. The facilities are modern and the staff is incredibly helpful."</p>
+<p class="font-label-sm text-primary font-bold">- Alex M.</p>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-lg shadow-sm border border-outline-variant/10 min-w-[300px]">
+<div class="flex text-on-tertiary-container mb-2 text-sm">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+</div>
+<p class="font-body-sm text-on-surface-variant mb-2">"Great quiet spaces for studying. I come here every weekend to work on my projects."</p>
+<p class="font-label-sm text-primary font-bold">- Jamie T.</p>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-lg shadow-sm border border-outline-variant/10 min-w-[300px]">
+<div class="flex text-on-tertiary-container mb-2 text-sm">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+</div>
+<p class="font-body-sm text-on-surface-variant mb-2">"The children's programs are amazing! My kids look forward to the reading hour every week."</p>
+<p class="font-label-sm text-primary font-bold">- Samantha R.</p>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-lg shadow-sm border border-outline-variant/10 min-w-[300px]">
+<div class="flex text-on-tertiary-container mb-2 text-sm">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>star</span>
+</div>
+<p class="font-body-sm text-on-surface-variant mb-2">"An invaluable resource for the community. The digital collection is extensive and easy to use."</p>
+<p class="font-label-sm text-primary font-bold">- Marcus B.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- 6. Live Seat Map Section -->
+<section class="py-xl bg-surface-container-low">
+<div class="max-w-container-max mx-auto px-gutter">
+<div class="text-center mb-12">
+<span class="inline-block bg-primary-fixed px-3 py-1 rounded-full text-primary font-label-md uppercase tracking-wider mb-2">Live Availability</span>
+<h2 class="font-display text-display-mobile md:text-headline-lg text-on-background">Current <span class="text-secondary border-b-4 border-secondary pb-1">Seating</span></h2>
+<p class="font-body-md text-on-surface-variant mt-4">Check live availability before you visit the Main Branch.</p>
+</div>
+<div class="bg-surface-container-lowest p-8 rounded-2xl shadow-sm border border-outline-variant/20 max-w-4xl mx-auto">
+<div class="flex items-center justify-center gap-6 mb-8 font-label-md">
+<div class="flex items-center gap-2"><div class="w-4 h-4 bg-surface-variant rounded"></div> Available</div>
+<div class="flex items-center gap-2"><div class="w-4 h-4 bg-primary/20 rounded"></div> Partially Full</div>
+<div class="flex items-center gap-2"><div class="w-4 h-4 bg-primary rounded"></div> Occupied</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+<!-- Zone A -->
+<div class="bg-surface-bright border border-outline-variant/30 p-4 rounded-xl text-center">
+<h4 class="font-headline-sm text-on-background mb-4">Quiet Zone</h4>
+<div class="grid grid-cols-3 gap-2">
+<div class="aspect-square bg-primary rounded shadow-sm"></div>
+<div class="aspect-square bg-primary rounded shadow-sm"></div>
+<div class="aspect-square bg-surface-variant rounded shadow-sm"></div>
+<div class="aspect-square bg-primary rounded shadow-sm"></div>
+<div class="aspect-square bg-surface-variant rounded shadow-sm"></div>
+<div class="aspect-square bg-surface-variant rounded shadow-sm"></div>
+</div>
+<p class="mt-4 font-label-md text-on-surface-variant">3/6 Available</p>
+</div>
+<!-- Zone B -->
+<div class="bg-surface-bright border border-outline-variant/30 p-4 rounded-xl text-center">
+<h4 class="font-headline-sm text-on-background mb-4">Tech Lab</h4>
+<div class="grid grid-cols-3 gap-2">
+<div class="aspect-square bg-primary rounded shadow-sm"></div>
+<div class="aspect-square bg-primary rounded shadow-sm"></div>
+<div class="aspect-square bg-primary rounded shadow-sm"></div>
+<div class="aspect-square bg-primary rounded shadow-sm"></div>
+<div class="aspect-square bg-primary rounded shadow-sm"></div>
+<div class="aspect-square bg-primary/20 rounded shadow-sm"></div>
+</div>
+<p class="mt-4 font-label-md text-on-surface-variant">1/6 Available</p>
+</div>
+<!-- Zone C -->
+<div class="bg-surface-bright border border-outline-variant/30 p-4 rounded-xl text-center">
+<h4 class="font-headline-sm text-on-background mb-4">Group Study</h4>
+<div class="grid grid-cols-2 gap-2">
+<div class="aspect-[2/1] bg-surface-variant rounded shadow-sm"></div>
+<div class="aspect-[2/1] bg-primary rounded shadow-sm"></div>
+<div class="aspect-[2/1] bg-surface-variant rounded shadow-sm"></div>
+<div class="aspect-[2/1] bg-surface-variant rounded shadow-sm"></div>
+</div>
+<p class="mt-4 font-label-md text-on-surface-variant">3/4 Available</p>
+</div>
+<!-- Zone D -->
+<div class="bg-surface-bright border border-outline-variant/30 p-4 rounded-xl text-center">
+<h4 class="font-headline-sm text-on-background mb-4">Reading Lounge</h4>
+<div class="grid grid-cols-3 gap-2">
+<div class="aspect-square bg-surface-variant rounded-full shadow-sm"></div>
+<div class="aspect-square bg-primary rounded-full shadow-sm"></div>
+<div class="aspect-square bg-surface-variant rounded-full shadow-sm"></div>
+<div class="aspect-square bg-surface-variant rounded-full shadow-sm"></div>
+<div class="aspect-square bg-surface-variant rounded-full shadow-sm"></div>
+<div class="aspect-square bg-primary rounded-full shadow-sm"></div>
+</div>
+<p class="mt-4 font-label-md text-on-surface-variant">4/6 Available</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 7. Prices / Membership Plans Section -->
+<section class="py-xl bg-surface">
+<div class="max-w-container-max mx-auto px-gutter">
+<div class="text-center mb-12">
+<span class="inline-block bg-primary-fixed px-3 py-1 rounded-full text-primary font-label-md uppercase tracking-wider mb-2">Join Us</span>
+<h2 class="font-display text-display-mobile md:text-headline-lg text-on-background">Membership <span class="text-secondary border-b-4 border-secondary pb-1">Plans</span></h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Plan 1 -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 p-8 flex flex-col hover:-translate-y-2 transition-transform duration-300">
+<h3 class="font-headline-md text-primary mb-2">Basic</h3>
+<p class="font-display text-on-background mb-4">Free<span class="font-body-md text-on-surface-variant font-normal">/forever</span></p>
+<p class="font-body-sm text-on-surface-variant mb-6">Perfect for casual readers and local residents.</p>
+<ul class="space-y-4 mb-8 flex-grow">
+<li class="flex items-center gap-3 font-body-sm text-on-background"><span class="material-symbols-outlined text-primary text-sm">check_circle</span> Up to 5 physical books</li>
+<li class="flex items-center gap-3 font-body-sm text-on-background"><span class="material-symbols-outlined text-primary text-sm">check_circle</span> Basic Wi-Fi access</li>
+<li class="flex items-center gap-3 font-body-sm text-on-background"><span class="material-symbols-outlined text-primary text-sm">check_circle</span> Standard study room booking</li>
+<li class="flex items-center gap-3 font-body-sm text-outline"><span class="material-symbols-outlined text-outline text-sm">cancel</span> No digital library access</li>
+</ul>
+<button class="w-full py-3 rounded-lg border-2 border-primary text-primary font-label-lg hover:bg-primary-fixed transition-colors">Sign Up</button>
+</div>
+<!-- Plan 2 -->
+<div class="bg-primary rounded-2xl shadow-xl border border-primary p-8 flex flex-col relative transform md:scale-105 z-10">
+<div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-secondary text-white px-4 py-1 rounded-full font-label-sm text-xs uppercase tracking-wider">Most Popular</div>
+<h3 class="font-headline-md text-white mb-2">Scholar</h3>
+<p class="font-display text-white mb-4">$5<span class="font-body-md text-primary-fixed-dim font-normal">/month</span></p>
+<p class="font-body-sm text-primary-fixed-dim mb-6">Ideal for students and avid learners.</p>
+<ul class="space-y-4 mb-8 flex-grow">
+<li class="flex items-center gap-3 font-body-sm text-white"><span class="material-symbols-outlined text-secondary text-sm">check_circle</span> Up to 15 physical books</li>
+<li class="flex items-center gap-3 font-body-sm text-white"><span class="material-symbols-outlined text-secondary text-sm">check_circle</span> High-speed Wi-Fi access</li>
+<li class="flex items-center gap-3 font-body-sm text-white"><span class="material-symbols-outlined text-secondary text-sm">check_circle</span> Priority study room booking</li>
+<li class="flex items-center gap-3 font-body-sm text-white"><span class="material-symbols-outlined text-secondary text-sm">check_circle</span> Full digital library access</li>
+</ul>
+<button class="w-full py-3 rounded-lg bg-secondary text-white font-label-lg hover:bg-secondary-container transition-colors">Get Scholar</button>
+</div>
+<!-- Plan 3 -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 p-8 flex flex-col hover:-translate-y-2 transition-transform duration-300">
+<h3 class="font-headline-md text-tertiary mb-2">Premium</h3>
+<p class="font-display text-on-background mb-4">$15<span class="font-body-md text-on-surface-variant font-normal">/month</span></p>
+<p class="font-body-sm text-on-surface-variant mb-6">For researchers, professionals, and families.</p>
+<ul class="space-y-4 mb-8 flex-grow">
+<li class="flex items-center gap-3 font-body-sm text-on-background"><span class="material-symbols-outlined text-tertiary text-sm">check_circle</span> Unlimited physical books</li>
+<li class="flex items-center gap-3 font-body-sm text-on-background"><span class="material-symbols-outlined text-tertiary text-sm">check_circle</span> High-speed Wi-Fi &amp; Device Loan</li>
+<li class="flex items-center gap-3 font-body-sm text-on-background"><span class="material-symbols-outlined text-tertiary text-sm">check_circle</span> Advanced booking (up to 30 days)</li>
+<li class="flex items-center gap-3 font-body-sm text-on-background"><span class="material-symbols-outlined text-tertiary text-sm">check_circle</span> Full digital &amp; premium databases</li>
+</ul>
+<button class="w-full py-3 rounded-lg border-2 border-tertiary text-tertiary font-label-lg hover:bg-tertiary-fixed transition-colors">Get Premium</button>
+</div>
+</div>
+</div>
+</section>
+<!-- 8. Enquiry Tab Section -->
+<section class="py-xl bg-wash">
+<div class="max-w-container-max mx-auto px-gutter">
+<div class="text-center mb-12">
+<span class="inline-block bg-primary-fixed px-3 py-1 rounded-full text-primary font-label-md uppercase tracking-wider mb-2">Get in Touch</span>
+<h2 class="font-display text-display-mobile md:text-headline-lg text-on-background">Reserve Your <span class="text-secondary border-b-4 border-secondary pb-1">Study Space</span></h2>
+</div>
+<div class="flex flex-col lg:flex-row gap-lg bg-surface-container-lowest rounded-2xl shadow-md border border-outline-variant/20 overflow-hidden">
+<div class="w-full lg:w-1/3 bg-primary p-8 text-on-primary flex flex-col justify-between">
+<div>
+<h3 class="font-headline-md mb-4 text-white">Start Your Focus Journey Today</h3>
+<p class="font-body-sm text-primary-fixed-dim mb-8">Need a quiet space? Want to collaborate? Reserve a study room or tech space at your local branch—no fee required.</p>
+<ul class="space-y-6">
+<li class="flex items-start gap-4">
+<div class="w-10 h-10 bg-on-primary/10 rounded-full flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-white">call</span>
+</div>
+<div>
+<p class="font-label-md text-primary-fixed-dim">Call / WhatsApp</p>
+<p class="font-headline-sm font-bold text-white">+1 (555) 012-3456</p>
+</div>
+</li>
+<li class="flex items-start gap-4">
+<div class="w-10 h-10 bg-on-primary/10 rounded-full flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-white">location_on</span>
+</div>
+<div>
+<p class="font-label-md text-primary-fixed-dim">Main Branch</p>
+<p class="font-headline-sm font-bold text-white">123 Library Way, City Center</p>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="w-full lg:w-2/3 p-8 md:p-12">
+<div class="flex items-center gap-2 mb-6 text-primary">
+<span class="material-symbols-outlined" style='font-variation-settings: "FILL" 1;'>edit_square</span>
+<h4 class="font-headline-sm font-bold">Reservation Form</h4>
+</div>
+<form class="space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">Full Name *</label>
+<input class="w-full bg-surface-bright border border-outline-variant/50 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body-sm" placeholder="Your full name" type="text"/>
+</div>
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">Phone Number *</label>
+<input class="w-full bg-surface-bright border border-outline-variant/50 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body-sm" placeholder="+1 (555) 000-0000" type="tel"/>
+</div>
+</div>
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">Email Address</label>
+<input class="w-full bg-surface-bright border border-outline-variant/50 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body-sm" placeholder="your@email.com" type="email"/>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">Select Branch *</label>
+<select class="w-full bg-surface-bright border border-outline-variant/50 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body-sm text-on-surface-variant appearance-none">
+<option>Central Library</option>
+<option>Northside Branch</option>
+<option>East End Tech Lab</option>
+</select>
+</div>
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">Room Type *</label>
+<select class="w-full bg-surface-bright border border-outline-variant/50 rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body-sm text-on-surface-variant appearance-none">
+<option>Quiet Study (1-2 People)</option>
+<option>Group Collaboration (3-6 People)</option>
+<option>Media Lab Station</option>
+</select>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-4 rounded-lg font-label-lg shadow-sm hover:bg-primary-fixed-variant transition-colors flex items-center justify-center gap-2 mt-4" type="submit">
+<span class="material-symbols-outlined">send</span> Submit Reservation
+                            </button>
+</form>
+</div>
+</div>
+</div>
+</section>
+<!-- 9. Locations Section -->
+<section class="py-xl bg-surface">
+<div class="w-full">
+<div class="max-w-container-max mx-auto px-gutter mb-8 text-center">
+<h2 class="font-display text-display-mobile md:text-headline-lg text-on-background">Find <span class="text-secondary border-b-4 border-secondary pb-1">Us Here</span></h2>
+<p class="font-body-md text-on-surface-variant mt-4">Visit our Main Branch or find one of our 10+ locations across the city.</p>
+</div>
+</div></section></main></body></html>
