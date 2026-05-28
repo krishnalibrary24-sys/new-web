@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function AdmissionPage() {
   const { activeBranch } = useBranch();
-  const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
+  const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
   
   const [mobile, setMobile] = useState("");
   const [fullName, setFullName] = useState("");
@@ -123,7 +123,7 @@ export default function AdmissionPage() {
         if (savedWelcome) welcomeTemplate = savedWelcome;
       }
       
-      const branchLabel = activeBranch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
+      const branchLabel = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
       const expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       
       const msg = welcomeTemplate
@@ -244,11 +244,15 @@ export default function AdmissionPage() {
                 <h3 className="text-xs font-bold text-tertiary uppercase tracking-widest">Shift Assignment</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {[
+                {(activeBranch === 'namnakala' ? [
+                  { value: 'Full Day', label: 'Full Day', time: '7:30 AM – 9:30 PM', price: '₹1,000' },
+                  { value: 'Morning', label: 'Morning', time: '7:30 AM – 2:30 PM', price: '₹600' },
+                  { value: 'Evening', label: 'Evening', time: '2:30 PM – 9:30 PM', price: '₹600' },
+                ] : [
                   { value: 'Full Day', label: 'Full Day', time: '7 AM – 10 PM', price: '₹1,000' },
                   { value: 'Morning', label: 'Morning', time: '7 AM – 3 PM', price: '₹600' },
                   { value: 'Evening', label: 'Evening', time: '3 PM – 10 PM', price: '₹600' },
-                ].map(option => (
+                ]).map(option => (
                   <button
                     key={option.value}
                     type="button"

@@ -16,7 +16,8 @@ export const SquishyPricing = () => {
             label="Morning Slot"
             monthlyPrice="₹600"
             suffix="/month"
-            timeSlot="7:30 AM to 2:30 PM"
+            timeSlotBC="7:00 AM to 3:00 PM"
+            timeSlotNK="7:30 AM to 2:30 PM"
             description="Perfect for early birds, college students, and morning study sessions. Includes high-speed Wi-Fi, reserved seating, and a peaceful environment."
             cta="Book Morning Slot"
             background="bg-v-primary/80 dark:bg-v-primary"
@@ -26,7 +27,8 @@ export const SquishyPricing = () => {
             label="Full Day Slot"
             monthlyPrice="₹1,000"
             suffix="/month"
-            timeSlot="7:30 AM to 10:30 PM"
+            timeSlotBC="7:00 AM to 10:00 PM"
+            timeSlotNK="7:30 AM to 9:30 PM"
             description="Our most popular slot for dedicated aspirants. Unlimited study hours to maximize your productivity. Ideal for UPSC, CA, and competitive exams."
             cta="Book Full Day"
             background="bg-v-secondary/90 dark:bg-v-secondary"
@@ -37,7 +39,8 @@ export const SquishyPricing = () => {
             label="Evening Slot"
             monthlyPrice="₹600"
             suffix="/month"
-            timeSlot="3:00 PM to 10:30 PM"
+            timeSlotBC="3:00 PM to 10:00 PM"
+            timeSlotNK="2:30 PM to 9:30 PM"
             description="Great for school students, working professionals, and late-day learners. Enjoy a distraction-free space for evening deep-focus sessions."
             cta="Book Evening Slot"
             background="bg-v-tertiary/90 dark:bg-v-tertiary"
@@ -48,7 +51,7 @@ export const SquishyPricing = () => {
   );
 };
 
-const PricingCard = ({ label, monthlyPrice, suffix, timeSlot, description, cta, background, isPopular, BGComponent }: any) => {
+const PricingCard = ({ label, monthlyPrice, suffix, timeSlotBC, timeSlotNK, description, cta, background, isPopular, BGComponent }: any) => {
   return (
     <motion.div
       whileHover="hover"
@@ -75,8 +78,9 @@ const PricingCard = ({ label, monthlyPrice, suffix, timeSlot, description, cta, 
             {monthlyPrice}
             <span className="text-xl font-normal font-v-body-md text-white/80">{suffix}</span>
           </motion.span>
-          <div className="mt-2 text-sm font-bold bg-black/25 w-fit px-2 py-1 rounded border border-white/10 font-mono">
-            🕒 {timeSlot}
+          <div className="mt-2 text-xs font-bold bg-black/25 w-fit px-3 py-1.5 rounded-lg border border-white/10 font-mono leading-relaxed">
+            <div>🕒 Bangali: {timeSlotBC}</div>
+            <div className="mt-0.5">🕒 Namnakala: {timeSlotNK}</div>
           </div>
           <p className="text-sm text-white/95 font-v-body-sm leading-relaxed mt-4">{description}</p>
         </div>

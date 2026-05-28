@@ -30,7 +30,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
 
   const getRoleBadge = () => {
     if (isAdmin) return { label: "Admin", color: "bg-primary/15 text-primary border-primary/25" };
-    if (role === "bengali-chowk") return { label: "Bengali Chowk", color: "bg-tertiary/15 text-tertiary border-tertiary/25" };
+    if (role === "bengali-chowk") return { label: "Bangali Chowk", color: "bg-tertiary/15 text-tertiary border-tertiary/25" };
     return { label: "Namnakala", color: "bg-secondary/15 text-secondary border-secondary/25" };
   };
 
@@ -69,7 +69,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
                 onClick={() => setActiveBranch('bengali-chowk')}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all z-20 relative ${activeBranch === 'bengali-chowk' ? '!text-white' : 'text-[#475569] hover:text-[#0f172a]'}`}
               >
-                Bengali Chowk
+                Bangali Chowk
               </button>
               <button 
                 onClick={() => setActiveBranch('namnakala')}

@@ -5,12 +5,12 @@ import { supabase } from "@/lib/supabase";
 
 export default function SettingsPage() {
   const { activeBranch } = useBranch();
-  const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
+  const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
 
   // State for all settings
   const [libName, setLibName] = useState("Krishna Library");
   const [libPhone, setLibPhone] = useState("+91 8269144748");
-  const [libAddress, setLibAddress] = useState("Plot 12, Bengali Chowk Area, Ambikapur, C.G.");
+  const [libAddress, setLibAddress] = useState("Plot 12, Bangali Chowk Area, Ambikapur, C.G.");
   const [upiId, setUpiId] = useState("krishnalibrary@okaxis");
   const [upiName, setUpiName] = useState("Krishna Library");
   const [welcomeMsg, setWelcomeMsg] = useState(

@@ -50,11 +50,11 @@ export interface BranchData {
 const getBranchData = (occupancy: Record<string, number>): Record<BranchId, BranchData> => ({
   'bengali-chowk': {
     id: 'bengali-chowk',
-    label: 'Bengali Chowk',
+    label: 'Bangali Chowk',
     title: 'Flagship Hub',
-    description: 'Our premier intellectual sanctuary at Bengali Chowk. Engineered for absolute silence, unmatched connectivity, and the pursuit of excellence.',
+    description: 'Our premier intellectual sanctuary at Bangali Chowk. Engineered for absolute silence, unmatched connectivity, and the pursuit of excellence.',
     image: '/assets/exterior.jpg',
-    address: 'Plot 12, Bengali Chowk Area, Ambikapur.',
+    address: 'Plot 12, Bangali Chowk Area, Ambikapur.',
     colors: {
       gradient: 'from-blue-600 to-indigo-900',
       glow: 'bg-blue-500',

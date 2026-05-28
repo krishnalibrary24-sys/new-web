@@ -6,8 +6,9 @@ import { supabase } from "@/lib/supabase";
 
 export default function SeatingPage() {
   const { activeBranch } = useBranch();
+  const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
   const seats = activeBranch === 'namnakala' ? 127 : 151;
-  const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
+
   
   const [seatMap, setSeatMap] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);

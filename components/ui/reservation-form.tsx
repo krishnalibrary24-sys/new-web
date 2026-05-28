@@ -16,32 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 
-const slots = [
-  {
-    id: 1,
-    title: "Morning Slot",
-    description: "7:30 AM to 2:30 PM",
-    price: "₹600/month",
-    interestValue: "Morning",
-  },
-  {
-    id: 2,
-    title: "Full Day Slot",
-    description: "7:30 AM to 10:30 PM",
-    price: "₹1,000/month",
-    interestValue: "Full Day",
-  },
-  {
-    id: 3,
-    title: "Evening Slot",
-    description: "3:00 PM to 10:30 PM",
-    price: "₹600/month",
-    interestValue: "Evening",
-  },
-];
-
 export default function ReservationForm() {
-  const [selectedSlot, setSelectedSlot] = useState(slots[1]);
+  const [selectedSlotId, setSelectedSlotId] = useState(2);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -51,6 +27,54 @@ export default function ReservationForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  const slots = branch === 'namnakala' ? [
+    {
+      id: 1,
+      title: "Morning Slot",
+      description: "7:30 AM to 2:30 PM",
+      price: "₹600/month",
+      interestValue: "Morning",
+    },
+    {
+      id: 2,
+      title: "Full Day Slot",
+      description: "7:30 AM to 9:30 PM",
+      price: "₹1,000/month",
+      interestValue: "Full Day",
+    },
+    {
+      id: 3,
+      title: "Evening Slot",
+      description: "2:30 PM to 9:30 PM",
+      price: "₹600/month",
+      interestValue: "Evening",
+    },
+  ] : [
+    {
+      id: 1,
+      title: "Morning Slot",
+      description: "7:00 AM to 3:00 PM",
+      price: "₹600/month",
+      interestValue: "Morning",
+    },
+    {
+      id: 2,
+      title: "Full Day Slot",
+      description: "7:00 AM to 10:00 PM",
+      price: "₹1,000/month",
+      interestValue: "Full Day",
+    },
+    {
+      id: 3,
+      title: "Evening Slot",
+      description: "3:00 PM to 10:00 PM",
+      price: "₹600/month",
+      interestValue: "Evening",
+    },
+  ];
+
+  const selectedSlot = slots.find(s => s.id === selectedSlotId) || slots[1];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,7 +189,7 @@ export default function ReservationForm() {
                   <SelectValue placeholder="Select Branch" />
                 </SelectTrigger>
                 <SelectContent className="bg-v-surface border-v-outline-variant/30 text-v-on-background">
-                  <SelectItem value="bengali-chowk">Bengali Chowk</SelectItem>
+                  <SelectItem value="bengali-chowk">Bangali Chowk</SelectItem>
                   <SelectItem value="namnakala">Namnakala</SelectItem>
                 </SelectContent>
               </Select>
@@ -207,10 +231,9 @@ export default function ReservationForm() {
 
               <RadioGroup
                 className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-                value={selectedSlot.id.toString()}
+                value={selectedSlotId.toString()}
                 onValueChange={(value) => {
-                  const found = slots.find((s) => s.id.toString() === value);
-                  if (found) setSelectedSlot(found);
+                  setSelectedSlotId(Number(value));
                 }}
               >
                 {slots.map((item) => (

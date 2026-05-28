@@ -60,7 +60,7 @@ export default function DashboardPage() {
    ADMIN DASHBOARD
    ═══════════════════════════════════════════════════════════ */
 function AdminDashboard({ activeBranch }: { activeBranch: string }) {
-  const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
+  const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
 
   const [stats, setStats] = useState({
     revenue: '—', dues: '—', members: '—', occupancy: 0,
@@ -151,7 +151,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
             <button className="text-primary text-xs font-semibold hover:underline">View Details →</button>
           </div>
           <div className="space-y-5">
-            <BranchBar name="Bengali Chowk" color="bg-primary" value={stats.bcRevenue} total={stats.bcRevenue + stats.nmRevenue} isCurrency={true} />
+            <BranchBar name="Bangali Chowk" color="bg-primary" value={stats.bcRevenue} total={stats.bcRevenue + stats.nmRevenue} isCurrency={true} />
             <BranchBar name="Namnakala" color="bg-tertiary" value={stats.nmRevenue} total={stats.bcRevenue + stats.nmRevenue} isCurrency={true} />
           </div>
         </div>
@@ -211,7 +211,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
    OFFICE DASHBOARD
    ═══════════════════════════════════════════════════════════ */
 function OfficeDashboard({ branch }: { branch: string }) {
-  const branchName = branch === "namnakala" ? "Namnakala" : "Bengali Chowk";
+  const branchName = branch === "namnakala" ? "Namnakala" : "Bangali Chowk";
   
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

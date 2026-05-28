@@ -9,7 +9,7 @@ const FAQ_DATA = [
   {
     question: "Timings",
     fullQuestion: "What are the operational timings for the branches?",
-    answer: "Our library operates in two primary shifts to accommodate different study patterns. \n\n• Bengali Chowk: Morning (07:00 AM – 15:00 PM) | Evening (15:00 PM – 22:00 PM) \n• Namnakala: Morning (07:30 AM – 14:30 PM) | Evening (14:30 PM – 21:30 PM)",
+    answer: "Our library operates in two primary shifts to accommodate different study patterns. \n\n• Bangali Chowk: Morning (07:00 AM – 03:00 PM) | Evening (03:00 PM – 10:00 PM) | Full Day (07:00 AM – 10:00 PM)\n• Namnakala: Morning (07:30 AM – 02:30 PM) | Evening (02:30 PM – 09:30 PM) | Full Day (07:30 AM – 09:30 PM)",
     icon: "schedule",
     color: "text-blue-400"
   },

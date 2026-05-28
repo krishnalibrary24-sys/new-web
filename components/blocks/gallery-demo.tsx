@@ -62,7 +62,7 @@ export const GalleryDemo = () => {
             Inside the <span className="text-v-primary">Krishna Library</span>
           </h2>
           <p className="leading-relaxed text-v-on-surface-variant text-lg font-v-body-md mb-8">
-            Take a visual tour of our beautifully designed spaces. From the quiet reading rooms of our Namlakala branch to the high-tech collaboration zones at Bengali Chowk.
+            Take a visual tour of our beautifully designed spaces. From the quiet reading rooms of our Namlakala branch to the high-tech collaboration zones at Bangali Chowk.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a

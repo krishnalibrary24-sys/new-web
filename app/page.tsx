@@ -217,7 +217,7 @@ export default function Home() {
                         <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-v-primary/10 text-v-primary rounded-full mb-2">Flagship Hub</span>
                         <h3 className="font-montserrat text-[18px] font-bold text-v-on-background mb-1">Bangali Chowk Branch</h3>
                         <p className="font-lexend text-[13px] text-v-on-surface-variant leading-relaxed">
-                          Plot 12, Bengali Chowk Area, Ambikapur, C.G.
+                          Plot 12, Bangali Chowk Area, Ambikapur, C.G.
                         </p>
                         <p className="font-lexend text-[13px] text-v-primary mt-1">📞 +91 8269144748</p>
                       </div>
