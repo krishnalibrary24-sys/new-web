@@ -63,7 +63,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
   const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
 
   const [stats, setStats] = useState({
-    revenue: '—', dues: '—', members: '—', occupancy: 0,
+    totalRevenue: '—', receivedRevenue: '—', upcomingRevenue: '—', members: '—', occupancy: 0,
     bcRevenue: 0, nmRevenue: 0, totalSeats: 274,
     fullDayPct: 0, halfDayPct: 0, fullDayCount: 0, halfDayCount: 0
   });
@@ -80,10 +80,10 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
         
         if (members) {
           const active = members.filter(m => m.is_active);
-          const totalRevenue = active.reduce((sum, m) => sum + (m.plan_amount || 0), 0);
-          const now = new Date();
+          const receivedRevenueVal = active.reduce((sum, m) => sum + (m.plan_amount || 0), 0);
           const overdue = members.filter(m => !m.is_active);
-          const overdueAmount = overdue.reduce((sum, m) => sum + (m.plan_amount || 0), 0);
+          const upcomingRevenueVal = overdue.reduce((sum, m) => sum + (m.plan_amount || 0), 0);
+          const totalRevenueVal = receivedRevenueVal + upcomingRevenueVal;
 
           const { data: bcData } = await supabase.from('members').select('plan_amount').eq('branch', 'bengali-chowk').eq('is_active', true);
           const { data: nmData } = await supabase.from('members').select('plan_amount').eq('branch', 'namnakala').eq('is_active', true);
@@ -96,8 +96,9 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           const totalActive = active.length || 1; // Prevent div by 0
 
           setStats({
-            revenue: `₹${totalRevenue.toLocaleString('en-IN')}`,
-            dues: `₹${overdueAmount.toLocaleString('en-IN')}`,
+            totalRevenue: `₹${totalRevenueVal.toLocaleString('en-IN')}`,
+            receivedRevenue: `₹${receivedRevenueVal.toLocaleString('en-IN')}`,
+            upcomingRevenue: `₹${upcomingRevenueVal.toLocaleString('en-IN')}`,
             members: active.length.toString(),
             occupancy: Math.round((active.length / (activeBranch === 'bengali-chowk' ? 153 : 121)) * 100),
             bcRevenue,
@@ -120,16 +121,18 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
   return (
     <div className="space-y-6 animate-fade-in-fast">
       {/* ─── Stat Cards ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard
-          icon="payments" iconClass="stat-icon-primary" label={`Revenue · ${branchName}`}
-          value={loading ? null : stats.revenue}
-          trend="+12%" trendUp={true}
+          icon="account_balance" iconClass="stat-icon-primary" label={`Total Revenue · ${branchName}`}
+          value={loading ? null : stats.totalRevenue}
         />
         <StatCard
-          icon="warning" iconClass="stat-icon-danger" label={`Pending Dues · ${branchName}`}
-          value={loading ? null : stats.dues}
-          badge="Action Required" badgeClass="badge-danger"
+          icon="payments" iconClass="stat-icon-success" label={`Received Revenue · ${branchName}`}
+          value={loading ? null : stats.receivedRevenue}
+        />
+        <StatCard
+          icon="pending_actions" iconClass="stat-icon-warning" label={`Upcoming Revenue · ${branchName}`}
+          value={loading ? null : stats.upcomingRevenue}
         />
         <StatCard
           icon="group" iconClass="stat-icon-primary" label={`Active Members · ${branchName}`}
