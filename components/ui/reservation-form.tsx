@@ -21,6 +21,7 @@ export default function ReservationForm() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
   const [branch, setBranch] = useState("bengali-chowk");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -86,7 +87,7 @@ export default function ReservationForm() {
         phone: phone,
         interest: selectedSlot.interestValue,
         branch: branch,
-        notes: `Email: ${email || 'None'}`.trim(),
+        notes: `Address: ${address || 'None'} | Email: ${email || 'None'}`.trim(),
         status: "new",
       };
 
@@ -100,6 +101,7 @@ export default function ReservationForm() {
       setFullName("");
       setPhone("");
       setEmail("");
+      setAddress("");
     } catch (err: any) {
       console.error("Failed to submit reservation:", err);
       setError(err.message || "Failed to submit reservation. Please try again.");
@@ -189,6 +191,20 @@ export default function ReservationForm() {
                   <SelectItem value="namnakala">Namnakala</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="col-span-full">
+              <Label htmlFor="address" className="font-semibold text-v-on-background">
+                Address <span className="text-xs text-v-on-surface-variant">(Optional)</span>
+              </Label>
+              <Input
+                type="text"
+                id="address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Enter your local area or full address"
+                className="mt-2 bg-v-surface border-v-outline-variant/30 text-v-on-background focus:ring-v-primary"
+              />
             </div>
 
             <Separator className="col-span-full my-4 bg-v-outline-variant/20" />
