@@ -31,7 +31,7 @@ function AnimatedCounter({ value, suffix = "" }: { value: string; suffix?: strin
 export default function Home() {
   return (
     <div className="bg-white text-v-on-background font-lexend antialiased selection:bg-v-primary/10 selection:text-v-primary visitor-page">
-
+      <InteractiveDotBackground />
       <VisitorNav />
       <main>
         {/* ═══ 1. HERO ═══ */}
@@ -349,5 +349,131 @@ function ReviewCard({ initials, name, time, text, color }: {
         <span className="text-[10px] text-v-on-surface-variant/50 font-lexend tracking-wide">Google Review</span>
       </div>
     </div>
+  );
+}
+
+/* ── Interactive Dotted Background Component ── */
+function InteractiveDotBackground() {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationFrameId: number;
+    let width = 0;
+    let height = 0;
+    
+    // Mouse coordinates
+    const mouse = { x: -1000, y: -1000 };
+    const targetMouse = { x: -1000, y: -1000 };
+    let hasMoved = false;
+
+    const resize = () => {
+      if (!canvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      width = window.innerWidth;
+      height = window.innerHeight;
+      
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      
+      ctx.scale(dpr, dpr);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      targetMouse.x = e.clientX;
+      targetMouse.y = e.clientY;
+      hasMoved = true;
+    };
+
+    const handleMouseLeave = () => {
+      targetMouse.x = -1000;
+      targetMouse.y = -1000;
+    };
+
+    window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseleave', handleMouseLeave);
+    
+    resize();
+
+    // Dot grid settings
+    const spacing = 32;
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      // Smooth cursor movement with linear interpolation (lerp)
+      if (hasMoved) {
+        mouse.x += (targetMouse.x - mouse.x) * 0.12;
+        mouse.y += (targetMouse.y - mouse.y) * 0.12;
+      }
+
+      // Calculate grid dimensions
+      const cols = Math.ceil(width / spacing) + 1;
+      const rows = Math.ceil(height / spacing) + 1;
+
+      for (let c = 0; c < cols; c++) {
+        for (let r = 0; r < rows; r++) {
+          const dotX = c * spacing;
+          const dotY = r * spacing;
+
+          // Distance to cursor
+          const dx = mouse.x - dotX;
+          const dy = mouse.y - dotY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const maxDist = 130;
+
+          let drawX = dotX;
+          let drawY = dotY;
+          let radius = 1.0;
+          let opacity = 0.04;
+          
+          if (dist < maxDist) {
+            const force = (maxDist - dist) / maxDist; // 0 to 1
+            
+            // Subtle magnetic pull away from cursor (warp effect)
+            if (dist > 0) {
+              drawX -= (dx / dist) * force * 7;
+              drawY -= (dy / dist) * force * 7;
+            }
+
+            // Glow and size increase near cursor
+            radius = 1.0 + force * 1.5;
+            opacity = 0.04 + force * 0.28;
+          }
+
+          ctx.fillStyle = `rgba(0, 49, 120, ${opacity})`;
+          ctx.beginPath();
+          ctx.arc(drawX, drawY, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 pointer-events-none z-0 bg-transparent"
+      style={{ mixBlendMode: 'multiply' }}
+    />
   );
 }

@@ -973,3 +973,127 @@ html.lenis, html.lenis body {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   PREMIUM CONTRAST & SAAS BLOCKS FOR DASHBOARD LIGHT MODE
+   ═══════════════════════════════════════════════════════════ */
+
+/* Override transparent white backgrounds in light mode to beautiful, high-contrast light slate */
+.dashboard-light-theme .bg-white\/\[0\.01\],
+.dashboard-light-theme .bg-white\/\[0\.02\],
+.dashboard-light-theme .bg-white\/\[0\.03\],
+.dashboard-light-theme .bg-white\/\[0\.04\],
+.dashboard-light-theme .bg-white\/\[0\.06\] {
+  background-color: #f8fafc !important; /* Soft slate gray */
+}
+
+.dashboard-light-theme .bg-white\/\[0\.01\] {
+  background-color: #fdfdfd !important;
+  border-color: #f1f5f9 !important;
+}
+
+.dashboard-light-theme .bg-white\/\[0\.02\] {
+  background-color: #f8fafc !important; /* Elegant light background */
+}
+
+.dashboard-light-theme .bg-white\/\[0\.03\] {
+  background-color: #f1f5f9 !important; /* Sleek card background */
+}
+
+/* Override transparent white borders to crisp, clean Slate-200 borders */
+.dashboard-light-theme .border-white\/\[0\.04\],
+.dashboard-light-theme .border-white\/\[0\.05\],
+.dashboard-light-theme .border-white\/\[0\.06\],
+.dashboard-light-theme .border-white\/\[0\.08\],
+.dashboard-light-theme .border-white\/10 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Ensure horizontal, vertical, top, and bottom borders in cards/tables are crisp */
+.dashboard-light-theme .border-b-white\/\[0\.06\] {
+  border-bottom-color: #e2e8f0 !important;
+}
+.dashboard-light-theme .border-t-white\/\[0\.06\] {
+  border-top-color: #e2e8f0 !important;
+}
+.dashboard-light-theme .border-t-white\/\[0\.04\] {
+  border-top-color: #e2e8f0 !important;
+}
+
+/* Make dashed border placeholders in documents feel organic and polished */
+.dashboard-light-theme .border-dashed.border-white\/10 {
+  border-color: #cbd5e1 !important;
+  background-color: #f8fafc !important;
+}
+.dashboard-light-theme .border-dashed.border-white\/10:hover {
+  border-color: #94a3b8 !important;
+  background-color: #f1f5f9 !important;
+}
+
+/* Fix text and label colors to have rich premium contrast */
+.dashboard-light-theme .text-white\/50,
+.dashboard-light-theme .text-white\/60 {
+  color: #64748b !important; /* Slate 500 */
+}
+.dashboard-light-theme .text-white\/70,
+.dashboard-light-theme .text-white\/80,
+.dashboard-light-theme .text-white\/90 {
+  color: #334155 !important; /* Slate 700 */
+}
+
+/* Table header text premium styling */
+.dashboard-light-theme thead.bg-white\/\[0\.03\] {
+  background-color: #f8fafc !important;
+}
+
+/* Dynamic price summary block contrast */
+.dashboard-light-theme .bg-white\/\[0\.03\].border-white\/\[0\.05\] {
+  background-color: #eff6ff !important; /* Soft royal blue highlight background */
+  border-color: #bfdbfe !important; /* Light blue border */
+}
+.dashboard-light-theme .bg-white\/\[0\.03\].border-white\/\[0\.05\] .text-on-surface-variant {
+  color: #1e40af !important; /* Royal blue for formula details */
+}
+
+/* Manual duration selectors when not active */
+.dashboard-light-theme .bg-slate-200.hover\:bg-slate-300 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+.dashboard-light-theme .bg-slate-200.hover\:bg-slate-300:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Shift assignment container when not active */
+.dashboard-light-theme button.bg-slate-200 {
+  background-color: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 0.75rem !important;
+}
+.dashboard-light-theme button.bg-slate-200:hover {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+.dashboard-light-theme button.bg-slate-200 .text-slate-800 {
+  color: #1e293b !important;
+}
+.dashboard-light-theme button.bg-slate-200 .text-slate-600 {
+  color: #475569 !important;
+}
+.dashboard-light-theme button.bg-slate-200 .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Pay later checkbox panel overrides */
+.dashboard-light-theme .bg-slate-200.border-slate-300 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+.dashboard-light-theme .bg-slate-200.border-slate-300:hover {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+
