@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS public.members (
   loss_amount           INTEGER NOT NULL DEFAULT 0,
   left_at               TIMESTAMPTZ,
   left_reason           TEXT,
+  previous_seat_no      TEXT,
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

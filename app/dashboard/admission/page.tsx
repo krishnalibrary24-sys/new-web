@@ -107,6 +107,38 @@ export default function AdmissionPage() {
       end.setMonth(end.getMonth() + months);
       const subscription_end_date = end.toISOString();
 
+      let seatToAllot = null;
+      let prevSeatVal = null;
+
+      if (recordFound && permanentId) {
+        const { data: currentMember } = await supabase
+          .from('members')
+          .select('seat_no, previous_seat_no')
+          .eq('permanent_id', permanentId)
+          .maybeSingle();
+
+        if (currentMember) {
+          seatToAllot = currentMember.seat_no || null;
+          prevSeatVal = currentMember.previous_seat_no || null;
+
+          if (!seatToAllot && prevSeatVal) {
+            const { data: occupant } = await supabase
+              .from('members')
+              .select('id')
+              .eq('branch', activeBranch)
+              .eq('shift', shift)
+              .eq('seat_no', prevSeatVal)
+              .eq('is_active', true)
+              .maybeSingle();
+
+            if (!occupant) {
+              seatToAllot = prevSeatVal;
+              prevSeatVal = null;
+            }
+          }
+        }
+      }
+
       const payload = {
         permanent_id: finalId,
         full_name: fullName,
@@ -116,7 +148,8 @@ export default function AdmissionPage() {
         mobile: mobile,
         address: address,
         branch: activeBranch,
-        seat_no: null,
+        seat_no: seatToAllot,
+        previous_seat_no: prevSeatVal,
         shift: shift,
         plan_amount: basePrice,
         is_active: true,

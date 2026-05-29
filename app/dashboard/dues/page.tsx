@@ -60,7 +60,33 @@ export default function DuesPage() {
   const reactivateMember = async (member: any) => {
     setActionId(member.id);
     const newEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    await supabase.from('members').update({ is_active: true, subscription_end_date: newEnd }).eq('id', member.id);
+    
+    let seatToAllot = member.seat_no || null;
+    let prevSeatVal = member.previous_seat_no || null;
+
+    if (!seatToAllot && prevSeatVal) {
+      const { data: occupant } = await supabase
+        .from('members')
+        .select('id')
+        .eq('branch', member.branch)
+        .eq('shift', member.shift)
+        .eq('seat_no', prevSeatVal)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!occupant) {
+        seatToAllot = prevSeatVal;
+        prevSeatVal = null;
+      }
+    }
+
+    await supabase.from('members').update({ 
+      is_active: true, 
+      subscription_end_date: newEnd,
+      seat_no: seatToAllot,
+      previous_seat_no: prevSeatVal
+    }).eq('id', member.id);
+    
     await fetchData();
     setActionId(null);
   };

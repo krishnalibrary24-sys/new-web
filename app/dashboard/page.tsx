@@ -253,14 +253,22 @@ function OfficeDashboard({ branch }: { branch: string }) {
       try {
         const { data: expired } = await supabase
           .from('members')
-          .select('id')
+          .select('id, seat_no')
           .eq('branch', branch)
           .eq('is_active', true)
           .lt('subscription_end_date', new Date().toISOString());
 
         if (expired && expired.length > 0) {
-          const ids = expired.map(e => e.id);
-          await supabase.from('members').update({ is_active: false, seat_no: null }).in('id', ids);
+          for (const m of expired) {
+            await supabase
+              .from('members')
+              .update({ 
+                is_active: false, 
+                previous_seat_no: m.seat_no, 
+                seat_no: null 
+              })
+              .eq('id', m.id);
+          }
         }
       } catch (err) {
         console.error("Auto-eviction failed", err);

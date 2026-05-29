@@ -150,6 +150,25 @@ export default function MembersPage() {
     const baseDate = currentEnd < new Date() ? new Date() : currentEnd;
     baseDate.setMonth(baseDate.getMonth() + months);
     const newEnd = baseDate;
+
+    let seatToAllot = member.seat_no || null;
+    let prevSeatVal = member.previous_seat_no || null;
+    
+    if (!seatToAllot && prevSeatVal) {
+      const { data: occupant } = await supabase
+        .from('members')
+        .select('id')
+        .eq('branch', member.branch)
+        .eq('shift', member.shift)
+        .eq('seat_no', prevSeatVal)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!occupant) {
+        seatToAllot = prevSeatVal;
+        prevSeatVal = null;
+      }
+    }
     
     await supabase.from('members').update({ 
       subscription_end_date: newEnd.toISOString(),
@@ -160,7 +179,9 @@ export default function MembersPage() {
       left_with_dues: false,
       loss_amount: 0,
       left_at: null,
-      left_reason: null
+      left_reason: null,
+      seat_no: seatToAllot,
+      previous_seat_no: prevSeatVal
     }).eq('id', member.id);
 
     await supabase.from('payments').insert([{
@@ -182,7 +203,9 @@ export default function MembersPage() {
       left_with_dues: false,
       loss_amount: 0,
       left_at: null,
-      left_reason: null
+      left_reason: null,
+      seat_no: seatToAllot,
+      previous_seat_no: prevSeatVal
     };
 
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...updatedData } : m));
@@ -218,6 +241,7 @@ export default function MembersPage() {
     try {
       const leftPayload = {
         is_active: false,
+        previous_seat_no: member.seat_no || member.previous_seat_no || null,
         seat_no: null, // Release the seat!
         left_with_dues: leftWithDues,
         loss_amount: leftWithDues ? leftLossAmount : 0,
