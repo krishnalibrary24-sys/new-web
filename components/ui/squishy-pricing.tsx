@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 
 export const SquishyPricing = () => {
   return (
-    <section id="membership" className="bg-v-surface px-4 py-xl min-h-screen transition-colors">
+    <section id="membership" className="bg-transparent px-4 py-xl transition-colors">
       <div className="max-w-container-max mx-auto px-gutter mb-12 text-center">
         <span className="inline-block bg-v-primary-fixed px-3 py-1 rounded-full text-v-primary font-v-label-md text-v-label-md uppercase tracking-wider mb-2">Pricing</span>
         <h2 className="font-v-display text-v-display text-v-display-mobile md:text-headline-lg text-v-on-background">Membership <span className="text-v-secondary border-b-4 border-v-secondary pb-1">Slots</span></h2>

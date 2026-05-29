@@ -45,7 +45,7 @@ export default function FaqSection() {
   };
 
   return (
-    <section id="faq" className="py-24 px-4 bg-gradient-to-b from-v-surface-container-low to-v-surface relative overflow-hidden">
+    <section id="faq" className="py-24 px-4 bg-transparent relative overflow-hidden">
       {/* Background Floating Elements */}
       <motion.div
         className="absolute top-10 left-10 w-72 h-72 rounded-full bg-v-primary/5 blur-3xl"

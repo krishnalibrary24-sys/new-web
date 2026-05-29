@@ -139,7 +139,7 @@ export default function AboutUsSection() {
     <section
       id="about"
       ref={sectionRef}
-      className="w-full pt-24 pb-12 px-4 bg-gradient-to-b from-v-surface to-v-surface-container-lowest text-v-on-surface overflow-hidden relative"
+      className="w-full pt-24 pb-12 px-4 bg-transparent text-v-on-surface overflow-hidden relative"
     >
       {/* Decorative background elements */}
       <motion.div

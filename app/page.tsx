@@ -17,7 +17,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 function AnimatedCounter({ value, suffix = "" }: { value: string; suffix?: string }) {
   return (
     <motion.span
-      className="font-montserrat text-[clamp(1.5rem,3.5vw,2.5rem)] font-extrabold text-v-on-primary-container tabular-nums"
+      className="font-montserrat text-[clamp(1.5rem,3.5vw,2.5rem)] font-extrabold text-[#003178] tabular-nums"
       initial={{ opacity: 0, scale: 0.5 }}
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true }}
@@ -38,18 +38,18 @@ export default function Home() {
         <HeroSlider />
 
         {/* ═══ STATS BANNER ═══ */}
-        <section className="relative bg-v-primary-container">
-          <div className="max-w-[1280px] mx-auto px-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/10">
+        <section className="relative px-6 -mt-16 z-20">
+          <div className="max-w-[1100px] mx-auto bg-white/80 backdrop-blur-md rounded-2xl border border-v-outline-variant/15 shadow-[0_15px_50px_-15px_rgba(0,49,120,0.12)] py-6 md:py-8 px-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-v-outline-variant/15">
               {[
                 { val: "2", suf: "+", label: "Years of Trust" },
                 { val: "1200", suf: "+", label: "Students Served" },
                 { val: "2", suf: "", label: "City Branches" },
                 { val: "99", suf: "%", label: "Satisfaction Rate" },
               ].map((stat, i) => (
-                <ScrollReveal key={i} delay={i * 0.1} className="py-6 md:py-8 flex flex-col items-center text-center gap-1">
+                <ScrollReveal key={i} delay={i * 0.1} className="flex flex-col items-center text-center gap-1">
                   <AnimatedCounter value={stat.val} suffix={stat.suf} />
-                  <span className="font-montserrat text-[10px] md:text-[11px] font-bold text-v-on-primary-container/70 uppercase tracking-[0.1em]">
+                  <span className="font-montserrat text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-[0.1em]">
                     {stat.label}
                   </span>
                 </ScrollReveal>
@@ -62,7 +62,7 @@ export default function Home() {
         <AboutUsSection />
 
         {/* ═══ 3. ACHIEVERS ═══ */}
-        <section id="achievers" className="py-20 md:py-28 bg-white relative overflow-hidden">
+        <section id="achievers" className="py-20 md:py-28 bg-transparent relative overflow-hidden">
           <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-v-primary/[0.02] rounded-full blur-[100px] translate-y-1/2 -translate-x-1/3 pointer-events-none" />
 
           <div className="max-w-[1280px] mx-auto px-6">
@@ -124,7 +124,7 @@ export default function Home() {
         </section>
 
         {/* ═══ 5. REVIEW MARQUEE ═══ */}
-        <section className="py-14 bg-[#f8f9ff] border-y border-v-outline-variant/10 overflow-hidden">
+        <section className="py-14 bg-transparent border-y border-v-outline-variant/10 overflow-hidden">
           <div className="max-w-[1280px] mx-auto px-6 mb-8 text-center">
             <ScrollReveal>
               <div className="flex flex-col items-center gap-2">
@@ -176,14 +176,14 @@ export default function Home() {
         <SquishyPricing />
 
         {/* ═══ 8. ENQUIRY / CONTACT ═══ */}
-        <section id="contact" className="py-20 md:py-28 bg-[#f8f9ff] px-4">
+        <section id="contact" className="py-20 md:py-28 bg-transparent px-4">
           <ScrollReveal>
             <ReservationForm />
           </ScrollReveal>
         </section>
 
         {/* ═══ 9. LOCATIONS ═══ */}
-        <section id="locations" className="py-20 md:py-28 bg-white">
+        <section id="locations" className="py-20 md:py-28 bg-transparent">
           <div className="max-w-[1280px] mx-auto px-6">
             <SectionHeading
               tag="Our Branches"
@@ -428,25 +428,21 @@ function InteractiveDotBackground() {
           const dx = mouse.x - dotX;
           const dy = mouse.y - dotY;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const maxDist = 130;
+          const maxDist = 140;
 
-          let drawX = dotX;
-          let drawY = dotY;
-          let radius = 1.0;
-          let opacity = 0.04;
+          // PERFECT GRID: No physical warp offset (dots remain stationary in their slots)
+          const drawX = dotX;
+          const drawY = dotY;
+          
+          let radius = 1.2;
+          let opacity = 0.05;
           
           if (dist < maxDist) {
             const force = (maxDist - dist) / maxDist; // 0 to 1
             
-            // Subtle magnetic pull away from cursor (warp effect)
-            if (dist > 0) {
-              drawX -= (dx / dist) * force * 7;
-              drawY -= (dy / dist) * force * 7;
-            }
-
-            // Glow and size increase near cursor
-            radius = 1.0 + force * 1.5;
-            opacity = 0.04 + force * 0.28;
+            // Spotlight / Zoom-in effect: scale up the dots and make them glow near the cursor
+            radius = 1.2 + force * 2.2;
+            opacity = 0.05 + force * 0.40;
           }
 
           ctx.fillStyle = `rgba(0, 49, 120, ${opacity})`;
