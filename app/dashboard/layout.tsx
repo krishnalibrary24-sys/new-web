@@ -19,6 +19,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
     { name: "Invoices", icon: "receipt_long", path: "/dashboard/invoices" },
     { name: "Enquiries", icon: "contact_mail", path: "/dashboard/enquiries" },
     { name: "Expenses", icon: "trending_up", path: "/dashboard/expenses" },
+    ...(isAdmin ? [{ name: "Loss Payments", icon: "money_off", path: "/dashboard/loss-payment" }] : []),
     { name: "Settings", icon: "settings", path: "/dashboard/settings" },
   ];
 

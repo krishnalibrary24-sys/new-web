@@ -19,6 +19,17 @@ export default function AdmissionPage() {
   const [basePrice, setBasePrice] = useState(1000);
   const [discount, setDiscount] = useState(0);
   const [paymentMode, setPaymentMode] = useState("Cash");
+  
+  // Membership duration and Pay Later states
+  const [duration, setDuration] = useState<number>(1);
+  const [customMonths, setCustomMonths] = useState<string>("");
+  const [isCustomDuration, setIsCustomDuration] = useState<boolean>(false);
+  const [payLater, setPayLater] = useState<boolean>(false);
+  const [dueDate, setDueDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7); // Default to 7 days from now
+    return d.toISOString().split('T')[0];
+  });
 
   const [recordFound, setRecordFound] = useState(false);
   const [permanentId, setPermanentId] = useState("");
@@ -89,7 +100,12 @@ export default function AdmissionPage() {
         setPermanentId(finalId);
       }
 
-      const finalAmount = Math.max(0, basePrice - discount);
+      const months = isCustomDuration ? Math.max(1, parseInt(customMonths) || 1) : duration;
+      const totalPayable = Math.max(0, (basePrice * months) - discount);
+
+      const end = new Date();
+      end.setMonth(end.getMonth() + months);
+      const subscription_end_date = end.toISOString();
 
       const payload = {
         permanent_id: finalId,
@@ -102,9 +118,11 @@ export default function AdmissionPage() {
         branch: activeBranch,
         seat_no: null,
         shift: shift,
-        plan_amount: finalAmount,
+        plan_amount: basePrice,
         is_active: true,
-        subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        subscription_end_date: subscription_end_date,
+        pay_later: payLater,
+        payment_due_date: payLater ? dueDate : null,
       };
 
       let memberId = "";
@@ -122,10 +140,12 @@ export default function AdmissionPage() {
       if (memberId) {
         await supabase.from('payments').insert([{
           member_id: memberId,
-          amount: finalAmount,
+          amount: payLater ? 0 : totalPayable,
           branch: activeBranch,
-          payment_mode: paymentMode,
-          notes: discount > 0 ? `Admission Discount: ₹${discount}. Base Price: ₹${basePrice}` : 'New Admission'
+          payment_mode: payLater ? 'Cash' : paymentMode,
+          notes: payLater
+            ? `Pay Later — Outstanding Dues: ₹${totalPayable} due on ${new Date(dueDate).toLocaleDateString()}. Plan duration: ${months} month(s).`
+            : `New Admission — Duration: ${months} month(s). Base Price/mo: ₹${basePrice}, Discount: ₹${discount}`
         }]);
       }
       
@@ -147,7 +167,7 @@ export default function AdmissionPage() {
       }
       
       const branchLabel = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
-      const expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const expiryDate = end;
       
       const msg = welcomeTemplate
         .replace(/{name}/g, fullName)
@@ -162,6 +182,7 @@ export default function AdmissionPage() {
         setSuccess(false);
         setMobile(""); setFullName(""); setFatherName(""); setDob(""); setGender(""); setAddress("");
         setDiscount(0); setPaymentMode("Cash");
+        setDuration(1); setCustomMonths(""); setIsCustomDuration(false); setPayLater(false);
       }, 3000);
 
     } catch (err: any) {
@@ -304,13 +325,65 @@ export default function AdmissionPage() {
             </div>
 
             {/* Pricing & Payment Section */}
-            <div className="space-y-5 pt-6 border-t border-white/[0.06]">
+            <div className="space-y-6 pt-6 border-t border-white/[0.06]">
               <div className="flex items-center gap-2 mb-1">
                 <span className="material-symbols-outlined text-[#fdac29] text-base">payments</span>
                 <h3 className="text-xs font-bold text-[#fdac29] uppercase tracking-widest">Pricing & Payment Details</h3>
               </div>
+
+              {/* Membership Duration Selection */}
+              <div className="space-y-3 bg-white/[0.01] border border-white/[0.04] p-4 rounded-xl">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Membership Duration
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {[1, 3, 6, 12].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => {
+                        setDuration(m);
+                        setIsCustomDuration(false);
+                      }}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
+                        !isCustomDuration && duration === m
+                          ? "bg-[#003178] text-white border-[#003178] shadow-md shadow-blue-500/10"
+                          : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
+                      }`}
+                    >
+                      {m} {m === 1 ? "Month" : "Months"}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomDuration(true)}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
+                      isCustomDuration
+                        ? "bg-[#003178] text-white border-[#003178] shadow-md shadow-blue-500/10"
+                        : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
+                    }`}
+                  >
+                    Custom
+                  </button>
+                </div>
+                {isCustomDuration && (
+                  <div className="max-w-[200px] mt-2 animate-fade-in-fast">
+                    <input
+                      type="number"
+                      min="1"
+                      value={customMonths}
+                      onChange={(e) => setCustomMonths(e.target.value)}
+                      className="input-premium !py-2 !text-sm"
+                      placeholder="Enter custom months..."
+                      required={isCustomDuration}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Pricing Config Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <FormField label="Base Plan Price (₹)" required>
+                <FormField label="Base Plan Price (₹/mo)" required>
                   <input 
                     type="number" 
                     min="0"
@@ -321,7 +394,7 @@ export default function AdmissionPage() {
                     placeholder="e.g. 1000" 
                   />
                 </FormField>
-                <FormField label="Discount (₹)">
+                <FormField label="Total Discount (₹)">
                   <input 
                     type="number" 
                     min="0"
@@ -331,11 +404,12 @@ export default function AdmissionPage() {
                     placeholder="e.g. 100" 
                   />
                 </FormField>
-                <FormField label="Payment Method" required>
+                <FormField label="Payment Method" required={!payLater}>
                   <select 
+                    disabled={payLater}
                     value={paymentMode} 
                     onChange={(e) => setPaymentMode(e.target.value)} 
-                    className="input-premium appearance-none [&>option]:bg-white [&>option]:text-slate-800"
+                    className="input-premium appearance-none [&>option]:bg-white [&>option]:text-slate-800 disabled:opacity-50"
                   >
                     <option value="Cash">Cash</option>
                     <option value="UPI">UPI</option>
@@ -344,12 +418,59 @@ export default function AdmissionPage() {
                   </select>
                 </FormField>
               </div>
-              <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+
+              {/* Pay Later Toggle & Due Date Picker */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                <div 
+                  className={`flex items-center gap-3 border p-4 rounded-xl transition-all cursor-pointer select-none ${
+                    payLater 
+                      ? 'bg-amber-500/10 border-amber-500/30' 
+                      : 'bg-slate-200 hover:bg-slate-300 border-slate-300'
+                  }`}
+                  onClick={() => setPayLater(!payLater)}
+                >
+                  <input
+                    type="checkbox"
+                    checked={payLater}
+                    onChange={(e) => setPayLater(e.target.checked)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-5 h-5 rounded-lg text-[#003178] focus:ring-[#003178] border-slate-300 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-sm font-bold text-slate-800 block">Pay Later (Delay Payment)</span>
+                    <span className="text-[10px] text-slate-500">Seat stays assigned & status active</span>
+                  </div>
+                </div>
+                
+                {payLater && (
+                  <div className="animate-scale-in">
+                    <FormField label="Dues Payment Target Date" required={payLater}>
+                      <input
+                        type="date"
+                        required={payLater}
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
+                        className="input-premium !py-2.5"
+                      />
+                    </FormField>
+                  </div>
+                )}
+              </div>
+
+              {/* Final Summary Card */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.05] gap-2">
                 <div className="text-xs text-on-surface-variant font-medium">
-                  Calculated: ₹{basePrice} (Base) - ₹{discount} (Discount)
+                  Calculated: ₹{basePrice.toLocaleString('en-IN')}/mo * {isCustomDuration ? (customMonths || '1') : duration} month(s) - ₹{discount.toLocaleString('en-IN')} (Discount)
                 </div>
                 <div className="text-sm font-bold text-emerald-400">
-                  Final Payable Amount: ₹{Math.max(0, basePrice - discount)}
+                  {payLater ? (
+                    <span className="text-amber-500 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">schedule</span>
+                      Pay Later: ₹0 Upfront (₹{Math.max(0, (basePrice * (isCustomDuration ? (parseInt(customMonths) || 1) : duration)) - discount).toLocaleString('en-IN')} due by {new Date(dueDate).toLocaleDateString()})
+                    </span>
+                  ) : (
+                    <span>Total Payable: ₹{Math.max(0, (basePrice * (isCustomDuration ? (parseInt(customMonths) || 1) : duration)) - discount).toLocaleString('en-IN')}</span>
+                  )}
                 </div>
               </div>
             </div>

@@ -24,6 +24,24 @@ export default function MembersPage() {
   const [renewDiscount, setRenewDiscount] = useState(0);
   const [renewPaymentMode, setRenewPaymentMode] = useState("Cash");
 
+  // Renewal duration and Pay Later states
+  const [renewDuration, setRenewDuration] = useState<number>(1);
+  const [renewCustomMonths, setRenewCustomMonths] = useState<string>("");
+  const [renewIsCustomDuration, setRenewIsCustomDuration] = useState<boolean>(false);
+  const [renewPayLater, setRenewPayLater] = useState<boolean>(false);
+  const [renewDueDate, setRenewDueDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split('T')[0];
+  });
+
+  // Mark as Left states
+  const [isMarkingLeft, setIsMarkingLeft] = useState<boolean>(false);
+  const [leftWithDues, setLeftWithDues] = useState<boolean>(false);
+  const [leftLossAmount, setLeftLossAmount] = useState<number>(0);
+  const [leftDate, setLeftDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [leftReason, setLeftReason] = useState<string>("");
+
   // Display style toggler (tiles vs list)
   const [viewMode, setViewMode] = useState<'tiles' | 'list'>('tiles');
 
@@ -43,13 +61,28 @@ export default function MembersPage() {
     fetchMembers();
   }, [fetchMembers]);
 
-  // Reset renewal states when selectedMember changes
+  // Reset renewal and left states when selectedMember changes
   useEffect(() => {
     if (selectedMember) {
-      setRenewPrice(selectedMember.plan_amount || (selectedMember.shift === 'Full Day' ? 1000 : 600));
+      const plan = selectedMember.plan_amount || (selectedMember.shift === 'Full Day' ? 1000 : 600);
+      setRenewPrice(plan);
       setRenewDiscount(0);
       setRenewPaymentMode("Cash");
       setIsRenewingInline(false);
+      
+      setRenewDuration(1);
+      setRenewCustomMonths("");
+      setRenewIsCustomDuration(false);
+      setRenewPayLater(false);
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      setRenewDueDate(d.toISOString().split('T')[0]);
+
+      setIsMarkingLeft(false);
+      setLeftWithDues(false);
+      setLeftLossAmount(plan);
+      setLeftDate(new Date().toISOString().split('T')[0]);
+      setLeftReason("");
     }
   }, [selectedMember]);
 
@@ -111,26 +144,49 @@ export default function MembersPage() {
 
   const handleRenew = async (member: any) => {
     setIsActionLoading(true);
-    const finalRenewPrice = Math.max(0, renewPrice - renewDiscount);
+    const months = renewIsCustomDuration ? Math.max(1, parseInt(renewCustomMonths) || 1) : renewDuration;
+    const totalPayable = Math.max(0, (renewPrice * months) - renewDiscount);
     const currentEnd = new Date(member.subscription_end_date);
-    const newEnd = currentEnd < new Date() ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : new Date(currentEnd.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const baseDate = currentEnd < new Date() ? new Date() : currentEnd;
+    baseDate.setMonth(baseDate.getMonth() + months);
+    const newEnd = baseDate;
     
     await supabase.from('members').update({ 
       subscription_end_date: newEnd.toISOString(),
-      plan_amount: finalRenewPrice,
-      is_active: true
+      plan_amount: renewPrice,
+      is_active: true,
+      pay_later: renewPayLater,
+      payment_due_date: renewPayLater ? renewDueDate : null,
+      left_with_dues: false,
+      loss_amount: 0,
+      left_at: null,
+      left_reason: null
     }).eq('id', member.id);
 
     await supabase.from('payments').insert([{
       member_id: member.id,
-      amount: finalRenewPrice,
+      amount: renewPayLater ? 0 : totalPayable,
       branch: member.branch,
-      payment_mode: renewPaymentMode,
-      notes: renewDiscount > 0 ? `Renewal Discount: ₹${renewDiscount}. Base Price: ₹${renewPrice}` : 'Subscription Renewal'
+      payment_mode: renewPayLater ? 'Cash' : renewPaymentMode,
+      notes: renewPayLater
+        ? `Pay Later — Outstanding Dues: ₹${totalPayable} due on ${new Date(renewDueDate).toLocaleDateString()}. Renewal duration: ${months} month(s).`
+        : `Subscription Renewal — Duration: ${months} month(s). Base Price/mo: ₹${renewPrice}, Discount: ₹${renewDiscount}`
     }]);
 
-    setMembers(prev => prev.map(m => m.id === member.id ? { ...m, subscription_end_date: newEnd.toISOString(), plan_amount: finalRenewPrice, is_active: true } : m));
-    setSelectedMember({ ...member, subscription_end_date: newEnd.toISOString(), plan_amount: finalRenewPrice, is_active: true });
+    const updatedData = { 
+      subscription_end_date: newEnd.toISOString(), 
+      plan_amount: renewPrice, 
+      is_active: true,
+      pay_later: renewPayLater,
+      payment_due_date: renewPayLater ? renewDueDate : null,
+      left_with_dues: false,
+      loss_amount: 0,
+      left_at: null,
+      left_reason: null
+    };
+
+    setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...updatedData } : m));
+    setSelectedMember({ ...member, ...updatedData });
     setIsRenewingInline(false);
     setIsActionLoading(false);
     
@@ -153,6 +209,37 @@ export default function MembersPage() {
       .replace(/{expiry}/g, newEnd.toLocaleDateString());
 
     window.open(`https://wa.me/${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const handleMarkLeft = async (member: any) => {
+    if (!confirm("Are you sure you want to mark this member as LEFT? This will release their seat.")) return;
+    setIsActionLoading(true);
+    
+    try {
+      const leftPayload = {
+        is_active: false,
+        seat_no: null, // Release the seat!
+        left_with_dues: leftWithDues,
+        loss_amount: leftWithDues ? leftLossAmount : 0,
+        left_at: new Date(leftDate).toISOString(),
+        left_reason: leftReason || "Member left the library"
+      };
+
+      const { error } = await supabase
+        .from('members')
+        .update(leftPayload)
+        .eq('id', member.id);
+
+      if (error) throw new Error(error.message);
+
+      setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...leftPayload } : m));
+      setSelectedMember(null); // Close the profile modal
+      setIsMarkingLeft(false);
+    } catch (err: any) {
+      alert(err.message || "Failed to mark member as left.");
+    } finally {
+      setIsActionLoading(false);
+    }
   };
   
   return (
@@ -401,7 +488,13 @@ export default function MembersPage() {
                       <span className={`badge ${selectedMember.is_active ? 'badge-success' : 'badge-danger'}`}>
                         {selectedMember.is_active ? 'Active' : 'Inactive'}
                       </span>
-                      <span className="text-[10px] text-on-surface-variant">
+                      {selectedMember.pay_later && (
+                        <span className="badge badge-warning text-[10px] flex items-center gap-1 font-bold animate-pulse">
+                          <span className="material-symbols-outlined text-[12px]">schedule</span>
+                          Pay Later (Due: {new Date(selectedMember.payment_due_date).toLocaleDateString()})
+                        </span>
+                      )}
+                      <span className="text-[10px] text-on-surface-variant font-medium">
                         Valid till: {new Date(selectedMember.subscription_end_date).toLocaleDateString()}
                       </span>
                     </div>
@@ -439,15 +532,65 @@ export default function MembersPage() {
               </div>
 
               {/* Dynamic Renewal Options Expandable Card */}
+              {/* Dynamic Renewal Options Expandable Card */}
               {isRenewingInline && (
                 <div className="mt-5 p-5 rounded-2xl bg-white/[0.02] border border-[#fdac29]/20 space-y-4 animate-fade-in-fast">
                   <div className="flex items-center gap-2 text-[#fdac29] text-xs font-bold uppercase tracking-wider">
                     <span className="material-symbols-outlined text-base">payments</span>
                     Renewal Payment Customization
                   </div>
+                  
+                  {/* Membership Duration Selection */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase font-bold text-on-surface-variant block">Membership Duration</label>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[1, 3, 6, 12].map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => {
+                            setRenewDuration(m);
+                            setRenewIsCustomDuration(false);
+                          }}
+                          className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border ${
+                            !renewIsCustomDuration && renewDuration === m
+                              ? "bg-[#003178] text-white border-[#003178] shadow-md"
+                              : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
+                          }`}
+                        >
+                          {m}M
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setRenewIsCustomDuration(true)}
+                        className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border ${
+                          renewIsCustomDuration
+                            ? "bg-[#003178] text-white border-[#003178] shadow-md"
+                            : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
+                        }`}
+                      >
+                        Custom
+                      </button>
+                    </div>
+                    {renewIsCustomDuration && (
+                      <div className="max-w-[150px] mt-1.5">
+                        <input
+                          type="number"
+                          min="1"
+                          value={renewCustomMonths}
+                          onChange={(e) => setRenewCustomMonths(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs"
+                          placeholder="Enter months..."
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Pricing Configurations */}
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">Base Price (₹)</label>
+                      <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">Base Price (₹/mo)</label>
                       <input
                         type="number"
                         min="0"
@@ -457,7 +600,7 @@ export default function MembersPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">Discount (₹)</label>
+                      <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">Total Discount (₹)</label>
                       <input
                         type="number"
                         min="0"
@@ -469,9 +612,10 @@ export default function MembersPage() {
                     <div>
                       <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">Payment Mode</label>
                       <select
+                        disabled={renewPayLater}
                         value={renewPaymentMode}
                         onChange={(e) => setRenewPaymentMode(e.target.value)}
-                        className="input-premium !py-2 !text-sm w-full appearance-none [&>option]:bg-white [&>option]:text-slate-800"
+                        className="input-premium !py-2 !text-sm w-full appearance-none [&>option]:bg-white [&>option]:text-slate-800 disabled:opacity-50"
                       >
                         <option value="Cash">Cash</option>
                         <option value="UPI">UPI</option>
@@ -480,9 +624,127 @@ export default function MembersPage() {
                       </select>
                     </div>
                   </div>
+
+                  {/* Pay Later Options */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div 
+                      className={`flex items-center gap-2 border p-3 rounded-xl transition-all cursor-pointer select-none ${
+                        renewPayLater 
+                          ? 'bg-amber-500/10 border-amber-500/30' 
+                          : 'bg-slate-200 hover:bg-slate-300 border-slate-300'
+                      }`}
+                      onClick={() => setRenewPayLater(!renewPayLater)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={renewPayLater}
+                        onChange={(e) => setRenewPayLater(e.target.checked)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 rounded text-[#003178] focus:ring-[#003178] border-slate-300 cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 block">Pay Later</span>
+                        <span className="text-[9px] text-slate-500">Delay this payment</span>
+                      </div>
+                    </div>
+                    
+                    {renewPayLater && (
+                      <div className="animate-scale-in">
+                        <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">Dues Payment Target Date</label>
+                        <input
+                          type="date"
+                          required={renewPayLater}
+                          value={renewDueDate}
+                          onChange={(e) => setRenewDueDate(e.target.value)}
+                          className="input-premium !py-2 !text-xs w-full"
+                        />
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex justify-between items-center bg-white/[0.02] border border-white/[0.04] p-3 rounded-xl text-xs">
-                    <span className="text-on-surface-variant">Calculation: ₹{renewPrice} - ₹{renewDiscount}</span>
-                    <span className="font-bold text-emerald-400">Final Price: ₹{Math.max(0, renewPrice - renewDiscount)}</span>
+                    <span className="text-on-surface-variant">
+                      Calculated: ₹{renewPrice.toLocaleString('en-IN')}/mo * {renewIsCustomDuration ? (renewCustomMonths || '1') : renewDuration} month(s) - ₹{renewDiscount.toLocaleString('en-IN')}
+                    </span>
+                    <span className="font-bold text-emerald-400">
+                      {renewPayLater ? (
+                        <span className="text-amber-500">
+                          ₹0 Upfront (₹{Math.max(0, (renewPrice * (renewIsCustomDuration ? (parseInt(renewCustomMonths) || 1) : renewDuration)) - renewDiscount).toLocaleString('en-IN')} due)
+                        </span>
+                      ) : (
+                        <span>Final Price: ₹{Math.max(0, (renewPrice * (renewIsCustomDuration ? (parseInt(renewCustomMonths) || 1) : renewDuration)) - renewDiscount).toLocaleString('en-IN')}</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Mark as Left sub-form */}
+              {isMarkingLeft && (
+                <div className="mt-5 p-5 rounded-2xl bg-white/[0.02] border border-red-500/20 space-y-4 animate-fade-in-fast">
+                  <div className="flex items-center gap-2 text-red-400 text-xs font-bold uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-base">directions_run</span>
+                    Mark Member as Left (Release Seat)
+                  </div>
+                  
+                  {/* Left Date and Reason */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">Left Date</label>
+                      <input
+                        type="date"
+                        value={leftDate}
+                        onChange={(e) => setLeftDate(e.target.value)}
+                        className="input-premium !py-2 !text-sm w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">Left Reason / Notes</label>
+                      <input
+                        type="text"
+                        value={leftReason}
+                        onChange={(e) => setLeftReason(e.target.value)}
+                        className="input-premium !py-2 !text-sm w-full"
+                        placeholder="e.g. Finished exams / shifted out"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Left with Unpaid Dues? (Loss Payment) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div 
+                      className={`flex items-center gap-2 border p-3 rounded-xl transition-all cursor-pointer select-none ${
+                        leftWithDues 
+                          ? 'bg-red-500/10 border-red-500/30' 
+                          : 'bg-slate-200 hover:bg-slate-300 border-slate-300'
+                      }`}
+                      onClick={() => setLeftWithDues(!leftWithDues)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={leftWithDues}
+                        onChange={(e) => setLeftWithDues(e.target.checked)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 rounded text-red-500 focus:ring-red-500 border-slate-300 cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 block">Left with Unpaid Dues (Loss)</span>
+                        <span className="text-[9px] text-slate-500">Record unpaid fees as loss</span>
+                      </div>
+                    </div>
+                    
+                    {leftWithDues && (
+                      <div className="animate-scale-in">
+                        <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">Outstanding Dues (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={leftLossAmount}
+                          onChange={(e) => setLeftLossAmount(Math.max(0, Number(e.target.value)))}
+                          className="input-premium !py-2 !text-sm w-full"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -490,27 +752,41 @@ export default function MembersPage() {
 
             {/* Modal Actions */}
             <div className="px-6 py-4 border-t border-white/[0.06] flex flex-wrap gap-3 bg-white/[0.02]">
-              {!isRenewingInline ? (
+              {!isRenewingInline && !isMarkingLeft ? (
                 <>
-                  <button disabled={isActionLoading} onClick={() => handleDelete(selectedMember.id)} className="btn-danger px-4 py-2.5 disabled:opacity-50 flex items-center gap-2">
+                  <button disabled={isActionLoading} onClick={() => handleDelete(selectedMember.id)} className="btn-danger px-4 py-2.5 disabled:opacity-50 flex items-center gap-2 text-xs font-bold">
                     <span className="material-symbols-outlined text-base">delete</span>
                     Delete
                   </button>
-                  <button disabled={isActionLoading} onClick={() => router.push('/dashboard/admission')} className="btn-ghost px-4 py-2.5 flex-1 disabled:opacity-50">
+                  <button disabled={isActionLoading} onClick={() => setIsMarkingLeft(true)} className="btn-ghost px-4 py-2.5 flex-1 disabled:opacity-50 text-red-500 border border-red-500/20 hover:bg-red-500/10 text-xs font-bold flex justify-center items-center gap-1">
+                    <span className="material-symbols-outlined text-base">directions_run</span>
+                    Mark as Left
+                  </button>
+                  <button disabled={isActionLoading} onClick={() => router.push('/dashboard/admission')} className="btn-ghost px-4 py-2.5 flex-1 disabled:opacity-50 text-xs font-bold">
                     Update Details
                   </button>
-                  <button disabled={isActionLoading} onClick={() => setIsRenewingInline(true)} className="btn-primary px-4 py-2.5 flex-1 flex justify-center items-center gap-2 disabled:opacity-50">
+                  <button disabled={isActionLoading} onClick={() => setIsRenewingInline(true)} className="btn-primary px-4 py-2.5 flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold">
                     Renew Subscription
+                  </button>
+                </>
+              ) : isRenewingInline ? (
+                <>
+                  <button disabled={isActionLoading} onClick={() => setIsRenewingInline(false)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-xs font-bold">
+                    Cancel
+                  </button>
+                  <button disabled={isActionLoading} onClick={() => handleRenew(selectedMember)} className="btn-primary px-4 py-2.5 flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold">
+                    {isActionLoading ? <span className="material-symbols-outlined animate-spin text-base">progress_activity</span> : null}
+                    Confirm Renewal & Print
                   </button>
                 </>
               ) : (
                 <>
-                  <button disabled={isActionLoading} onClick={() => setIsRenewingInline(false)} className="btn-ghost px-4 py-2.5 disabled:opacity-50">
+                  <button disabled={isActionLoading} onClick={() => setIsMarkingLeft(false)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-xs font-bold">
                     Cancel
                   </button>
-                  <button disabled={isActionLoading} onClick={() => handleRenew(selectedMember)} className="btn-primary px-4 py-2.5 flex-1 flex justify-center items-center gap-2 disabled:opacity-50">
+                  <button disabled={isActionLoading} onClick={() => handleMarkLeft(selectedMember)} className="btn-danger px-4 py-2.5 flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold">
                     {isActionLoading ? <span className="material-symbols-outlined animate-spin text-base">progress_activity</span> : null}
-                    Confirm Renewal & Print
+                    Confirm Member Left
                   </button>
                 </>
               )}

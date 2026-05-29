@@ -65,7 +65,8 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
   const [stats, setStats] = useState({
     totalRevenue: '—', receivedRevenue: '—', upcomingRevenue: '—', members: '—', occupancy: 0,
     bcRevenue: 0, nmRevenue: 0, totalSeats: 274,
-    fullDayPct: 0, halfDayPct: 0, fullDayCount: 0, halfDayCount: 0
+    fullDayPct: 0, halfDayPct: 0, fullDayCount: 0, halfDayCount: 0,
+    lossPayments: '—', leftMembers: '—'
   });
   const [loading, setLoading] = useState(true);
 
@@ -75,18 +76,30 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
       try {
         const { data: members } = await supabase
           .from('members')
-          .select('branch, is_active, plan_amount, subscription_end_date')
+          .select('branch, is_active, plan_amount, subscription_end_date, pay_later, left_with_dues, loss_amount')
           .eq('branch', activeBranch);
         
         if (members) {
-          const active = members.filter(m => m.is_active);
-          const receivedRevenueVal = active.reduce((sum, m) => sum + (m.plan_amount || 0), 0);
-          const overdue = members.filter(m => !m.is_active);
-          const upcomingRevenueVal = overdue.reduce((sum, m) => sum + (m.plan_amount || 0), 0);
+          const active = members.filter(m => m.is_active && !m.left_with_dues);
+          
+          // Received: active members who have actually paid (not pay later)
+          const receivedRevenueVal = active.filter(m => !m.pay_later).reduce((sum, m) => sum + (m.plan_amount || 0), 0);
+          
+          // Upcoming: normal inactive/overdue members (excluding those who permanently left) AND active pay_later outstanding dues
+          const overdue = members.filter(m => !m.is_active && !m.left_with_dues);
+          const payLaterDues = active.filter(m => m.pay_later).reduce((sum, m) => sum + (m.plan_amount || 0), 0);
+          const upcomingRevenueVal = overdue.reduce((sum, m) => sum + (m.plan_amount || 0), 0) + payLaterDues;
+          
           const totalRevenueVal = receivedRevenueVal + upcomingRevenueVal;
 
-          const { data: bcData } = await supabase.from('members').select('plan_amount').eq('branch', 'bengali-chowk').eq('is_active', true);
-          const { data: nmData } = await supabase.from('members').select('plan_amount').eq('branch', 'namnakala').eq('is_active', true);
+          // Loss Payments and Left Members count
+          const lossMembers = members.filter(m => m.left_with_dues);
+          const lossRevenueVal = lossMembers.reduce((sum, m) => sum + (m.loss_amount || 0), 0);
+          const leftMembersCount = lossMembers.length;
+
+          // Branch-wise Active Revenues
+          const { data: bcData } = await supabase.from('members').select('plan_amount').eq('branch', 'bengali-chowk').eq('is_active', true).eq('pay_later', false);
+          const { data: nmData } = await supabase.from('members').select('plan_amount').eq('branch', 'namnakala').eq('is_active', true).eq('pay_later', false);
 
           const bcRevenue = bcData?.reduce((sum, m) => sum + (m.plan_amount || 0), 0) || 0;
           const nmRevenue = nmData?.reduce((sum, m) => sum + (m.plan_amount || 0), 0) || 0;
@@ -107,7 +120,9 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
             fullDayCount,
             halfDayCount,
             fullDayPct: Math.round((fullDayCount / totalActive) * 100),
-            halfDayPct: Math.round((halfDayCount / totalActive) * 100)
+            halfDayPct: Math.round((halfDayCount / totalActive) * 100),
+            lossPayments: `₹${lossRevenueVal.toLocaleString('en-IN')}`,
+            leftMembers: leftMembersCount.toString()
           });
         }
       } catch (err) {
@@ -121,25 +136,33 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
   return (
     <div className="space-y-6 animate-fade-in-fast">
       {/* ─── Stat Cards ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         <StatCard
-          icon="account_balance" iconClass="stat-icon-primary" label={`Total Revenue · ${branchName}`}
+          icon="account_balance" iconClass="stat-icon-primary" label={`Total Revenue`}
           value={loading ? null : stats.totalRevenue}
         />
         <StatCard
-          icon="payments" iconClass="stat-icon-success" label={`Received Revenue · ${branchName}`}
+          icon="payments" iconClass="stat-icon-success" label={`Received`}
           value={loading ? null : stats.receivedRevenue}
         />
         <StatCard
-          icon="pending_actions" iconClass="stat-icon-warning" label={`Upcoming Revenue · ${branchName}`}
+          icon="pending_actions" iconClass="stat-icon-warning" label={`Upcoming`}
           value={loading ? null : stats.upcomingRevenue}
         />
         <StatCard
-          icon="group" iconClass="stat-icon-primary" label={`Active Members · ${branchName}`}
+          icon="money_off" iconClass="stat-icon-danger" label={`Loss Payment`}
+          value={loading ? null : stats.lossPayments}
+        />
+        <StatCard
+          icon="directions_run" iconClass="stat-icon-warning" label={`Left Members`}
+          value={loading ? null : stats.leftMembers}
+        />
+        <StatCard
+          icon="group" iconClass="stat-icon-primary" label={`Active`}
           value={loading ? null : stats.members}
         />
         <StatCard
-          icon="speed" iconClass="stat-icon-warning" label={`Occupancy · ${branchName}`}
+          icon="speed" iconClass="stat-icon-warning" label={`Occupancy`}
           value={loading ? null : `${stats.occupancy}%`}
           progressValue={stats.occupancy}
         />

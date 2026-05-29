@@ -30,6 +30,12 @@ CREATE TABLE IF NOT EXISTS public.members (
   plan_amount           INTEGER NOT NULL DEFAULT 1000,      -- 1000 full, 600 half
   is_active             BOOLEAN NOT NULL DEFAULT TRUE,
   subscription_end_date TIMESTAMPTZ,
+  pay_later             BOOLEAN NOT NULL DEFAULT FALSE,
+  payment_due_date      DATE,
+  left_with_dues        BOOLEAN NOT NULL DEFAULT FALSE,
+  loss_amount           INTEGER NOT NULL DEFAULT 0,
+  left_at               TIMESTAMPTZ,
+  left_reason           TEXT,
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
