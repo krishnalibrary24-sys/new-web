@@ -265,6 +265,56 @@ export default function MembersPage() {
       setIsActionLoading(false);
     }
   };
+
+  const handleToggleStatus = async (member: any) => {
+    setIsActionLoading(true);
+    try {
+      if (member.is_active) {
+        const payload = {
+          is_active: false,
+          previous_seat_no: member.seat_no || member.previous_seat_no || null,
+          seat_no: null
+        };
+        const { error } = await supabase.from('members').update(payload).eq('id', member.id);
+        if (error) throw error;
+        setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...payload } : m));
+        setSelectedMember({ ...member, ...payload });
+      } else {
+        let seatToAllot = null;
+        let prevSeatVal = member.previous_seat_no || null;
+        
+        if (prevSeatVal) {
+          const { data: occupant } = await supabase
+            .from('members')
+            .select('id')
+            .eq('branch', member.branch)
+            .eq('shift', member.shift)
+            .eq('seat_no', prevSeatVal)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (!occupant) {
+            seatToAllot = prevSeatVal;
+            prevSeatVal = null;
+          }
+        }
+        
+        const payload = {
+          is_active: true,
+          seat_no: seatToAllot,
+          previous_seat_no: prevSeatVal
+        };
+        const { error } = await supabase.from('members').update(payload).eq('id', member.id);
+        if (error) throw error;
+        setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...payload } : m));
+        setSelectedMember({ ...member, ...payload });
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to toggle member status.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -392,10 +442,22 @@ export default function MembersPage() {
                       <span className="badge badge-info text-[9px] mt-1 tracking-widest">{member.permanent_id}</span>
                     </div>
                   </div>
-                  <span className={`badge ${member.is_active ? 'badge-success' : 'badge-danger'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${member.is_active ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                    {member.is_active ? 'Active' : 'Inactive'}
-                  </span>
+                  {(() => {
+                    if (!member.is_active) return <span className="badge badge-danger">Inactive</span>;
+                    const isOverdue = member.subscription_end_date && new Date(member.subscription_end_date) < new Date();
+                    if (isOverdue) return (
+                      <span className="badge badge-danger animate-pulse flex items-center gap-1 font-bold">
+                        <span className="material-symbols-outlined text-[12px]">warning</span>
+                        Danger
+                      </span>
+                    );
+                    return (
+                      <span className="badge badge-success">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Active
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs mb-4">
                   <div className="bg-white/[0.03] p-3 rounded-xl border border-white/[0.05]">
@@ -455,10 +517,22 @@ export default function MembersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 border-b border-[#f1f5f9]">
-                        <span className={`badge ${member.is_active ? 'badge-success' : 'badge-danger'}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${member.is_active ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                          {member.is_active ? 'Active' : 'Inactive'}
-                        </span>
+                        {(() => {
+                          if (!member.is_active) return <span className="badge badge-danger">Inactive</span>;
+                          const isOverdue = member.subscription_end_date && new Date(member.subscription_end_date) < new Date();
+                          if (isOverdue) return (
+                            <span className="badge badge-danger animate-pulse flex items-center gap-1 font-bold">
+                              <span className="material-symbols-outlined text-[10px]">warning</span>
+                              Danger (Overdue)
+                            </span>
+                          );
+                          return (
+                            <span className="badge badge-success">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                              Active
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 border-b border-[#f1f5f9]">
                         <div className="text-xs font-bold text-[#003178]">
@@ -509,9 +583,17 @@ export default function MembersPage() {
                       <p className="text-primary font-semibold text-sm mt-0.5">{selectedMember.permanent_id}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
-                      <span className={`badge ${selectedMember.is_active ? 'badge-success' : 'badge-danger'}`}>
-                        {selectedMember.is_active ? 'Active' : 'Inactive'}
-                      </span>
+                      {(() => {
+                        if (!selectedMember.is_active) return <span className="badge badge-danger">Inactive</span>;
+                        const isOverdue = selectedMember.subscription_end_date && new Date(selectedMember.subscription_end_date) < new Date();
+                        if (isOverdue) return (
+                          <span className="badge badge-danger animate-pulse flex items-center gap-1 font-bold">
+                            <span className="material-symbols-outlined text-[12px]">warning</span>
+                            Danger (Overdue)
+                          </span>
+                        );
+                        return <span className="badge badge-success">Active</span>;
+                      })()}
                       {selectedMember.pay_later && (
                         <span className="badge badge-warning text-[10px] flex items-center gap-1 font-bold animate-pulse">
                           <span className="material-symbols-outlined text-[12px]">schedule</span>
@@ -781,6 +863,10 @@ export default function MembersPage() {
                   <button disabled={isActionLoading} onClick={() => handleDelete(selectedMember.id)} className="btn-danger px-4 py-2.5 disabled:opacity-50 flex items-center gap-2 text-xs font-bold">
                     <span className="material-symbols-outlined text-base">delete</span>
                     Delete
+                  </button>
+                  <button disabled={isActionLoading} onClick={() => handleToggleStatus(selectedMember)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-[#003178] border border-[#003178]/25 hover:bg-[#003178]/5 text-xs font-bold flex justify-center items-center gap-1.5">
+                    <span className="material-symbols-outlined text-base">{selectedMember.is_active ? 'toggle_off' : 'toggle_on'}</span>
+                    {selectedMember.is_active ? 'Deactivate' : 'Activate'}
                   </button>
                   <button disabled={isActionLoading} onClick={() => setIsMarkingLeft(true)} className="btn-ghost px-4 py-2.5 flex-1 disabled:opacity-50 text-red-500 border border-red-500/20 hover:bg-red-500/10 text-xs font-bold flex justify-center items-center gap-1">
                     <span className="material-symbols-outlined text-base">directions_run</span>

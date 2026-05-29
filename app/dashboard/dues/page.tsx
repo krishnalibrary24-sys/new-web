@@ -33,7 +33,7 @@ export default function DuesPage() {
         const end = new Date(m.subscription_end_date);
         return end >= now && end <= in3Days;
       }));
-      setDefaulters(data.filter(m => !m.is_active));
+      setDefaulters(data.filter(m => !m.is_active || (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < now)));
     }
     setLoading(false);
   }, [activeBranch]);

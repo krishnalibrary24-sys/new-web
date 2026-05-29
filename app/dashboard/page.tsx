@@ -251,12 +251,14 @@ function OfficeDashboard({ branch }: { branch: string }) {
       
       // Auto-eviction of expired members
       try {
+        // Grace period: Evict only on the 6th day (overdue for more than 5 days)
+        const graceThreshold = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
         const { data: expired } = await supabase
           .from('members')
           .select('id, seat_no')
           .eq('branch', branch)
           .eq('is_active', true)
-          .lt('subscription_end_date', new Date().toISOString());
+          .lt('subscription_end_date', graceThreshold);
 
         if (expired && expired.length > 0) {
           for (const m of expired) {
