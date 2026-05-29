@@ -434,15 +434,15 @@ function InteractiveDotBackground() {
           const drawX = dotX;
           const drawY = dotY;
           
-          let radius = 1.2;
-          let opacity = 0.05;
+          let radius = 0.9;
+          let opacity = 0.09;
           
           if (dist < maxDist) {
             const force = (maxDist - dist) / maxDist; // 0 to 1
             
             // Spotlight / Zoom-in effect: scale up the dots and make them glow near the cursor
-            radius = 1.2 + force * 2.2;
-            opacity = 0.05 + force * 0.40;
+            radius = 0.9 + force * 0.9;
+            opacity = 0.09 + force * 0.26;
           }
 
           ctx.fillStyle = `rgba(0, 49, 120, ${opacity})`;
