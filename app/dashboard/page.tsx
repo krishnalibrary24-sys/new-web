@@ -64,7 +64,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
 
   const [stats, setStats] = useState({
     revenue: '—', dues: '—', members: '—', occupancy: 0,
-    bcRevenue: 0, nmRevenue: 0, totalSeats: 273,
+    bcRevenue: 0, nmRevenue: 0, totalSeats: 274,
     fullDayPct: 0, halfDayPct: 0, fullDayCount: 0, halfDayCount: 0
   });
   const [loading, setLoading] = useState(true);
@@ -99,10 +99,10 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
             revenue: `₹${totalRevenue.toLocaleString('en-IN')}`,
             dues: `₹${overdueAmount.toLocaleString('en-IN')}`,
             members: active.length.toString(),
-            occupancy: Math.round((active.length / (activeBranch === 'bengali-chowk' ? 153 : 120)) * 100),
+            occupancy: Math.round((active.length / (activeBranch === 'bengali-chowk' ? 153 : 121)) * 100),
             bcRevenue,
             nmRevenue,
-            totalSeats: 273,
+            totalSeats: 274,
             fullDayCount,
             halfDayCount,
             fullDayPct: Math.round((fullDayCount / totalActive) * 100),
@@ -283,7 +283,7 @@ function OfficeDashboard({ branch }: { branch: string }) {
           value={loading ? null : overdueCount.toString()} 
           badge={overdueCount > 0 ? "Action Required" : undefined} badgeClass="badge-danger"
         />
-        <StatCard icon="event_seat" iconClass="stat-icon-success" label="Available Seats" value={loading ? null : ((branch === 'bengali-chowk' ? 153 : 120) - activeCount).toString()} />
+        <StatCard icon="event_seat" iconClass="stat-icon-success" label="Available Seats" value={loading ? null : ((branch === 'bengali-chowk' ? 153 : 121) - activeCount).toString()} />
       </div>
 
       {/* ─── Quick Actions ─── */}

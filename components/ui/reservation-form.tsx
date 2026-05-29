@@ -22,8 +22,6 @@ export default function ReservationForm() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [branch, setBranch] = useState("bengali-chowk");
-  const [seatNo, setSeatNo] = useState("");
-  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -88,7 +86,7 @@ export default function ReservationForm() {
         phone: phone,
         interest: selectedSlot.interestValue,
         branch: branch,
-        notes: `Seat No: ${seatNo || 'Not specified'}. Email: ${email || 'None'}. ${notes}`.trim(),
+        notes: `Email: ${email || 'None'}`.trim(),
         status: "new",
       };
 
@@ -102,8 +100,6 @@ export default function ReservationForm() {
       setFullName("");
       setPhone("");
       setEmail("");
-      setSeatNo("");
-      setNotes("");
     } catch (err: any) {
       console.error("Failed to submit reservation:", err);
       setError(err.message || "Failed to submit reservation. Please try again.");
@@ -193,33 +189,6 @@ export default function ReservationForm() {
                   <SelectItem value="namnakala">Namnakala</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="col-span-full sm:col-span-3">
-              <Label htmlFor="seat-no" className="font-semibold text-v-on-background">
-                Preferred Seat / Book No <span className="text-xs text-v-on-surface-variant">(Optional)</span>
-              </Label>
-              <Input
-                type="text"
-                id="seat-no"
-                value={seatNo}
-                onChange={(e) => setSeatNo(e.target.value)}
-                placeholder="e.g. 14A"
-                className="mt-2 bg-v-surface border-v-outline-variant/30 text-v-on-background focus:ring-v-primary"
-              />
-            </div>
-
-            <div className="col-span-full sm:col-span-3">
-              <Label htmlFor="notes" className="font-semibold text-v-on-background">
-                Additional Description / Notes <span className="text-xs text-v-on-surface-variant">(Optional)</span>
-              </Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any special requirements..."
-                className="mt-2 bg-v-surface border-v-outline-variant/30 text-v-on-background focus:ring-v-primary resize-none min-h-[40px] h-[40px] focus:h-[100px] transition-all duration-200"
-              />
             </div>
 
             <Separator className="col-span-full my-4 bg-v-outline-variant/20" />

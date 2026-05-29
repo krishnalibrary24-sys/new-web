@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 export default function SeatingPage() {
   const { activeBranch } = useBranch();
   const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
-  const seats = activeBranch === 'namnakala' ? 127 : 151;
+  const seats = activeBranch === 'namnakala' ? 121 : 153;
 
   
   const [seatMap, setSeatMap] = useState<Record<string, any[]>>({});
@@ -19,6 +19,19 @@ export default function SeatingPage() {
 
   const occupiedCount = Object.keys(seatMap).length;
   const availableCount = seats - occupiedCount;
+
+  // Real-time seat map statistics
+  const assignedTotalMembers = Object.values(seatMap).reduce((sum, occupants) => sum + occupants.length, 0);
+  const totalMembers = assignedTotalMembers + unassignedMembers.length;
+  const morningShiftMembers = Object.values(seatMap).reduce((sum, occupants) => 
+    sum + occupants.filter(m => m.shift === 'Morning').length, 0
+  );
+  const eveningShiftMembers = Object.values(seatMap).reduce((sum, occupants) => 
+    sum + occupants.filter(m => m.shift === 'Evening').length, 0
+  );
+  const fullDayShiftMembers = Object.values(seatMap).reduce((sum, occupants) => 
+    sum + occupants.filter(m => m.shift === 'Full Day').length, 0
+  );
 
   useEffect(() => {
     const fetchSeats = async () => {
@@ -56,11 +69,15 @@ export default function SeatingPage() {
     
     const member = unassignedMembers.find(m => m.id === memberId);
     if (member) {
+      // 1. Remove from unassigned list
+      setUnassignedMembers(prev => prev.filter(m => m.id !== memberId));
+      
+      // 2. Add to seatMap (ensuring no duplicate entries)
       setSeatMap(prev => {
         const current = prev[selectedSeat] || [];
-        return { ...prev, [selectedSeat]: [...current, { ...member, seat_no: selectedSeat }] };
+        const filteredCurrent = current.filter(m => m.id !== memberId);
+        return { ...prev, [selectedSeat]: [...filteredCurrent, { ...member, seat_no: selectedSeat }] };
       });
-      setUnassignedMembers(prev => prev.filter(m => m.id !== memberId));
     }
     setIsAssigning(false);
   };
@@ -69,13 +86,21 @@ export default function SeatingPage() {
     setIsAssigning(true);
     await supabase.from('members').update({ seat_no: null }).eq('id', memberId);
     
+    const currentOccupants = seatMap[seatNo] || [];
+    const member = currentOccupants.find(m => m.id === memberId);
+    
+    if (member) {
+      // 1. Add to unassigned list (filtering beforehand to avoid double entries)
+      setUnassignedMembers(prev => {
+        const filtered = prev.filter(m => m.id !== memberId);
+        return [...filtered, { ...member, seat_no: null }];
+      });
+    }
+
+    // 2. Remove from seatMap
     setSeatMap(prev => {
       const current = prev[seatNo] || [];
       const updated = current.filter(m => m.id !== memberId);
-      const member = current.find(m => m.id === memberId);
-      if (member) {
-        setUnassignedMembers(unass => [...unass, { ...member, seat_no: null }]);
-      }
       if (updated.length === 0) {
         const newMap = { ...prev };
         delete newMap[seatNo];
@@ -90,11 +115,19 @@ export default function SeatingPage() {
   const getSeatStyle = (seatId: string) => {
     const occupants = seatMap[seatId] || [];
     if (occupants.length === 0) return { bg: 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20', dot: '' };
-    if (occupants.length === 2) return { bg: 'bg-gradient-to-br from-amber-500/30 to-blue-500/30 border-amber-500/20', dot: 'bg-amber-400' };
+    if (occupants.length === 2) {
+      return { 
+        bg: 'border-purple-500/30 hover:scale-105', 
+        dot: 'multishift', 
+        style: {
+          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.35) 50%, rgba(168, 85, 247, 0.35) 50%)'
+        }
+      };
+    }
     const shift = occupants[0].shift;
     if (shift === 'Full Day') return { bg: 'bg-emerald-500/20 border-emerald-500/20', dot: 'bg-emerald-400' };
     if (shift === 'Morning') return { bg: 'bg-amber-500/20 border-amber-500/20', dot: 'bg-amber-400' };
-    if (shift === 'Evening') return { bg: 'bg-blue-500/20 border-blue-500/20', dot: 'bg-blue-400' };
+    if (shift === 'Evening') return { bg: 'bg-purple-500/20 border-purple-500/20', dot: 'bg-purple-400' };
     return { bg: 'bg-white/[0.04] border-white/[0.08]', dot: '' };
   };
   
@@ -104,23 +137,93 @@ export default function SeatingPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Seat Map</h1>
-          <p className="page-subtitle">{branchName} Branch · {seats} Total Seats</p>
+          <p className="page-subtitle">{branchName} Branch · {seats} Total Capacity</p>
         </div>
-        <div className="flex gap-3">
-          <div className="card-premium !p-3 text-center min-w-[90px]">
-            <div className="text-lg font-black text-emerald-400">{occupiedCount}</div>
-            <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Occupied</div>
+        {unassignedMembers.length > 0 && (
+          <div className="card-premium !py-2 !px-4 flex items-center gap-2 border-orange-500/20 text-orange-500 bg-orange-500/5">
+            <span className="material-symbols-outlined text-sm animate-pulse">info</span>
+            <span className="text-xs font-bold font-manrope">{unassignedMembers.length} Student{unassignedMembers.length > 1 ? 's' : ''} Awaiting Seats</span>
           </div>
-          <div className="card-premium !p-3 text-center min-w-[90px]">
-            <div className="text-lg font-black text-red-400">{availableCount}</div>
-            <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Available</div>
+        )}
+      </div>
+
+      {/* 📊 Seating Dynamic Stats Tiles Panel */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        {/* Total Members (Assigned + Unassigned) */}
+        <div className="card-premium !p-4 flex items-center gap-3 bg-primary/[0.02]">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+            <span className="material-symbols-outlined text-xl">groups</span>
           </div>
-          {unassignedMembers.length > 0 && (
-            <div className="card-premium !p-3 text-center min-w-[90px] !border-tertiary/20">
-              <div className="text-lg font-black text-tertiary">{unassignedMembers.length}</div>
-              <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Unassigned</div>
-            </div>
-          )}
+          <div>
+            <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider leading-none">Total Members</div>
+            <div className="text-lg font-black text-slate-800 mt-1.5 leading-none">{totalMembers}</div>
+          </div>
+        </div>
+
+        {/* Occupied Cabins */}
+        <div className="card-premium !p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+            <span className="material-symbols-outlined text-xl">event_seat</span>
+          </div>
+          <div>
+            <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider leading-none">Occupied Seats</div>
+            <div className="text-lg font-black text-slate-800 mt-1.5 leading-none">{occupiedCount}</div>
+          </div>
+        </div>
+
+        {/* Available Cabins */}
+        <div className="card-premium !p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center">
+            <span className="material-symbols-outlined text-xl">chair_alt</span>
+          </div>
+          <div>
+            <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider leading-none">Available Seats</div>
+            <div className="text-lg font-black text-slate-800 mt-1.5 leading-none">{availableCount}</div>
+          </div>
+        </div>
+
+        {/* Assigned Members (Total) */}
+        <div className="card-premium !p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+            <span className="material-symbols-outlined text-xl">group</span>
+          </div>
+          <div>
+            <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider leading-none">Assigned Total</div>
+            <div className="text-lg font-black text-slate-800 mt-1.5 leading-none">{assignedTotalMembers}</div>
+          </div>
+        </div>
+
+        {/* Morning Shift Assigned Members */}
+        <div className="card-premium !p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+            <span className="material-symbols-outlined text-xl">light_mode</span>
+          </div>
+          <div>
+            <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider leading-none">Morning Shift</div>
+            <div className="text-lg font-black text-slate-800 mt-1.5 leading-none">{morningShiftMembers}</div>
+          </div>
+        </div>
+
+        {/* Evening Shift Assigned Members */}
+        <div className="card-premium !p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
+            <span className="material-symbols-outlined text-xl">dark_mode</span>
+          </div>
+          <div>
+            <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider leading-none">Evening Shift</div>
+            <div className="text-lg font-black text-slate-800 mt-1.5 leading-none">{eveningShiftMembers}</div>
+          </div>
+        </div>
+
+        {/* Full Day Assigned Members */}
+        <div className="card-premium !p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
+            <span className="material-symbols-outlined text-xl">wb_sunny</span>
+          </div>
+          <div>
+            <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider leading-none">Full Day Shift</div>
+            <div className="text-lg font-black text-slate-800 mt-1.5 leading-none">{fullDayShiftMembers}</div>
+          </div>
         </div>
       </div>
 
@@ -129,7 +232,14 @@ export default function SeatingPage() {
         <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500/30 rounded border border-red-500/20" />Available</div>
         <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500/30 rounded border border-emerald-500/20" />Full Day</div>
         <div className="flex items-center gap-2"><div className="w-3 h-3 bg-amber-500/30 rounded border border-amber-500/20" />Morning</div>
-        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-blue-500/30 rounded border border-blue-500/20" />Evening</div>
+        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-purple-500/30 rounded border border-purple-500/20" />Evening</div>
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-3 h-3 rounded border border-purple-500/20" 
+            style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.35) 50%, rgba(168, 85, 247, 0.35) 50%)' }} 
+          />
+          Shared / Multishift
+        </div>
       </div>
       
       {/* Seat Grid */}
@@ -153,13 +263,21 @@ export default function SeatingPage() {
               <button
                 key={i}
                 onClick={() => setSelectedSeat(seatId)}
+                style={style.style}
                 className={`aspect-square ${style.bg} rounded-lg border flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 ${
                   isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105' : ''
                 }`}
                 title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
               >
                 <span className="text-[10px] font-bold text-white/50">{seatId}</span>
-                {style.dot && <span className={`w-1.5 h-1.5 rounded-full ${style.dot} mt-0.5`} />}
+                {style.dot === 'multishift' ? (
+                  <div className="flex gap-0.5 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_4px_#f59e0b]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_4px_#a855f7]" />
+                  </div>
+                ) : (
+                  style.dot && <span className={`w-1.5 h-1.5 rounded-full ${style.dot} mt-0.5`} />
+                )}
               </button>
             );
           })}

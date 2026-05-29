@@ -15,6 +15,11 @@ export default function AdmissionPage() {
   const [address, setAddress] = useState("");
   const [shift, setShift] = useState("Full Day");
   
+  // Dynamic Pricing & Payment states
+  const [basePrice, setBasePrice] = useState(1000);
+  const [discount, setDiscount] = useState(0);
+  const [paymentMode, setPaymentMode] = useState("Cash");
+
   const [recordFound, setRecordFound] = useState(false);
   const [permanentId, setPermanentId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,6 +53,11 @@ export default function AdmissionPage() {
     }
   }, [mobile]);
 
+  // Sync default base price when shift changes
+  useEffect(() => {
+    setBasePrice(shift === 'Full Day' ? 1000 : 600);
+  }, [shift]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -79,6 +89,8 @@ export default function AdmissionPage() {
         setPermanentId(finalId);
       }
 
+      const finalAmount = Math.max(0, basePrice - discount);
+
       const payload = {
         permanent_id: finalId,
         full_name: fullName,
@@ -90,7 +102,7 @@ export default function AdmissionPage() {
         branch: activeBranch,
         seat_no: null,
         shift: shift,
-        plan_amount: shift === 'Full Day' ? 1000 : 600,
+        plan_amount: finalAmount,
         is_active: true,
         subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       };
@@ -104,6 +116,17 @@ export default function AdmissionPage() {
         const { data: insertedMember, error: insErr } = await supabase.from('members').insert([payload]).select().single();
         if (insErr) throw new Error(insErr.message);
         if (insertedMember) memberId = insertedMember.id;
+      }
+
+      // Record in payments table
+      if (memberId) {
+        await supabase.from('payments').insert([{
+          member_id: memberId,
+          amount: finalAmount,
+          branch: activeBranch,
+          payment_mode: paymentMode,
+          notes: discount > 0 ? `Admission Discount: ₹${discount}. Base Price: ₹${basePrice}` : 'New Admission'
+        }]);
       }
       
       setSuccess(true);
@@ -138,6 +161,7 @@ export default function AdmissionPage() {
       setTimeout(() => {
         setSuccess(false);
         setMobile(""); setFullName(""); setFatherName(""); setDob(""); setGender(""); setAddress("");
+        setDiscount(0); setPaymentMode("Cash");
       }, 3000);
 
     } catch (err: any) {
@@ -174,8 +198,8 @@ export default function AdmissionPage() {
             <p className="text-xs text-on-surface-variant mt-0.5">Fill in the details below to register a new member</p>
           </div>
           <div className="text-right">
-            <div className="text-xs text-on-surface-variant">Plan Amount</div>
-            <div className="text-lg font-bold text-primary">{planAmount}<span className="text-xs text-on-surface-variant font-normal">/mo</span></div>
+            <div className="text-xs text-on-surface-variant">Final Payable Amount</div>
+            <div className="text-lg font-bold text-primary">₹{Math.max(0, basePrice - discount).toLocaleString('en-IN')}<span className="text-xs text-on-surface-variant font-normal">/mo</span></div>
           </div>
         </div>
         
@@ -276,6 +300,57 @@ export default function AdmissionPage() {
               <div className="flex items-start gap-2 text-xs text-on-surface-variant bg-white/[0.02] border border-white/[0.04] rounded-lg p-3">
                 <span className="material-symbols-outlined text-sm text-tertiary mt-0.5">info</span>
                 <span>Seat allotment is handled from the Seat Map module after admission.</span>
+              </div>
+            </div>
+
+            {/* Pricing & Payment Section */}
+            <div className="space-y-5 pt-6 border-t border-white/[0.06]">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="material-symbols-outlined text-[#fdac29] text-base">payments</span>
+                <h3 className="text-xs font-bold text-[#fdac29] uppercase tracking-widest">Pricing & Payment Details</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <FormField label="Base Plan Price (₹)" required>
+                  <input 
+                    type="number" 
+                    min="0"
+                    required 
+                    value={basePrice} 
+                    onChange={(e) => setBasePrice(Math.max(0, Number(e.target.value)))} 
+                    className="input-premium" 
+                    placeholder="e.g. 1000" 
+                  />
+                </FormField>
+                <FormField label="Discount (₹)">
+                  <input 
+                    type="number" 
+                    min="0"
+                    value={discount} 
+                    onChange={(e) => setDiscount(Math.max(0, Number(e.target.value)))} 
+                    className="input-premium" 
+                    placeholder="e.g. 100" 
+                  />
+                </FormField>
+                <FormField label="Payment Method" required>
+                  <select 
+                    value={paymentMode} 
+                    onChange={(e) => setPaymentMode(e.target.value)} 
+                    className="input-premium appearance-none [&>option]:bg-white [&>option]:text-slate-800"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Card">Card</option>
+                    <option value="Online">Online</option>
+                  </select>
+                </FormField>
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                <div className="text-xs text-on-surface-variant font-medium">
+                  Calculated: ₹{basePrice} (Base) - ₹{discount} (Discount)
+                </div>
+                <div className="text-sm font-bold text-emerald-400">
+                  Final Payable Amount: ₹{Math.max(0, basePrice - discount)}
+                </div>
               </div>
             </div>
 

@@ -8,50 +8,50 @@ import { Marquee } from "@/components/ui/marquee"
 const FAQ_DATA = [
   {
     question: "Timings",
-    fullQuestion: "What are the operational timings for the branches?",
-    answer: "Our library operates in two primary shifts to accommodate different study patterns. \n\n• Bangali Chowk: Morning (07:00 AM – 03:00 PM) | Evening (03:00 PM – 10:00 PM) | Full Day (07:00 AM – 10:00 PM)\n• Namnakala: Morning (07:30 AM – 02:30 PM) | Evening (02:30 PM – 09:30 PM) | Full Day (07:30 AM – 09:30 PM)",
+    fullQuestion: "What are the operational shift timings for both branches?",
+    answer: "Our branches operate in three flexible shifts to fit your study routine:\n\n• Bangali Chowk:\n  Morning: 07:00 AM – 03:00 PM\n  Evening: 03:00 PM – 10:00 PM\n  Full Day: 07:00 AM – 10:00 PM\n\n• Namnakala:\n  Morning: 07:30 AM – 02:30 PM\n  Evening: 02:30 PM – 09:30 PM\n  Full Day: 07:30 AM – 09:30 PM",
     icon: "schedule",
     color: "text-blue-400"
   },
   {
-    question: "Internet",
-    fullQuestion: "Does the library provide high-speed internet?",
-    answer: "Yes, we provide ultra-high-speed fiber optic connectivity across all zones. Our network is optimized for research, video lectures, and heavy downloads to ensure an uninterrupted digital learning experience.",
+    question: "Pricing & Plans",
+    fullQuestion: "What are the membership subscription fees?",
+    answer: "We offer highly affordable and premium pricing for all students:\n\n• Morning Slot: ₹600/month\n• Evening Slot: ₹600/month\n• Full Day Slot: ₹1,000/month\n\nThese rates include full access to high-speed internet, reserved seating, air conditioning, and all standard amenities without any hidden charges.",
+    icon: "payments",
+    color: "text-emerald-400"
+  },
+  {
+    question: "Our Branches",
+    fullQuestion: "Where are the library branches located in Ambikapur?",
+    answer: "We have two premier, quiet learning hubs situated in central locations:\n\n• Bangali Chowk Branch:\n  Plot 12, Bangali Chowk Area, Ambikapur, C.G.\n\n• Namnakala Branch:\n  2nd Floor, Zenith Plaza, Namnakala, Ambikapur, C.G. (Right above Central Wing)",
+    icon: "map",
+    color: "text-red-400"
+  },
+  {
+    question: "Internet Speed",
+    fullQuestion: "Does the library provide high-speed Wi-Fi?",
+    answer: "Absolutely. We provide ultra-high-speed, redundant fiber optic Wi-Fi connectivity across all study cabins. Our network is fully optimized for streaming high-definition video lectures, online research, and handling heavy digital downloads smoothly.",
     icon: "speed",
     color: "text-primary"
   },
   {
-    question: "Lockers",
-    fullQuestion: "Are secure storage facilities available for members?",
-    answer: "Absolutely. We offer dedicated personal locker facilities, allowing members to safely store their books and study materials within the premises for hassle-free daily commuting.",
+    question: "Book Lockers",
+    fullQuestion: "Are secure storage facilities available for my books?",
+    answer: "Yes! We feature dedicated personal locker storage units. Members can safely secure their textbooks, notes, and personal laptops inside their assigned lockers, eliminating the need to carry heavy bags back and forth every day.",
     icon: "lock",
     color: "text-tertiary"
   },
   {
-    question: "Social Zone",
-    fullQuestion: "Is there a designated area for discussions or meals?",
-    answer: "Yes, we feature a professionally integrated Discussion Hall and Lunch Area. This allows students to collaborate on group projects or take refreshment breaks without disturbing the silence of the main study zones.",
-    icon: "groups",
-    color: "text-green-400"
-  },
-  {
-    question: "Power",
-    fullQuestion: "What is the backup arrangement during power outages?",
-    answer: "Krishna Library is equipped with high-capacity industrial inverters. This ensures that essential services like lighting, WiFi, and ventilation remain functional even during unexpected power fluctuations.",
+    question: "Power Backup",
+    fullQuestion: "What happens during power outages?",
+    answer: "Our branches are backed by high-capacity heavy-duty industrial power inverters. This ensures 100% uninterrupted power supply (UPS) so that lighting, high-speed Wi-Fi networks, and individual charging points remain active without even a millisecond of lag.",
     icon: "bolt",
     color: "text-yellow-400"
   },
   {
-    question: "Hygiene",
-    fullQuestion: "Are drinking water facilities provided on-site?",
-    answer: "We prioritize student health and hygiene. RO-purified drinking water is available 24/7 at both branches to ensure you stay hydrated during long study sessions.",
-    icon: "water_drop",
-    color: "text-cyan-400"
-  },
-  {
-    question: "Experience",
-    fullQuestion: "Can I experience the environment before joining?",
-    answer: "We offer a 1-day complimentary trial period. This allows prospective members to experience our premium facilities and focused ambiance first-hand before completing the formal registration process.",
+    question: "Free Trial",
+    fullQuestion: "Can I experience the library before purchasing a membership?",
+    answer: "Yes, we welcome all prospective scholars with a 1-day complimentary free trial. You can visit either branch, experience the pin-drop silent environment, test the premium seats, and explore our facilities first-hand before subscribing.",
     icon: "model_training",
     color: "text-purple-400"
   }
