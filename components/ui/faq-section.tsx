@@ -11,29 +11,44 @@ interface FAQ {
 
 const faqs: FAQ[] = [
   {
-    question: "What are the library's operating hours?",
+    question: "What are the operational shift timings for both branches?",
     answer:
-      "Our main branches are open from 8:00 AM to 10:00 PM on weekdays, and 9:00 AM to 8:00 PM on weekends. During exam seasons, we extend our hours to 24/7 at select locations to support our students.",
+      "Our branches operate in three flexible shifts to fit your study routine:\n\n• Bangali Chowk:\n  - Morning: 07:00 AM – 03:00 PM\n  - Evening: 03:00 PM – 10:00 PM\n  - Full Day: 07:00 AM – 10:00 PM\n\n• Namnakala:\n  - Morning: 07:30 AM – 02:30 PM\n  - Evening: 02:30 PM – 09:30 PM\n  - Full Day: 07:30 AM – 09:30 PM",
   },
   {
-    question: "How do I become a member?",
+    question: "What are the membership subscription fees?",
     answer:
-      "You can easily become a member by clicking the 'Enroll Now' button in our navigation bar or visiting any of our branches. Membership requires a valid ID and a minimal monthly subscription fee.",
+      "We offer highly affordable and premium pricing for all students:\n\n• Morning Slot: ₹600/month\n• Evening Slot: ₹600/month\n• Full Day Slot: ₹1,000/month\n\nThese rates include full access to high-speed internet, reserved seating, air conditioning, and all standard amenities without any hidden charges.",
   },
   {
-    question: "Is high-speed Wi-Fi available for visitors?",
+    question: "Where are the library branches located in Ambikapur?",
     answer:
-      "Yes! We provide complimentary high-speed internet access to all members. Guests can also enjoy up to 2 hours of free Wi-Fi per day after a quick registration at the front desk.",
+      "We have two premier, quiet learning hubs situated in central locations:\n\n• Bangali Chowk Branch:\n  Plot 12, Bangali Chowk Area, Ambikapur, C.G.\n\n• Namnakala Branch:\n  2nd Floor, Zenith Plaza, Namnakala, Ambikapur, C.G.",
   },
   {
-    question: "Can I reserve a study cabin in advance?",
+    question: "Does the library provide high-speed Wi-Fi?",
     answer:
-      "Absolutely. Active members can reserve individual or group study cabins up to 48 hours in advance through our online staff portal or the library reception desk.",
+      "Absolutely. We provide ultra-high-speed, redundant fiber optic Wi-Fi connectivity across all study cabins. Our network is fully optimized for streaming high-definition video lectures, online research, and handling heavy digital downloads smoothly.",
   },
   {
-    question: "Do you offer digital resources or only physical books?",
+    question: "Are secure storage facilities available for my books?",
     answer:
-      "We offer a hybrid learning experience. Alongside our vast collection of over 100,000 physical books, members get exclusive access to premium digital journals, e-books, and online course platforms.",
+      "Yes! We feature dedicated personal locker storage units. Members can safely secure their textbooks, notes, and personal laptops inside their assigned lockers, eliminating the need to carry heavy bags back and forth every day.",
+  },
+  {
+    question: "What happens during power outages?",
+    answer:
+      "Our branches are backed by high-capacity heavy-duty industrial power inverters. This ensures 100% uninterrupted power supply (UPS) so that lighting, high-speed Wi-Fi networks, and individual charging points remain active without even a millisecond of lag.",
+  },
+  {
+    question: "Can I experience the library before purchasing a membership?",
+    answer:
+      "Yes, we welcome all prospective scholars with a 1-day complimentary free trial. You can visit either branch, experience the pin-drop silent environment, test the premium seats, and explore our facilities first-hand before subscribing.",
+  },
+  {
+    question: "What is the difference between Reserved and Unreserved seats?",
+    answer:
+      "Reserved members are allocated a specific study cabin desk number which is exclusively theirs for the duration of their shift. Unreserved members can access the library facilities, Wi-Fi, lockers, and other common areas, but do not have a dedicated seat assigned.",
   },
 ];
 
@@ -150,7 +165,7 @@ export default function FaqSection() {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
                     >
-                      <div className="px-6 pb-6 text-v-on-surface-variant font-v-body-md leading-relaxed border-t border-v-outline-variant/10 pt-4 mt-2">
+                      <div className="px-6 pb-6 text-v-on-surface-variant font-v-body-md leading-relaxed border-t border-v-outline-variant/10 pt-4 mt-2 whitespace-pre-line">
                         {faq.answer}
                       </div>
                     </motion.div>
