@@ -5,6 +5,7 @@ import VisitorNav from '@/components/visitor-nav';
 import HeroSlider from '@/components/hero-slider';
 import Footer4Col from '@/components/ui/footer-column';
 import AboutUsSection from '@/components/ui/about-us-section';
+import FounderMessageSection from '@/components/ui/founder-message';
 import FaqSection from '@/components/ui/faq-section';
 import { GalleryDemo } from '@/components/blocks/gallery-demo';
 import { SquishyPricing } from '@/components/ui/squishy-pricing';
@@ -61,6 +62,9 @@ export default function Home() {
 
         {/* ═══ 2. ABOUT US ═══ */}
         <AboutUsSection />
+
+        {/* ═══ FOUNDER'S NOTE ═══ */}
+        <FounderMessageSection />
 
         {/* ═══ 3. ACHIEVERS ═══ */}
         <section id="achievers" className="py-20 md:py-28 bg-transparent relative overflow-hidden">

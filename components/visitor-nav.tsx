@@ -6,6 +6,7 @@ import ThemeSwitch from "@/components/ui/theme-switch";
 
 const NAV_LINKS = [
   { id: "about",      label: "About"      },
+  { id: "founder-message", label: "Founder" },
   { id: "services",   label: "Services"   },
   { id: "achievers",  label: "Achievers"  },
   { id: "membership", label: "Membership" },
