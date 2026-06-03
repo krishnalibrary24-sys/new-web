@@ -12,6 +12,7 @@ import ReservationForm from '@/components/ui/reservation-form';
 import ScrollReveal, { StaggerContainer, StaggerItem } from '@/components/ui/scroll-reveal';
 import SectionHeading from '@/components/ui/section-heading';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import { useTheme } from 'next-themes';
 
 /* ── Counter animation hook ── */
 function AnimatedCounter({ value, suffix = "" }: { value: string; suffix?: string }) {
@@ -30,7 +31,7 @@ function AnimatedCounter({ value, suffix = "" }: { value: string; suffix?: strin
 
 export default function Home() {
   return (
-    <div className="bg-white text-v-on-background font-lexend antialiased selection:bg-v-primary/10 selection:text-v-primary visitor-page">
+    <div className="bg-transparent text-v-on-background font-lexend antialiased selection:bg-v-primary/10 selection:text-v-primary visitor-page">
       <InteractiveDotBackground />
       <VisitorNav />
       <main>
@@ -355,6 +356,7 @@ function ReviewCard({ initials, name, time, text, color }: {
 /* ── Interactive Dotted Background Component ── */
 function InteractiveDotBackground() {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const { resolvedTheme } = useTheme();
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -445,7 +447,9 @@ function InteractiveDotBackground() {
             opacity = 0.09 + force * 0.26;
           }
 
-          ctx.fillStyle = `rgba(0, 49, 120, ${opacity})`;
+          ctx.fillStyle = resolvedTheme === 'dark'
+            ? `rgba(34, 211, 238, ${opacity * 1.4})`
+            : `rgba(0, 49, 120, ${opacity})`;
           ctx.beginPath();
           ctx.arc(drawX, drawY, radius, 0, Math.PI * 2);
           ctx.fill();
@@ -463,13 +467,13 @@ function InteractiveDotBackground() {
       document.removeEventListener('mouseleave', handleMouseLeave);
       cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, [resolvedTheme]);
 
   return (
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-0 bg-transparent"
-      style={{ mixBlendMode: 'multiply' }}
+      style={{ mixBlendMode: resolvedTheme === 'dark' ? 'screen' : 'multiply' }}
     />
   );
 }

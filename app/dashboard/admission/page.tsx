@@ -2,10 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from 'next/navigation';
 
 export default function AdmissionPage() {
   const { activeBranch } = useBranch();
   const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
+  const router = useRouter();
   
   const [mobile, setMobile] = useState("");
   const [fullName, setFullName] = useState("");
@@ -14,23 +16,9 @@ export default function AdmissionPage() {
   const [gender, setGender] = useState("");
   const [address, setAddress] = useState("");
   const [shift, setShift] = useState("Full Day");
+  const [isReserved, setIsReserved] = useState<boolean>(true);
   
-  // Dynamic Pricing & Payment states
-  const [basePrice, setBasePrice] = useState(1000);
-  const [discount, setDiscount] = useState(0);
-  const [paymentMode, setPaymentMode] = useState("Cash");
-  
-  // Membership duration and Pay Later states
-  const [duration, setDuration] = useState<number>(1);
-  const [customMonths, setCustomMonths] = useState<string>("");
-  const [isCustomDuration, setIsCustomDuration] = useState<boolean>(false);
-  const [payLater, setPayLater] = useState<boolean>(false);
-  const [dueDate, setDueDate] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7); // Default to 7 days from now
-    return d.toISOString().split('T')[0];
-  });
-
+  // No pricing or payment states here anymore
   const [recordFound, setRecordFound] = useState(false);
   const [permanentId, setPermanentId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,11 +52,6 @@ export default function AdmissionPage() {
     }
   }, [mobile]);
 
-  // Sync default base price when shift changes
-  useEffect(() => {
-    setBasePrice(shift === 'Full Day' ? 1000 : 600);
-  }, [shift]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -78,20 +61,32 @@ export default function AdmissionPage() {
       
       if (!recordFound) {
         const branchCode = activeBranch === 'namnakala' ? 'N' : 'B';
-        const prefix = `#KL26${branchCode}`;
+        const prefix = isReserved ? `#KL26${branchCode}` : `#KL26${branchCode}U`;
 
         const { data: allIds } = await supabase
           .from('members')
           .select('permanent_id')
-          .like('permanent_id', `${prefix}%`);
+          .like('permanent_id', `#KL26${branchCode}%`);
           
         let maxSeq = 0;
         if (allIds && allIds.length > 0) {
           allIds.forEach(record => {
             if (record.permanent_id) {
-              const suffix = record.permanent_id.replace(prefix, '');
-              const num = parseInt(suffix);
-              if (!isNaN(num) && num > maxSeq) maxSeq = num;
+              if (isReserved) {
+                // Must not contain 'U'
+                if (!record.permanent_id.includes('U') && record.permanent_id.startsWith(prefix)) {
+                  const suffix = record.permanent_id.replace(prefix, '');
+                  const num = parseInt(suffix);
+                  if (!isNaN(num) && num > maxSeq) maxSeq = num;
+                }
+              } else {
+                // Must start with prefix (which contains 'U')
+                if (record.permanent_id.startsWith(prefix)) {
+                  const suffix = record.permanent_id.replace(prefix, '');
+                  const num = parseInt(suffix);
+                  if (!isNaN(num) && num > maxSeq) maxSeq = num;
+                }
+              }
             }
           });
         }
@@ -100,17 +95,13 @@ export default function AdmissionPage() {
         setPermanentId(finalId);
       }
 
-      const months = isCustomDuration ? Math.max(1, parseInt(customMonths) || 1) : duration;
-      const totalPayable = Math.max(0, (basePrice * months) - discount);
-
-      const end = new Date();
-      end.setMonth(end.getMonth() + months);
-      const subscription_end_date = end.toISOString();
+      // Default plan amount based on shift
+      const basePriceVal = shift === 'Full Day' ? 1000 : 600;
 
       let seatToAllot = null;
       let prevSeatVal = null;
 
-      if (recordFound && permanentId) {
+      if (isReserved && recordFound && permanentId) {
         const { data: currentMember } = await supabase
           .from('members')
           .select('seat_no, previous_seat_no')
@@ -139,6 +130,10 @@ export default function AdmissionPage() {
         }
       }
 
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
       const payload = {
         permanent_id: finalId,
         full_name: fullName,
@@ -151,11 +146,11 @@ export default function AdmissionPage() {
         seat_no: seatToAllot,
         previous_seat_no: prevSeatVal,
         shift: shift,
-        plan_amount: basePrice,
-        is_active: true,
-        subscription_end_date: subscription_end_date,
-        pay_later: payLater,
-        payment_due_date: payLater ? dueDate : null,
+        plan_amount: basePriceVal,
+        is_active: false, // Inactive pending initial payment
+        subscription_end_date: null, // Set during payment setup
+        pay_later: true, // Default to pay later with immediate due date
+        payment_due_date: tomorrowStr, // Due date is tomorrow
       };
 
       let memberId = "";
@@ -169,30 +164,24 @@ export default function AdmissionPage() {
         if (insertedMember) memberId = insertedMember.id;
       }
 
-      // Record in payments table
-      if (memberId) {
-        await supabase.from('payments').insert([{
-          member_id: memberId,
-          amount: payLater ? 0 : totalPayable,
-          branch: activeBranch,
-          payment_mode: payLater ? 'Cash' : paymentMode,
-          notes: payLater
-            ? `Pay Later — Outstanding Dues: ₹${totalPayable} due on ${new Date(dueDate).toLocaleDateString()}. Plan duration: ${months} month(s).`
-            : `New Admission — Duration: ${months} month(s). Base Price/mo: ₹${basePrice}, Discount: ₹${discount}`
-        }]);
-      }
-      
       setSuccess(true);
       setErrorMsg(null);
 
-      // Auto-open dynamic invoice print page
-      if (memberId) {
-        window.open(`/invoice?id=${memberId}`, '_blank');
-      }
-
-      // Dispatch customized WhatsApp Welcome Notification
+      // Dispatch Welcome WhatsApp message
       const mobileClean = mobile.replace(/[^0-9]/g, '');
-      let welcomeTemplate = "Dear {name},\n\nWelcome to Krishna Library! Your admission is confirmed.\nBranch: {branch}\nSeat No: {seat}\nShift: {shift}\nValid Till: {expiry}\n\nHappy Learning!\nKrishna Library";
+      let welcomeTemplate = 
+        "🌟 *Welcome to Krishna Library!* 🌟\n\n" +
+        "Dear *{name}*,\n\n" +
+        "Your admission is successfully confirmed! 🎉 We are thrilled to have you join our learning community.\n\n" +
+        "📋 *Admission Details:*\n" +
+        "📍 *Branch:* {branch}\n" +
+        "🪑 *Seat:* {seat}\n" +
+        "🕒 *Shift:* {shift}\n" +
+        "📅 *Valid Till:* {expiry}\n\n" +
+        "📖 *\"Success is the sum of small efforts, repeated day in and day out.\"* 💪✨ Stay focused, keep pushing, and achieve your dreams!\n\n" +
+        "If you have any questions, feel free to visit the reception.\n\n" +
+        "Happy Learning! 🚀\n" +
+        "*Krishna Library Team* 📚";
       
       if (typeof window !== 'undefined') {
         const savedWelcome = localStorage.getItem("krishna_welcome_msg");
@@ -200,23 +189,23 @@ export default function AdmissionPage() {
       }
       
       const branchLabel = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
-      const expiryDate = end;
       
       const msg = welcomeTemplate
         .replace(/{name}/g, fullName)
         .replace(/{branch}/g, branchLabel)
-        .replace(/{seat}/g, 'Unassigned')
+        .replace(/{seat}/g, isReserved ? (seatToAllot || 'Pending Assignment') : 'Unreserved (No seat allotted)')
         .replace(/{shift}/g, shift)
-        .replace(/{expiry}/g, expiryDate.toLocaleDateString());
+        .replace(/{expiry}/g, 'Pending Payment Setup');
 
       window.open(`https://wa.me/${mobileClean}?text=${encodeURIComponent(msg)}`, '_blank');
 
-      setTimeout(() => {
-        setSuccess(false);
-        setMobile(""); setFullName(""); setFatherName(""); setDob(""); setGender(""); setAddress("");
-        setDiscount(0); setPaymentMode("Cash");
-        setDuration(1); setCustomMonths(""); setIsCustomDuration(false); setPayLater(false);
-      }, 3000);
+      // Reset profile states
+      setMobile(""); setFullName(""); setFatherName(""); setDob(""); setGender(""); setAddress("");
+
+      // Redirect to Record Payment page with the new member's ID
+      if (memberId) {
+        router.push(`/dashboard/record-payment?memberId=${memberId}`);
+      }
 
     } catch (err: any) {
       setErrorMsg(err.message || "An unknown database error occurred.");
@@ -252,8 +241,8 @@ export default function AdmissionPage() {
             <p className="text-xs text-on-surface-variant mt-0.5">Fill in the details below to register a new member</p>
           </div>
           <div className="text-right">
-            <div className="text-xs text-on-surface-variant">Final Payable Amount</div>
-            <div className="text-lg font-bold text-primary">₹{Math.max(0, basePrice - discount).toLocaleString('en-IN')}<span className="text-xs text-on-surface-variant font-normal">/mo</span></div>
+            <div className="text-xs text-on-surface-variant">Step 1 of 2</div>
+            <div className="text-sm font-bold text-primary">Profile Info</div>
           </div>
         </div>
         
@@ -262,7 +251,7 @@ export default function AdmissionPage() {
           {success && (
             <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl mb-6 text-center font-medium flex items-center justify-center gap-2 animate-fade-in-fast">
               <span className="material-symbols-outlined text-lg">check_circle</span>
-              Admission Successful! Member ID: <span className="font-bold">{permanentId}</span>
+              Admission Successful! Redirecting to Payment Setup...
             </div>
           )}
 
@@ -283,7 +272,7 @@ export default function AdmissionPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <FormField label="Mobile Number" icon="phone" required>
                   <input 
-                    type="tel" required value={mobile} onChange={(e) => setMobile(e.target.value)}
+                     type="tel" required value={mobile} onChange={(e) => setMobile(e.target.value)}
                     className={`input-premium !pl-11 ${recordFound ? 'input-success' : ''}`}
                     placeholder="+91 00000 00000" 
                   />
@@ -311,6 +300,57 @@ export default function AdmissionPage() {
                   <FormField label="Address">
                     <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="input-premium" placeholder="Full residential address" />
                   </FormField>
+                </div>
+              </div>
+            </div>
+
+            {/* Seat Category Selection */}
+            <div className="space-y-5 pt-6 border-t border-white/[0.06]">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="material-symbols-outlined text-primary text-base">event_seat</span>
+                <h3 className="text-xs font-bold text-primary uppercase tracking-widest">Seat Category</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div 
+                  className={`flex items-center gap-3 border p-4 rounded-xl transition-all cursor-pointer select-none ${
+                    isReserved 
+                      ? 'bg-blue-500/10 border-blue-500/30' 
+                      : 'bg-slate-200 hover:bg-slate-300 border-slate-300'
+                  }`}
+                  onClick={() => setIsReserved(true)}
+                >
+                  <input
+                    type="radio"
+                    checked={isReserved}
+                    onChange={() => setIsReserved(true)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-5 h-5 text-[#003178] focus:ring-[#003178] border-slate-300 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-sm font-bold text-slate-800 block">Reserved Slot</span>
+                    <span className="text-[10px] text-slate-500">Dedicated desk allocated via Seat Map</span>
+                  </div>
+                </div>
+
+                <div 
+                  className={`flex items-center gap-3 border p-4 rounded-xl transition-all cursor-pointer select-none ${
+                    !isReserved 
+                      ? 'bg-blue-500/10 border-blue-500/30' 
+                      : 'bg-slate-200 hover:bg-slate-300 border-slate-300'
+                  }`}
+                  onClick={() => setIsReserved(false)}
+                >
+                  <input
+                    type="radio"
+                    checked={!isReserved}
+                    onChange={() => setIsReserved(false)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-5 h-5 text-[#003178] focus:ring-[#003178] border-slate-300 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-sm font-bold text-slate-800 block">Unreserved Slot</span>
+                    <span className="text-[10px] text-slate-500">General admission (No seat allotted)</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -351,161 +391,17 @@ export default function AdmissionPage() {
                   </button>
                 ))}
               </div>
-              <div className="flex items-start gap-2 text-xs text-on-surface-variant bg-white/[0.02] border border-white/[0.04] rounded-lg p-3">
-                <span className="material-symbols-outlined text-sm text-tertiary mt-0.5">info</span>
-                <span>Seat allotment is handled from the Seat Map module after admission.</span>
-              </div>
-            </div>
-
-            {/* Pricing & Payment Section */}
-            <div className="space-y-6 pt-6 border-t border-white/[0.06]">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="material-symbols-outlined text-[#fdac29] text-base">payments</span>
-                <h3 className="text-xs font-bold text-[#fdac29] uppercase tracking-widest">Pricing & Payment Details</h3>
-              </div>
-
-              {/* Membership Duration Selection */}
-              <div className="space-y-3 bg-white/[0.01] border border-white/[0.04] p-4 rounded-xl">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Membership Duration
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                  {[1, 3, 6, 12].map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => {
-                        setDuration(m);
-                        setIsCustomDuration(false);
-                      }}
-                      className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
-                        !isCustomDuration && duration === m
-                          ? "bg-[#003178] text-white border-[#003178] shadow-md shadow-blue-500/10"
-                          : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
-                      }`}
-                    >
-                      {m} {m === 1 ? "Month" : "Months"}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setIsCustomDuration(true)}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
-                      isCustomDuration
-                        ? "bg-[#003178] text-white border-[#003178] shadow-md shadow-blue-500/10"
-                        : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
-                    }`}
-                  >
-                    Custom
-                  </button>
+              {isReserved ? (
+                <div className="flex items-start gap-2 text-xs text-on-surface-variant bg-white/[0.02] border border-white/[0.04] rounded-lg p-3">
+                  <span className="material-symbols-outlined text-sm text-tertiary mt-0.5">info</span>
+                  <span>Seat allotment is handled from the Seat Map module after admission.</span>
                 </div>
-                {isCustomDuration && (
-                  <div className="max-w-[200px] mt-2 animate-fade-in-fast">
-                    <input
-                      type="number"
-                      min="1"
-                      value={customMonths}
-                      onChange={(e) => setCustomMonths(e.target.value)}
-                      className="input-premium !py-2 !text-sm"
-                      placeholder="Enter custom months..."
-                      required={isCustomDuration}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Pricing Config Row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <FormField label="Base Plan Price (₹/mo)" required>
-                  <input 
-                    type="number" 
-                    min="0"
-                    required 
-                    value={basePrice} 
-                    onChange={(e) => setBasePrice(Math.max(0, Number(e.target.value)))} 
-                    className="input-premium" 
-                    placeholder="e.g. 1000" 
-                  />
-                </FormField>
-                <FormField label="Total Discount (₹)">
-                  <input 
-                    type="number" 
-                    min="0"
-                    value={discount} 
-                    onChange={(e) => setDiscount(Math.max(0, Number(e.target.value)))} 
-                    className="input-premium" 
-                    placeholder="e.g. 100" 
-                  />
-                </FormField>
-                <FormField label="Payment Method" required={!payLater}>
-                  <select 
-                    disabled={payLater}
-                    value={paymentMode} 
-                    onChange={(e) => setPaymentMode(e.target.value)} 
-                    className="input-premium appearance-none [&>option]:bg-white [&>option]:text-slate-800 disabled:opacity-50"
-                  >
-                    <option value="Cash">Cash</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Card">Card</option>
-                    <option value="Online">Online</option>
-                  </select>
-                </FormField>
-              </div>
-
-              {/* Pay Later Toggle & Due Date Picker */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
-                <div 
-                  className={`flex items-center gap-3 border p-4 rounded-xl transition-all cursor-pointer select-none ${
-                    payLater 
-                      ? 'bg-amber-500/10 border-amber-500/30' 
-                      : 'bg-slate-200 hover:bg-slate-300 border-slate-300'
-                  }`}
-                  onClick={() => setPayLater(!payLater)}
-                >
-                  <input
-                    type="checkbox"
-                    checked={payLater}
-                    onChange={(e) => setPayLater(e.target.checked)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-5 h-5 rounded-lg text-[#003178] focus:ring-[#003178] border-slate-300 cursor-pointer"
-                  />
-                  <div>
-                    <span className="text-sm font-bold text-slate-800 block">Pay Later (Delay Payment)</span>
-                    <span className="text-[10px] text-slate-500">Seat stays assigned & status active</span>
-                  </div>
+              ) : (
+                <div className="flex items-start gap-2 text-xs text-on-surface-variant bg-white/[0.02] border border-white/[0.04] rounded-lg p-3">
+                  <span className="material-symbols-outlined text-sm text-emerald-400 mt-0.5">check_circle</span>
+                  <span>Unreserved Student: General admission slot. No seat allotment required.</span>
                 </div>
-                
-                {payLater && (
-                  <div className="animate-scale-in">
-                    <FormField label="Dues Payment Target Date" required={payLater}>
-                      <input
-                        type="date"
-                        required={payLater}
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
-                        className="input-premium !py-2.5"
-                      />
-                    </FormField>
-                  </div>
-                )}
-              </div>
-
-              {/* Final Summary Card */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.05] gap-2">
-                <div className="text-xs text-on-surface-variant font-medium">
-                  Calculated: ₹{basePrice.toLocaleString('en-IN')}/mo * {isCustomDuration ? (customMonths || '1') : duration} month(s) - ₹{discount.toLocaleString('en-IN')} (Discount)
-                </div>
-                <div className="text-sm font-bold text-emerald-400">
-                  {payLater ? (
-                    <span className="text-amber-500 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-sm">schedule</span>
-                      Pay Later: ₹0 Upfront (₹{Math.max(0, (basePrice * (isCustomDuration ? (parseInt(customMonths) || 1) : duration)) - discount).toLocaleString('en-IN')} due by {new Date(dueDate).toLocaleDateString()})
-                    </span>
-                  ) : (
-                    <span>Total Payable: ₹{Math.max(0, (basePrice * (isCustomDuration ? (parseInt(customMonths) || 1) : duration)) - discount).toLocaleString('en-IN')}</span>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Documents Section */}

@@ -76,19 +76,18 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
       try {
         const { data: members } = await supabase
           .from('members')
-          .select('branch, is_active, plan_amount, subscription_end_date, pay_later, left_with_dues, loss_amount')
+          .select('branch, is_active, plan_amount, subscription_end_date, left_with_dues, loss_amount')
           .eq('branch', activeBranch);
         
         if (members) {
           const active = members.filter(m => m.is_active && !m.left_with_dues);
           
-          // Received: active members who have actually paid (not pay later)
-          const receivedRevenueVal = active.filter(m => !m.pay_later).reduce((sum, m) => sum + (m.plan_amount || 0), 0);
+          // Received: active members who have paid
+          const receivedRevenueVal = active.reduce((sum, m) => sum + (m.plan_amount || 0), 0);
           
-          // Upcoming: normal inactive/overdue members (excluding those who permanently left) AND active pay_later outstanding dues
+          // Upcoming: normal inactive/overdue members (excluding those who permanently left)
           const overdue = members.filter(m => !m.is_active && !m.left_with_dues);
-          const payLaterDues = active.filter(m => m.pay_later).reduce((sum, m) => sum + (m.plan_amount || 0), 0);
-          const upcomingRevenueVal = overdue.reduce((sum, m) => sum + (m.plan_amount || 0), 0) + payLaterDues;
+          const upcomingRevenueVal = overdue.reduce((sum, m) => sum + (m.plan_amount || 0), 0);
           
           const totalRevenueVal = receivedRevenueVal + upcomingRevenueVal;
 
@@ -98,8 +97,8 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           const leftMembersCount = lossMembers.length;
 
           // Branch-wise Active Revenues
-          const { data: bcData } = await supabase.from('members').select('plan_amount').eq('branch', 'bengali-chowk').eq('is_active', true).eq('pay_later', false);
-          const { data: nmData } = await supabase.from('members').select('plan_amount').eq('branch', 'namnakala').eq('is_active', true).eq('pay_later', false);
+          const { data: bcData } = await supabase.from('members').select('plan_amount').eq('branch', 'bengali-chowk').eq('is_active', true);
+          const { data: nmData } = await supabase.from('members').select('plan_amount').eq('branch', 'namnakala').eq('is_active', true);
 
           const bcRevenue = bcData?.reduce((sum, m) => sum + (m.plan_amount || 0), 0) || 0;
           const nmRevenue = nmData?.reduce((sum, m) => sum + (m.plan_amount || 0), 0) || 0;

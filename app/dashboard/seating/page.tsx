@@ -3,11 +3,13 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from 'next/navigation';
 
 export default function SeatingPage() {
   const { activeBranch } = useBranch();
   const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
   const seats = activeBranch === 'namnakala' ? 121 : 153;
+  const router = useRouter();
 
   
   const [seatMap, setSeatMap] = useState<Record<string, any[]>>({});
@@ -38,7 +40,7 @@ export default function SeatingPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from('members')
-        .select('id, seat_no, shift, is_active, full_name, permanent_id')
+        .select('id, seat_no, shift, is_active, full_name, permanent_id, mobile')
         .eq('branch', activeBranch)
         .eq('is_active', true);
       
@@ -50,7 +52,11 @@ export default function SeatingPage() {
             if (!map[m.seat_no]) map[m.seat_no] = [];
             map[m.seat_no].push(m);
           } else {
-            unassigned.push(m);
+            // Exclude unreserved members from the seat map queue
+            const isUnreserved = m.permanent_id && m.permanent_id.includes('U');
+            if (!isUnreserved) {
+              unassigned.push(m);
+            }
           }
         });
         setSeatMap(map);
@@ -78,8 +84,32 @@ export default function SeatingPage() {
         const filteredCurrent = current.filter(m => m.id !== memberId);
         return { ...prev, [selectedSeat]: [...filteredCurrent, { ...member, seat_no: selectedSeat }] };
       });
+
+      // 3. Dispatch Seat Confirmation WhatsApp Message
+      const branchLabel = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
+      const mobileClean = member.mobile ? member.mobile.replace(/[^0-9]/g, '') : '';
+      
+      const seatMsg = 
+        "🎯 *Seat Allocated Successfully!* 🎯\n\n" +
+        "Dear *" + member.full_name + "*,\n\n" +
+        "Your study space has been officially reserved! 🪑✨\n\n" +
+        "📋 *Reservation Details:*\n" +
+        "📍 *Branch:* " + branchLabel + "\n" +
+        "🪑 *Seat Cabin:* Desk #" + selectedSeat + "\n" +
+        "🕒 *Shift:* " + member.shift + "\n\n" +
+        "📖 *\"The only place where success comes before work is in the dictionary.\"* 🧠💡 Make the most of this workspace, stay consistent, and unlock your true potential!\n\n" +
+        "Happy Learning! 🚀\n" +
+        "*Krishna Library Team* 📚";
+
+      if (mobileClean) {
+        window.open(`https://wa.me/${mobileClean}?text=${encodeURIComponent(seatMsg)}`, '_blank');
+      }
+
+      // 4. Redirect to Invoices section
+      router.push('/dashboard/invoices');
     }
     setIsAssigning(false);
+    setSelectedSeat(null);
   };
 
   const handleUnassignSeat = async (memberId: string, seatNo: string) => {

@@ -71,6 +71,63 @@
   animation: kl-ink 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* ── Dark mode nav overrides ── */
+.dark .kl-nav-link {
+  color: #a0b4d6;
+}
+.dark .kl-nav-link::after {
+  background: #22d3ee;
+}
+.dark .kl-nav-link:hover {
+  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.08);
+}
+.dark .kl-nav-link--active {
+  font-weight: 700;
+  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.08);
+}
+.dark .kl-staff-btn {
+  color: #22d3ee;
+  border-color: rgba(34, 211, 238, 0.3);
+}
+.dark .kl-staff-btn:hover {
+  background: rgba(34, 211, 238, 0.08);
+  border-color: rgba(34, 211, 238, 0.55);
+}
+.dark .kl-ham-line {
+  background: #22d3ee;
+}
+.dark .kl-mobile-menu {
+  background: rgba(8, 14, 30, 0.97);
+  border-top-color: rgba(34, 211, 238, 0.12);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+.dark .kl-mobile-link {
+  color: #a0b4d6;
+}
+.dark .kl-mobile-link:hover {
+  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.07);
+}
+.dark .kl-mobile-link--active {
+  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.08);
+  border-left-color: #22d3ee;
+}
+.dark .kl-mobile-ctas {
+  border-top-color: rgba(34, 211, 238, 0.1);
+}
+.dark .kl-mobile-staff {
+  color: #22d3ee;
+  border-color: rgba(34, 211, 238, 0.3);
+}
+.dark .kl-mobile-staff:hover { background: rgba(34, 211, 238, 0.07); }
+.dark .kl-mobile-enroll {
+  background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+  color: #fff;
+}
+
 /* ── Staff Login ghost button ── */
 .kl-staff-btn {
   font-family: 'Montserrat', sans-serif;
@@ -622,7 +679,7 @@ html.lenis, html.lenis body {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   VISITOR PAGE — Light mode overrides
+   VISITOR PAGE — Light mode
    ═══════════════════════════════════════════════════════════ */
 .visitor-page {
   background: #ffffff;
@@ -633,7 +690,6 @@ html.lenis, html.lenis body {
 .visitor-page ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 49, 120, 0.22);
 }
-/* Glass pane for light/visitor context */
 .visitor-page .glass-pane {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(248, 249, 255, 0.75) 100%);
   backdrop-filter: blur(16px);
@@ -642,6 +698,268 @@ html.lenis, html.lenis body {
   border-top: 1px solid rgba(255, 255, 255, 0.9);
   border-left: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow: 0 4px 24px rgba(0, 49, 120, 0.05);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   VISITOR PAGE — DARK MODE (Premium Rebuild)
+   Core palette:
+     Page bg     → #070d1a  (deep navy-black)
+     Card bg     → #0f172a  (slate-900)
+     Card hover  → #1e293b  (slate-800)
+     Border      → rgba(255,255,255,0.07)
+     Accent blue → #60a5fa  (blue-400 — warm & readable)
+     Text base   → #e2e8f0  (slate-200)
+     Text muted  → #94a3b8  (slate-400)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Page shell ─── */
+.dark .visitor-page {
+  background: #070d1a;
+}
+.dark body {
+  color: #e2e8f0;
+}
+
+/* ─── Dot grid canvas ─── */
+.dark canvas.fixed {
+  mix-blend-mode: screen !important;
+  opacity: 0.6 !important;
+}
+
+/* ─── Nav bar ─── */
+.dark .kl-nav-link                       { color: #94a3b8; }
+.dark .kl-nav-link::after                { background: #60a5fa; }
+.dark .kl-nav-link:hover                 { color: #bfdbfe; background: rgba(96,165,250,0.08); }
+.dark .kl-nav-link--active               { color: #60a5fa; background: rgba(96,165,250,0.1); font-weight:700; }
+.dark .kl-staff-btn                      { color: #93c5fd; border-color: rgba(96,165,250,0.28); }
+.dark .kl-staff-btn:hover                { background: rgba(96,165,250,0.08); border-color: rgba(96,165,250,0.5); }
+.dark .kl-enroll-btn                     { background: linear-gradient(135deg,#1d4ed8 0%,#3b82f6 100%); box-shadow:0 2px 14px rgba(59,130,246,0.4); }
+.dark .kl-enroll-btn:hover               { box-shadow:0 6px 22px rgba(59,130,246,0.55); }
+.dark .kl-ham-line                       { background: #93c5fd; }
+.dark .kl-mobile-menu                    { background: rgba(7,13,26,0.98); border-top-color: rgba(96,165,250,0.1); box-shadow:0 16px 48px rgba(0,0,0,0.7); }
+.dark .kl-mobile-link                    { color: #94a3b8; }
+.dark .kl-mobile-link:hover              { color: #bfdbfe; background: rgba(96,165,250,0.07); }
+.dark .kl-mobile-link--active            { color: #60a5fa; background: rgba(96,165,250,0.1); border-left-color:#60a5fa; }
+.dark .kl-mobile-ctas                    { border-top-color: rgba(96,165,250,0.1); }
+.dark .kl-mobile-staff                   { color:#93c5fd; border-color:rgba(96,165,250,0.3); }
+.dark .kl-mobile-staff:hover             { background:rgba(96,165,250,0.07); }
+.dark .kl-mobile-enroll                  { background: linear-gradient(135deg,#1d4ed8 0%,#3b82f6 100%); color:#fff; }
+
+/* ─── Headings & text ─── */
+.dark .visitor-page h1,
+.dark .visitor-page h2,
+.dark .visitor-page h3,
+.dark .visitor-page h4,
+.dark .visitor-page h5                   { color: #f1f5f9 !important; }
+.dark .visitor-page p                    { color: #94a3b8; }
+.dark .visitor-page .text-v-on-background     { color: #e2e8f0 !important; }
+.dark .visitor-page .text-v-on-surface        { color: #e2e8f0 !important; }
+.dark .visitor-page .text-v-on-surface-variant{ color: #94a3b8 !important; }
+.dark .visitor-page .text-v-primary           { color: #60a5fa !important; }
+.dark .visitor-page .text-v-secondary         { color: #fb923c !important; }
+.dark .visitor-page .text-v-tertiary          { color: #fbbf24 !important; }
+.dark .visitor-page .text-v-on-tertiary-container { color: #fbbf24 !important; }
+.dark .visitor-page .text-\[\#003178\]        { color: #60a5fa !important; }
+.dark .visitor-page .text-slate-500           { color: #64748b !important; }
+
+/* ─── Stats banner ─── */
+.dark .visitor-page .bg-white\/80 {
+  background: rgba(15, 23, 42, 0.9) !important;
+  border-color: rgba(96,165,250,0.1) !important;
+  box-shadow: 0 20px 60px -20px rgba(0,0,0,0.7) !important;
+}
+.dark .visitor-page .divide-v-outline-variant\/15 > * + * {
+  border-left-color: rgba(96,165,250,0.1) !important;
+}
+
+/* ─── Generic white cards → dark ─── */
+.dark .visitor-page .bg-white {
+  background: #0f172a !important;
+  border-color: rgba(255,255,255,0.06) !important;
+}
+.dark .visitor-page .bg-white\/80,
+.dark .visitor-page .bg-white\/90        { background: rgba(15,23,42,0.92) !important; }
+
+/* ─── Achiever testimonial cards ─── */
+.dark .visitor-page .group.bg-white {
+  background: #0f172a !important;
+  border-color: rgba(255,255,255,0.06) !important;
+}
+.dark .visitor-page .group.bg-white:hover {
+  border-color: rgba(34, 211, 238, 0.08) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4) !important;
+}
+.dark .visitor-page .review-card .border-t {
+  border-top-color: rgba(34, 211, 238, 0.08) !important;
+}
+
+/* ── Primary text (names, labels using v-on-background) ── */
+.dark .visitor-page .text-v-on-background,
+.dark .visitor-page .font-montserrat.text-v-on-background {
+  color: #ddeeff !important;
+}
+.dark .visitor-page .text-v-on-surface-variant {
+  color: #7899b8 !important;
+}
+.dark .visitor-page .text-v-primary {
+  color: #22d3ee !important;
+}
+.dark .visitor-page .text-v-secondary {
+  color: #f87171 !important;
+}
+
+/* ── Section dividers & border accents ── */
+.dark .visitor-page .border-v-outline-variant\/10,
+.dark .visitor-page .border-v-outline-variant\/15 {
+  border-color: rgba(34, 211, 238, 0.08) !important;
+}
+.dark .visitor-page .border-y {
+  border-top-color: rgba(34, 211, 238, 0.08) !important;
+  border-bottom-color: rgba(34, 211, 238, 0.08) !important;
+}
+
+/* ── Location cards info section ── */
+.dark .visitor-page .p-6.bg-white {
+  background: #0d1e38 !important;
+}
+.dark .visitor-page .rounded-2xl.overflow-hidden {
+  border-color: rgba(34, 211, 238, 0.1) !important;
+}
+
+/* ── Badges on location cards ── */
+.dark .visitor-page .bg-v-primary\/10 {
+  background: rgba(34, 211, 238, 0.1) !important;
+}
+.dark .visitor-page .bg-orange-500\/10 {
+  background: rgba(251, 146, 60, 0.12) !important;
+}
+
+/* ── "Loved by Community" review header ── */
+.dark .visitor-page section.border-y {
+  background: rgba(5, 12, 26, 0.6) !important;
+}
+
+/* ── Interactive dot background in dark mode ── */
+.dark canvas.fixed {
+  opacity: 0.55;
+}
+
+/* ── Glass pane in dark visitor context ── */
+.dark .visitor-page .glass-pane {
+  background: linear-gradient(135deg, rgba(13, 30, 56, 0.7) 0%, rgba(5, 12, 26, 0.6) 100%) !important;
+  border-color: rgba(34, 211, 238, 0.1) !important;
+}
+
+/* ── WhatsApp FAB stays green ── */
+.dark .visitor-page .bg-\[\#25D366\] {
+  background: #25D366 !important;
+}
+
+/* ── FAQ accordion dark mode ── */
+.dark .visitor-page .border.rounded-2xl {
+  background: #0d1e38 !important;
+  border-color: rgba(34, 211, 238, 0.1) !important;
+}
+.dark .visitor-page .border.rounded-2xl.bg-white {
+  background: #122040 !important;
+  border-color: rgba(34, 211, 238, 0.22) !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35) !important;
+}
+.dark .visitor-page .border-v-outline-variant\/10.pt-4 {
+  border-top-color: rgba(34, 211, 238, 0.08) !important;
+}
+/* FAQ inactive card hover */
+.dark .visitor-page .hover\:bg-white\/80:hover {
+  background: rgba(18, 32, 64, 0.9) !important;
+}
+.dark .visitor-page .hover\:border-v-primary\/20:hover {
+  border-color: rgba(34, 211, 238, 0.2) !important;
+}
+/* FAQ toggle button */
+.dark .visitor-page .bg-v-surface {
+  background: rgba(34, 211, 238, 0.08) !important;
+}
+.dark .visitor-page .bg-v-primary {
+  background: #0891b2 !important;
+}
+
+/* ── Squishy Pricing dark ── */
+.dark .visitor-page section#membership,
+.dark .visitor-page section[id="membership"] {
+  background: transparent !important;
+}
+
+/* ── Contact / Reservation Form dark ── */
+.dark .visitor-page .bg-v-surface-container-lowest\/50 {
+  background: rgba(13, 30, 56, 0.5) !important;
+}
+
+/* ── bg-gray-100 map embeds placeholder ── */
+.dark .visitor-page .bg-gray-100 {
+  background: #0a1628 !important;
+}
+
+/* ── Tags / pill labels in section headings ── */
+.dark .visitor-page .bg-v-primary\/\[0\.06\] {
+  background: rgba(34, 211, 238, 0.08) !important;
+  border-color: rgba(34, 211, 238, 0.15) !important;
+}
+.dark .visitor-page .border-v-primary\/10 {
+  border-color: rgba(34, 211, 238, 0.15) !important;
+}
+.dark .visitor-page .border-v-primary\/20 {
+  border-color: rgba(34, 211, 238, 0.2) !important;
+}
+.dark .visitor-page .border-v-primary\/30 {
+  border-color: rgba(34, 211, 238, 0.25) !important;
+}
+/* Dot in section heading tag */
+.dark .visitor-page .bg-v-primary.rounded-full {
+  background: #22d3ee !important;
+}
+/* Underline in section heading */
+.dark .visitor-page .bg-v-primary\/20 {
+  background: rgba(34, 211, 238, 0.18) !important;
+}
+
+/* ── Hero slider background ── */
+.dark .visitor-page .hero-slide,
+.dark .visitor-page [class*="hero"] {
+  background: #050c1a !important;
+}
+
+/* ── Footer dark ── */
+.dark .visitor-page footer {
+  background: #030810 !important;
+  border-top-color: rgba(34, 211, 238, 0.08) !important;
+}
+
+/* ── Floating gradient orbs (background blobs) ── */
+.dark .visitor-page .bg-v-primary\/\[0\.02\] {
+  background: rgba(34, 211, 238, 0.03) !important;
+}
+.dark .visitor-page .bg-v-secondary\/5 {
+  background: rgba(248, 113, 113, 0.05) !important;
+}
+.dark .visitor-page .bg-v-primary\/5 {
+  background: rgba(34, 211, 238, 0.05) !important;
+}
+
+/* ── ring on profile photos ── */
+.dark .visitor-page .ring-v-primary\/10 {
+  --tw-ring-color: rgba(34, 211, 238, 0.1) !important;
+}
+.dark .visitor-page .group-hover\:ring-v-primary\/25:hover {
+  --tw-ring-color: rgba(34, 211, 238, 0.25) !important;
+}
+
+/* ── Enroll button in dark visitor nav stays cyan ── */
+.dark .kl-enroll-btn {
+  background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+  box-shadow: 0 2px 12px rgba(6, 182, 212, 0.35);
+}
+.dark .kl-enroll-btn:hover {
+  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.5);
 }
 
 /* ═══════════════════════════════════════════════════════════

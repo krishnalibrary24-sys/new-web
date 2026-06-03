@@ -14,6 +14,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
     { name: "Overview", icon: "space_dashboard", path: "/dashboard" },
     { name: "Students", icon: "school", path: "/dashboard/members" },
     { name: "Admission", icon: "person_add", path: "/dashboard/admission" },
+    { name: "Record Payment", icon: "add_card", path: "/dashboard/record-payment" },
     { name: "Seat Map", icon: "grid_view", path: "/dashboard/seating" },
     { name: "Dues", icon: "account_balance_wallet", path: "/dashboard/dues" },
     { name: "Invoices", icon: "receipt_long", path: "/dashboard/invoices" },
@@ -89,7 +90,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto" data-lenis-prevent>
           <div className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest px-4 mb-2">Navigation</div>
-          {navLinks.slice(0, 4).map((link) => {
+          {navLinks.slice(0, 5).map((link) => {
             const isActive = pathname === link.path;
             return (
               <Link 
@@ -104,7 +105,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
           })}
           
           <div className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest px-4 mt-5 mb-2">Finance</div>
-          {navLinks.slice(4).map((link) => {
+          {navLinks.slice(5).map((link) => {
             const isActive = pathname === link.path;
             return (
               <Link 

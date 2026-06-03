@@ -14,7 +14,7 @@ export default function MembersPage() {
   const [search, setSearch] = useState("");
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'unreserved'>('active');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'seat-asc' | 'seat-desc'>('newest');
   const router = useRouter();
 
@@ -24,16 +24,10 @@ export default function MembersPage() {
   const [renewDiscount, setRenewDiscount] = useState(0);
   const [renewPaymentMode, setRenewPaymentMode] = useState("Cash");
 
-  // Renewal duration and Pay Later states
+  // Renewal duration states
   const [renewDuration, setRenewDuration] = useState<number>(1);
   const [renewCustomMonths, setRenewCustomMonths] = useState<string>("");
   const [renewIsCustomDuration, setRenewIsCustomDuration] = useState<boolean>(false);
-  const [renewPayLater, setRenewPayLater] = useState<boolean>(false);
-  const [renewDueDate, setRenewDueDate] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return d.toISOString().split('T')[0];
-  });
 
   // Mark as Left states
   const [isMarkingLeft, setIsMarkingLeft] = useState<boolean>(false);
@@ -73,10 +67,6 @@ export default function MembersPage() {
       setRenewDuration(1);
       setRenewCustomMonths("");
       setRenewIsCustomDuration(false);
-      setRenewPayLater(false);
-      const d = new Date();
-      d.setDate(d.getDate() + 7);
-      setRenewDueDate(d.toISOString().split('T')[0]);
 
       setIsMarkingLeft(false);
       setLeftWithDues(false);
@@ -90,9 +80,10 @@ export default function MembersPage() {
     const matchesSearch = m.full_name.toLowerCase().includes(search.toLowerCase()) || 
       m.permanent_id.toLowerCase().includes(search.toLowerCase()) ||
       m.mobile.includes(search);
-    const matchesFilter = filterStatus === 'all' || 
-      (filterStatus === 'active' && m.is_active) || 
-      (filterStatus === 'inactive' && !m.is_active);
+      const matchesFilter = filterStatus === 'all' || 
+        (filterStatus === 'active' && m.is_active && !(m.permanent_id && m.permanent_id.includes('U'))) || 
+        (filterStatus === 'inactive' && !m.is_active && !(m.permanent_id && m.permanent_id.includes('U'))) ||
+        (filterStatus === 'unreserved' && m.permanent_id && m.permanent_id.includes('U'));
     return matchesSearch && matchesFilter;
   }).sort((a, b) => {
     if (sortBy === 'name-asc') return a.full_name.localeCompare(b.full_name);
@@ -130,8 +121,9 @@ export default function MembersPage() {
     return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(); // newest
   });
 
-  const activeCount = members.filter(m => m.is_active).length;
-  const inactiveCount = members.filter(m => !m.is_active).length;
+  const activeCount = members.filter(m => m.is_active && !(m.permanent_id && m.permanent_id.includes('U'))).length;
+  const inactiveCount = members.filter(m => !m.is_active && !(m.permanent_id && m.permanent_id.includes('U'))).length;
+  const unreservedCount = members.filter(m => m.permanent_id && m.permanent_id.includes('U')).length;
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to permanently delete this member? This cannot be undone.")) return;
@@ -174,8 +166,8 @@ export default function MembersPage() {
       subscription_end_date: newEnd.toISOString(),
       plan_amount: renewPrice,
       is_active: true,
-      pay_later: renewPayLater,
-      payment_due_date: renewPayLater ? renewDueDate : null,
+      pay_later: false,
+      payment_due_date: null,
       left_with_dues: false,
       loss_amount: 0,
       left_at: null,
@@ -186,20 +178,18 @@ export default function MembersPage() {
 
     await supabase.from('payments').insert([{
       member_id: member.id,
-      amount: renewPayLater ? 0 : totalPayable,
+      amount: totalPayable,
       branch: member.branch,
-      payment_mode: renewPayLater ? 'Cash' : renewPaymentMode,
-      notes: renewPayLater
-        ? `Pay Later — Outstanding Dues: ₹${totalPayable} due on ${new Date(renewDueDate).toLocaleDateString()}. Renewal duration: ${months} month(s).`
-        : `Subscription Renewal — Duration: ${months} month(s). Base Price/mo: ₹${renewPrice}, Discount: ₹${renewDiscount}`
+      payment_mode: renewPaymentMode,
+      notes: `Subscription Renewal — Duration: ${months} month(s). Base Price/mo: ₹${renewPrice}, Discount: ₹${renewDiscount}`
     }]);
 
     const updatedData = { 
       subscription_end_date: newEnd.toISOString(), 
       plan_amount: renewPrice, 
       is_active: true,
-      pay_later: renewPayLater,
-      payment_due_date: renewPayLater ? renewDueDate : null,
+      pay_later: false,
+      payment_due_date: null,
       left_with_dues: false,
       loss_amount: 0,
       left_at: null,
@@ -348,9 +338,10 @@ export default function MembersPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.04] pb-4">
         <div className="flex gap-2">
           {[
-            { key: 'all' as const, label: `All (${members.length})` },
             { key: 'active' as const, label: `Active (${activeCount})` },
             { key: 'inactive' as const, label: `Inactive (${inactiveCount})` },
+            { key: 'unreserved' as const, label: `Unreserved (${unreservedCount})` },
+            { key: 'all' as const, label: `All (${members.length})` },
           ].map(tab => (
             <button
               key={tab.key}
@@ -594,12 +585,7 @@ export default function MembersPage() {
                         );
                         return <span className="badge badge-success">Active</span>;
                       })()}
-                      {selectedMember.pay_later && (
-                        <span className="badge badge-warning text-[10px] flex items-center gap-1 font-bold animate-pulse">
-                          <span className="material-symbols-outlined text-[12px]">schedule</span>
-                          Pay Later (Due: {new Date(selectedMember.payment_due_date).toLocaleDateString()})
-                        </span>
-                      )}
+                      {/* Pay Later badge removed */}
                       <span className="text-[10px] text-on-surface-variant font-medium">
                         Valid till: {new Date(selectedMember.subscription_end_date).toLocaleDateString()}
                       </span>
@@ -718,7 +704,7 @@ export default function MembersPage() {
                     <div>
                       <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">Payment Mode</label>
                       <select
-                        disabled={renewPayLater}
+                        disabled={isActionLoading}
                         value={renewPaymentMode}
                         onChange={(e) => setRenewPaymentMode(e.target.value)}
                         className="input-premium !py-2 !text-sm w-full appearance-none [&>option]:bg-white [&>option]:text-slate-800 disabled:opacity-50"
@@ -731,55 +717,12 @@ export default function MembersPage() {
                     </div>
                   </div>
 
-                  {/* Pay Later Options */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                    <div 
-                      className={`flex items-center gap-2 border p-3 rounded-xl transition-all cursor-pointer select-none ${
-                        renewPayLater 
-                          ? 'bg-amber-500/10 border-amber-500/30' 
-                          : 'bg-slate-200 hover:bg-slate-300 border-slate-300'
-                      }`}
-                      onClick={() => setRenewPayLater(!renewPayLater)}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={renewPayLater}
-                        onChange={(e) => setRenewPayLater(e.target.checked)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-4 h-4 rounded text-[#003178] focus:ring-[#003178] border-slate-300 cursor-pointer"
-                      />
-                      <div>
-                        <span className="text-xs font-bold text-slate-800 block">Pay Later</span>
-                        <span className="text-[9px] text-slate-500">Delay this payment</span>
-                      </div>
-                    </div>
-                    
-                    {renewPayLater && (
-                      <div className="animate-scale-in">
-                        <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">Dues Payment Target Date</label>
-                        <input
-                          type="date"
-                          required={renewPayLater}
-                          value={renewDueDate}
-                          onChange={(e) => setRenewDueDate(e.target.value)}
-                          className="input-premium !py-2 !text-xs w-full"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between items-center bg-white/[0.02] border border-white/[0.04] p-3 rounded-xl text-xs">
+                  <div className="flex justify-between items-center bg-white/[0.02] border border-white/[0.04] p-3 rounded-xl text-xs mt-2">
                     <span className="text-on-surface-variant">
                       Calculated: ₹{renewPrice.toLocaleString('en-IN')}/mo * {renewIsCustomDuration ? (renewCustomMonths || '1') : renewDuration} month(s) - ₹{renewDiscount.toLocaleString('en-IN')}
                     </span>
                     <span className="font-bold text-emerald-400">
-                      {renewPayLater ? (
-                        <span className="text-amber-500">
-                          ₹0 Upfront (₹{Math.max(0, (renewPrice * (renewIsCustomDuration ? (parseInt(renewCustomMonths) || 1) : renewDuration)) - renewDiscount).toLocaleString('en-IN')} due)
-                        </span>
-                      ) : (
-                        <span>Final Price: ₹{Math.max(0, (renewPrice * (renewIsCustomDuration ? (parseInt(renewCustomMonths) || 1) : renewDuration)) - renewDiscount).toLocaleString('en-IN')}</span>
-                      )}
+                      <span>Final Price: ₹{Math.max(0, (renewPrice * (renewIsCustomDuration ? (renewCustomMonths || '1') : renewDuration)) - renewDiscount).toLocaleString('en-IN')}</span>
                     </span>
                   </div>
                 </div>

@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import '@/app/theme-switch.css';
 
 const ThemeSwitch = () => {
   const { theme, setTheme } = useTheme();
@@ -11,49 +10,23 @@ const ThemeSwitch = () => {
     setMounted(true);
   }, []);
 
-  if (!mounted) return <div className="w-16 h-8" />;
+  if (!mounted) return <div className="w-8 h-8 shrink-0" />;
+
+  const isLight = theme === 'light';
 
   return (
-    <div className="theme-switch-wrapper scale-[0.3] origin-left -ml-2 -mt-4">
-      <label className="bb8-toggle">
-        <input 
-          className="bb8-toggle__checkbox" 
-          type="checkbox" 
-          checked={theme === 'light'} 
-          onChange={(e) => setTheme(e.target.checked ? 'light' : 'dark')} 
-        />
-        <div className="bb8-toggle__container">
-          <div className="bb8-toggle__scenery">
-            <div className="bb8-toggle__star" />
-            <div className="bb8-toggle__star" />
-            <div className="bb8-toggle__star" />
-            <div className="bb8-toggle__star" />
-            <div className="bb8-toggle__star" />
-            <div className="bb8-toggle__star" />
-            <div className="bb8-toggle__star" />
-            <div className="tatto-1" />
-            <div className="tatto-2" />
-            <div className="gomrassen" />
-            <div className="hermes" />
-            <div className="chenini" />
-            <div className="bb8-toggle__cloud" />
-            <div className="bb8-toggle__cloud" />
-            <div className="bb8-toggle__cloud" />
-          </div>
-          <div className="bb8">
-            <div className="bb8__head-container">
-              <div className="bb8__antenna" />
-              <div className="bb8__antenna" />
-              <div className="bb8__head" />
-            </div>
-            <div className="bb8__body" />
-          </div>
-          <div className="artificial__hidden">
-            <div className="bb8__shadow" />
-          </div>
-        </div>
-      </label>
-    </div>
+    <button
+      onClick={() => setTheme(isLight ? 'dark' : 'light')}
+      className="w-8 h-8 rounded-lg flex items-center justify-center border border-v-outline-variant/15 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-all text-slate-500 dark:text-slate-400 relative overflow-hidden shrink-0"
+      aria-label="Toggle Theme"
+    >
+      <span className="material-symbols-outlined text-[18px] transition-all duration-500 absolute rotate-0 scale-100 dark:rotate-90 dark:scale-0 dark:opacity-0" style={{ fontVariationSettings: '"FILL" 1' }}>
+        light_mode
+      </span>
+      <span className="material-symbols-outlined text-[18px] transition-all duration-500 absolute rotate-90 scale-0 opacity-0 dark:rotate-0 dark:scale-100 dark:opacity-100" style={{ fontVariationSettings: '"FILL" 1' }}>
+        dark_mode
+      </span>
+    </button>
   );
 }
 
