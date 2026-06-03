@@ -135,7 +135,7 @@ export default function Home() {
               <div className="flex flex-col items-center gap-2">
                 <div className="flex items-center gap-2.5">
                   <h3 className="font-montserrat text-xl font-bold text-v-on-background">
-                    Loved by Our Community
+                    Loved by Our Community (4.9★ Rating)
                   </h3>
                   <span className="material-symbols-outlined text-[#fdac29]" style={{ fontVariationSettings: '"FILL" 1' }}>star</span>
                 </div>

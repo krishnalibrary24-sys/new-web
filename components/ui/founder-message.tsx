@@ -56,7 +56,7 @@ export default function FounderMessageSection() {
                 <div className="relative aspect-[4/5] rounded-2xl overflow-hidden mb-5 bg-slate-100 dark:bg-slate-800">
                   <img
                     src="/assets/founder.png"
-                    alt="Dewansh Gupta - Founder"
+                    alt="Shivendra - Founder"
                     className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-v-primary/30 to-transparent mix-blend-multiply opacity-60 group-hover:opacity-30 transition-opacity duration-500" />
@@ -65,7 +65,7 @@ export default function FounderMessageSection() {
                 {/* Founder Details */}
                 <div className="text-center pb-2">
                   <h3 className="font-montserrat text-lg font-extrabold text-v-on-background tracking-wide">
-                    Dewansh Gupta
+                    Shivendra
                   </h3>
                   <p className="font-montserrat text-xs font-semibold text-v-primary uppercase tracking-widest mt-0.5">
                     Founder, Krishna Library
@@ -123,7 +123,7 @@ export default function FounderMessageSection() {
             <div className="pt-4 border-t border-v-outline-variant/10 flex items-center justify-between gap-4 flex-wrap">
               <div className="flex flex-col">
                 <span className="font-montserrat text-[15px] font-extrabold text-v-on-background">
-                  Dewansh Gupta
+                  Shivendra
                 </span>
                 <span className="text-[11px] text-v-on-surface-variant/80 font-lexend font-medium">
                   Founder & Director
@@ -132,7 +132,7 @@ export default function FounderMessageSection() {
               
               {/* Signature look font block */}
               <div className="font-serif italic text-v-primary/70 text-2xl tracking-wide select-none pr-4">
-                Dewansh G.
+                Shivendra
               </div>
             </div>
 

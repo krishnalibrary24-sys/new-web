@@ -28,7 +28,7 @@ const faqs: FAQ[] = [
   {
     question: "Does the library provide high-speed Wi-Fi?",
     answer:
-      "Absolutely. We provide ultra-high-speed, redundant fiber optic Wi-Fi connectivity across all study cabins. Our network is fully optimized for streaming high-definition video lectures, online research, and handling heavy digital downloads smoothly.",
+      "Absolutely. We provide ultra-high-speed, redundant fiber optic Wi-Fi connectivity across all study cabins, available all the time with zero downtime. Our network is fully optimized for streaming high-definition video lectures, online research, and handling heavy digital downloads smoothly.",
   },
   {
     question: "Are secure storage facilities available for my books?",
@@ -44,11 +44,6 @@ const faqs: FAQ[] = [
     question: "Can I experience the library before purchasing a membership?",
     answer:
       "Yes, we welcome all prospective scholars with a 1-day complimentary free trial. You can visit either branch, experience the pin-drop silent environment, test the premium seats, and explore our facilities first-hand before subscribing.",
-  },
-  {
-    question: "What is the difference between Reserved and Unreserved seats?",
-    answer:
-      "Reserved members are allocated a specific study cabin desk number which is exclusively theirs for the duration of their shift. Unreserved members can access the library facilities, Wi-Fi, lockers, and other common areas, but do not have a dedicated seat assigned.",
   },
 ];
 
