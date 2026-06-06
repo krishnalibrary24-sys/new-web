@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from 'framer-motion';
+import { getLibrarySetting } from "@/lib/settings";
 
 export default function DuesPage() {
   const { activeBranch } = useBranch();
@@ -172,20 +173,41 @@ export default function DuesPage() {
     }
   };
 
-  const sendWhatsApp = (member: any, type: 'reminder' | 'overdue' | 'invoice-dues', extraData?: any) => {
+  const sendWhatsApp = async (member: any, type: 'reminder' | 'overdue' | 'invoice-dues', extraData?: any) => {
     const mobile = member.mobile.replace(/[^0-9]/g, '');
     let msg = "";
     
     if (type === 'reminder') {
       const endDate = new Date(member.subscription_end_date).toLocaleDateString();
-      msg = `Dear ${member.full_name},\n\nThis is a friendly reminder from Krishna Library that your membership (${member.permanent_id}) is expiring on ${endDate}.\n\nPlease renew your subscription to continue enjoying uninterrupted access to your seat.\n\nRegards,\nKrishna Library — ${branchName}`;
+      const template = await getLibrarySetting(
+        "due_soon_msg",
+        "Dear {name},\n\nThis is a friendly reminder that your Krishna Library subscription expires in 3 days on {expiry}.\n\nPlease renew to secure your seat (#{seat}).\n\nRegards,\nKrishna Library"
+      );
+      msg = template
+        .replace(/{name}/g, member.full_name)
+        .replace(/{seat}/g, member.seat_no || 'Unassigned')
+        .replace(/{expiry}/g, endDate);
     } else if (type === 'overdue') {
       const endDate = new Date(member.subscription_end_date).toLocaleDateString();
-      msg = `Dear ${member.full_name},\n\nYour Krishna Library membership (${member.permanent_id}) expired on ${endDate}. Your seat has been temporarily released.\n\nPlease visit the library at the earliest to renew your subscription.\n\nRegards,\nKrishna Library — ${branchName}`;
+      const template = await getLibrarySetting(
+        "overdue_msg",
+        "Dear {name},\n\nYour payment of {amount} is overdue since {due_date}. Please clear your dues immediately to avoid seat cancellation.\n\nRegards,\nKrishna Library"
+      );
+      msg = template
+        .replace(/{name}/g, member.full_name)
+        .replace(/{amount}/g, `₹${member.plan_amount || '600'}`)
+        .replace(/{due_date}/g, endDate);
     } else if (type === 'invoice-dues') {
-      const dueAmt = extraData?.due_amount;
+      const dueAmt = extraData?.due_amount || '0';
       const dueDateStr = extraData?.due_date ? new Date(extraData.due_date).toLocaleDateString() : 'Immediate';
-      msg = `Dear ${member.full_name},\n\nYou have outstanding dues of *₹${dueAmt}* pending with Krishna Library for your membership (${member.permanent_id}).\n\nPlease clear the balance by the due date: *${dueDateStr}* to avoid slot suspension.\n\nRegards,\nKrishna Library — ${branchName}`;
+      const template = await getLibrarySetting(
+        "invoice_msg",
+        "Dear {name},\n\nYour invoice of {amount} has been generated. Due date: {due_date}.\n\nThank you for choosing Krishna Library."
+      );
+      msg = template
+        .replace(/{name}/g, member.full_name)
+        .replace(/{amount}/g, `₹${dueAmt}`)
+        .replace(/{due_date}/g, dueDateStr);
     }
 
     window.open(`https://wa.me/${mobile}?text=${encodeURIComponent(msg)}`, '_blank');

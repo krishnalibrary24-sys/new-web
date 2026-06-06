@@ -14,6 +14,7 @@ import ScrollReveal, { StaggerContainer, StaggerItem } from '@/components/ui/scr
 import SectionHeading from '@/components/ui/section-heading';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useTheme } from 'next-themes';
+import { supabase } from '@/lib/supabase';
 
 /* ── Counter animation hook ── */
 function AnimatedCounter({ value, suffix = "" }: { value: string; suffix?: string }) {
@@ -30,7 +31,55 @@ function AnimatedCounter({ value, suffix = "" }: { value: string; suffix?: strin
   );
 }
 
+const DEFAULT_ACHIEVERS = [
+  {
+    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAXIyldosztmi8fNPYHddI3Ddsv7gSvYSw5EolHH-DQnTg4GfkF2Ng-ZPSCTwr1eUIHeVcVllJJbD17V6s1Ydd6_rAfMZFs6Qounf8a9P-WhPdR34KrWk0I6a6JlF6RnvzRlapPaiica1iWLhhRQBg5EMN_cPIml1df-in3jeIPiDj1OgKWBX6KyOZ5sFhvdBRUH9eNVvUoQ7itGs22Fm46XyOFDb3whdrbuxA_9pCBIqxqO5XbMUlmPbLgcmIo4IEnewxsmwYl-rIS",
+    name: "Sarah Jenkins",
+    role: "University Scholar",
+    quote: "The quiet study rooms and access to premium academic databases at Krishna Library were crucial for my final year thesis. I couldn't have done it without this resource!",
+  },
+  {
+    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuB92wRJryR1hxdOU_xyKytgYaOMN0ksIkUqwf7KH_UbthE8L1d-7yZhnbSenN90WxMcrTGvXvgwIz5bkQq_9P-1gK12khzdGzwdW8Rw_Nh1QyPf5mk815rFYHp21OsoQaehunSP369cj5fczztRNGJDOCRehOwbL_IxZTvdMeLP1rv6DBlgf2NbWSaRfT-c_JFx0004hev3cHEbyxTS_ZEEfyIF0FBvn4InRGgNhNT7SmMkX3SO0gyaPc1ZDMDRLrLo6IvrhuPXf0Ng",
+    name: "David Chen",
+    role: "Self-Taught Developer",
+    quote: "I learned to code using the library's free internet and tech workshop materials. The supportive environment here completely changed my career trajectory.",
+  },
+  {
+    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDVCmcTA0DQW06Gn1_OIIDGJB_yFZ4EZWZhx4Q5QKlp0PrZBGBUwWtBC4zcoQYzjZ_7ow_yuVIzlWpMMMjKPiK0_8DLUr737mXshjJUGSabVlIK6mlNZAqTehs_NQ2Rsy4TyUjyAq5g519hNI24ugz_zIU44RHLPp0KnL_v9GpO1KS2ivq2fCGINOnwSfajgoM8tFCWoHQNH3sbSV4PEQKx5r3nqIwSeFmtFT4dU1-tqo307Me9kY4hlCPxw7TpQkEN9H2XEm4eGI52",
+    name: "Maria Garcia",
+    role: "Small Business Owner",
+    quote: "Attending the adult literacy and business networking events here gave me the confidence and skills to launch my own local bakery. It's truly a community hub.",
+  },
+];
+
 export default function Home() {
+  const [achievers, setAchievers] = useState(DEFAULT_ACHIEVERS);
+
+  useEffect(() => {
+    async function loadAchievers() {
+      try {
+        const { data, error } = await supabase
+          .from("achievers")
+          .select("*")
+          .order("created_at", { ascending: true });
+        if (error) throw error;
+        if (data && data.length > 0) {
+          setAchievers(
+            data.map((a: any) => ({
+              img: a.photo_url || "https://lh3.googleusercontent.com/aida-public/AB6AXuAXIyldosztmi8fNPYHddI3Ddsv7gSvYSw5EolHH-DQnTg4GfkF2Ng-ZPSCTwr1eUIHeVcVllJJbD17V6s1Ydd6_rAfMZFs6Qounf8a9P-WhPdR34KrWk0I6a6JlF6RnvzRlapPaiica1iWLhhRQBg5EMN_cPIml1df-in3jeIPiDj1OgKWBX6KyOZ5sFhvdBRUH9eNVvUoQ7itGs22Fm46XyOFDb3whdrbuxA_9pCBIqxqO5XbMUlmPbLgcmIo4IEnewxsmwYl-rIS",
+              name: a.name,
+              role: a.achievement,
+              quote: a.testimonial || "",
+            }))
+          );
+        }
+      } catch (err) {
+        console.warn("Failed to load achievers, using defaults", err);
+      }
+    }
+    loadAchievers();
+  }, []);
+
   return (
     <div className="bg-transparent text-v-on-background font-lexend antialiased selection:bg-v-primary/10 selection:text-v-primary visitor-page">
       <InteractiveDotBackground />
@@ -79,26 +128,7 @@ export default function Home() {
             />
 
             <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6" stagger={0.15}>
-              {[
-                {
-                  img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAXIyldosztmi8fNPYHddI3Ddsv7gSvYSw5EolHH-DQnTg4GfkF2Ng-ZPSCTwr1eUIHeVcVllJJbD17V6s1Ydd6_rAfMZFs6Qounf8a9P-WhPdR34KrWk0I6a6JlF6RnvzRlapPaiica1iWLhhRQBg5EMN_cPIml1df-in3jeIPiDj1OgKWBX6KyOZ5sFhvdBRUH9eNVvUoQ7itGs22Fm46XyOFDb3whdrbuxA_9pCBIqxqO5XbMUlmPbLgcmIo4IEnewxsmwYl-rIS",
-                  name: "Sarah Jenkins",
-                  role: "University Scholar",
-                  quote: "The quiet study rooms and access to premium academic databases at Krishna Library were crucial for my final year thesis. I couldn't have done it without this resource!",
-                },
-                {
-                  img: "https://lh3.googleusercontent.com/aida-public/AB6AXuB92wRJryR1hxdOU_xyKytgYaOMN0ksIkUqwf7KH_UbthE8L1d-7yZhnbSenN90WxMcrTGvXvgwIz5bkQq_9P-1gK12khzdGzwdW8Rw_Nh1QyPf5mk815rFYHp21OsoQaehunSP369cj5fczztRNGJDOCRehOwbL_IxZTvdMeLP1rv6DBlgf2NbWSaRfT-c_JFx0004hev3cHEbyxTS_ZEEfyIF0FBvn4InRGgNhNT7SmMkX3SO0gyaPc1ZDMDRLrLo6IvrhuPXf0Ng",
-                  name: "David Chen",
-                  role: "Self-Taught Developer",
-                  quote: "I learned to code using the library's free internet and tech workshop materials. The supportive environment here completely changed my career trajectory.",
-                },
-                {
-                  img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDVCmcTA0DQW06Gn1_OIIDGJB_yFZ4EZWZhx4Q5QKlp0PrZBGBUwWtBC4zcoQYzjZ_7ow_yuVIzlWpMMMjKPiK0_8DLUr737mXshjJUGSabVlIK6mlNZAqTehs_NQ2Rsy4TyUjyAq5g519hNI24ugz_zIU44RHLPp0KnL_v9GpO1KS2ivq2fCGINOnwSfajgoM8tFCWoHQNH3sbSV4PEQKx5r3nqIwSeFmtFT4dU1-tqo307Me9kY4hlCPxw7TpQkEN9H2XEm4eGI52",
-                  name: "Maria Garcia",
-                  role: "Small Business Owner",
-                  quote: "Attending the adult literacy and business networking events here gave me the confidence and skills to launch my own local bakery. It's truly a community hub.",
-                },
-              ].map((person, i) => (
+              {achievers.map((person, i) => (
                 <StaggerItem key={i}>
                   <div className="group bg-white p-7 rounded-2xl border border-v-outline-variant/15 hover:border-v-primary/15 hover:shadow-[0_12px_40px_rgba(0,49,120,0.05)] transition-all duration-500 h-full flex flex-col">
                     <div className="flex items-center gap-4 mb-5">

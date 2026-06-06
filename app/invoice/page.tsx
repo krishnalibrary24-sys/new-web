@@ -10,27 +10,49 @@ function InvoiceContent() {
   const [member, setMember] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Settings loaded from localStorage
+  // Settings loaded from Supabase/localStorage
   const [libName, setLibName] = useState("Krishna Library");
   const [libPhone, setLibPhone] = useState("+91 8269144748");
   const [libAddress, setLibAddress] = useState("Plot 12, Bengali Chowk Area, Ambikapur, C.G.");
   const [upiId, setUpiId] = useState("krishnalibrary@okaxis");
   const [upiName, setUpiName] = useState("Krishna Library");
+  const [invoiceMsg, setInvoiceMsg] = useState(
+    "Dear {name},\n\nYour invoice of {amount} has been generated. Due date: {due_date}.\n\nThank you for choosing Krishna Library."
+  );
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedName = localStorage.getItem("krishna_lib_name");
-      const savedPhone = localStorage.getItem("krishna_phone");
-      const savedAddress = localStorage.getItem("krishna_address");
-      const savedUpiId = localStorage.getItem("krishna_upi_id");
-      const savedUpiName = localStorage.getItem("krishna_upi_pn");
+    async function loadSettings() {
+      try {
+        const { data, error } = await supabase.from('library_settings').select('*');
+        if (error) throw error;
+        if (data && data.length > 0) {
+          data.forEach((item: any) => {
+            if (item.id === 'lib_name') setLibName(item.value);
+            if (item.id === 'lib_phone') setLibPhone(item.value);
+            if (item.id === 'lib_address') setLibAddress(item.value);
+            if (item.id === 'upi_id') setUpiId(item.value);
+            if (item.id === 'upi_name') setUpiName(item.value);
+            if (item.id === 'invoice_msg') setInvoiceMsg(item.value);
+          });
+        }
+      } catch (err) {
+        console.warn("Failed to load settings from DB in invoice, loading from localStorage", err);
+        if (typeof window !== 'undefined') {
+          const savedName = localStorage.getItem("krishna_lib_name");
+          const savedPhone = localStorage.getItem("krishna_phone");
+          const savedAddress = localStorage.getItem("krishna_address");
+          const savedUpiId = localStorage.getItem("krishna_upi_id");
+          const savedUpiName = localStorage.getItem("krishna_upi_pn");
 
-      if (savedName) setLibName(savedName);
-      if (savedPhone) setLibPhone(savedPhone);
-      if (savedAddress) setLibAddress(savedAddress);
-      if (savedUpiId) setUpiId(savedUpiId);
-      if (savedUpiName) setUpiName(savedUpiName);
+          if (savedName) setLibName(savedName);
+          if (savedPhone) setLibPhone(savedPhone);
+          if (savedAddress) setLibAddress(savedAddress);
+          if (savedUpiId) setUpiId(savedUpiId);
+          if (savedUpiName) setUpiName(savedUpiName);
+        }
+      }
     }
+    loadSettings();
   }, []);
 
   const [invoice, setInvoice] = useState<any>(null);
@@ -120,7 +142,12 @@ function InvoiceContent() {
           Print Invoice
         </button>
         <a 
-          href={`https://wa.me/${member.mobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${member.full_name}, here is your latest invoice for ${libName}. You can view it here: ${typeof window !== 'undefined' ? window.location.href : ''}`)}`}
+          href={`https://wa.me/${member.mobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+            invoiceMsg
+              .replace(/{name}/g, member.full_name)
+              .replace(/{amount}/g, `₹${invoice.due_amount > 0 ? invoice.due_amount : invoice.total_amount}`)
+              .replace(/{due_date}/g, invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : new Date().toLocaleDateString())
+          )}`}
           target="_blank" rel="noreferrer"
           className="bg-[#10b981] hover:bg-[#059669] text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all hover:scale-105 shadow-md animate-fade-in"
         >

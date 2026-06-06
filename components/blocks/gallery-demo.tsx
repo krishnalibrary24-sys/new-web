@@ -1,10 +1,10 @@
-"use client";
-
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { MapPin, Library } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
-const IMAGES: { src: string; label: string; caption: string }[] = [
+const DEFAULT_IMAGES = [
   {
     src: "/assets/images/Gallery/exterior.jpg",
     label: "Bangali Chowk Branch",
@@ -43,6 +43,36 @@ const IMAGES: { src: string; label: string; caption: string }[] = [
 ];
 
 export const GalleryDemo = () => {
+  const [images, setImages] = useState(DEFAULT_IMAGES);
+
+  useEffect(() => {
+    async function loadGallery() {
+      try {
+        const { data, error } = await supabase
+          .from("gallery_photos")
+          .select("*")
+          .order("created_at", { ascending: true });
+        if (error) throw error;
+        if (data && data.length > 0) {
+          setImages(
+            data.map((item: any) => ({
+              src: item.url,
+              label:
+                item.branch === "bengali-chowk"
+                  ? "Bangali Chowk Branch"
+                  : item.branch === "namnakala"
+                  ? "Namnakala Branch"
+                  : "All Branches",
+              caption: item.title || "Library View",
+            }))
+          );
+        }
+      } catch (err) {
+        console.warn("Failed to load gallery photos, using defaults", err);
+      }
+    }
+    loadGallery();
+  }, []);
   return (
     <section className="relative bg-v-surface text-v-on-background py-24 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -100,7 +130,7 @@ export const GalleryDemo = () => {
           }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
         >
-          {IMAGES.map((img, idx) => (
+          {images.map((img, idx) => (
             <motion.div
               key={idx}
               variants={{

@@ -3,80 +3,478 @@ import React, { useState, useEffect } from 'react';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 
+interface ImageCropperProps {
+  imageSrc: string;
+  type: 'gallery' | 'achiever';
+  onClose: () => void;
+  onCropComplete: (croppedBase64: string) => void;
+}
+
+const ImageCropper = ({ imageSrc, type, onClose, onCropComplete }: ImageCropperProps) => {
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  const [scale, setScale] = useState(1);
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Crop viewport dimensions
+  const viewportWidth = type === 'gallery' ? 320 : 240;
+  const viewportHeight = 240;
+
+  useEffect(() => {
+    const image = new Image();
+    image.src = imageSrc;
+    image.onload = () => {
+      setImg(image);
+      setScale(1);
+      setOffsetX(0);
+      setOffsetY(0);
+    };
+  }, [imageSrc]);
+
+  // Cover calculation
+  const scaleX = img ? viewportWidth / img.width : 1;
+  const scaleY = img ? viewportHeight / img.height : 1;
+  const baseScale = Math.max(scaleX, scaleY);
+  const initialWidth = img ? img.width * baseScale : 0;
+  const initialHeight = img ? img.height * baseScale : 0;
+
+  const currentWidth = initialWidth * scale;
+  const currentHeight = initialHeight * scale;
+
+  const clampOffsets = (x: number, y: number, currentScale: number) => {
+    const w = initialWidth * currentScale;
+    const h = initialHeight * currentScale;
+    
+    const minX = (viewportWidth - w) / 2;
+    const maxX = (w - viewportWidth) / 2;
+    const minY = (viewportHeight - h) / 2;
+    const maxY = (h - viewportHeight) / 2;
+    
+    const clampedX = w < viewportWidth ? 0 : Math.min(Math.max(x, minX), maxX);
+    const clampedY = h < viewportHeight ? 0 : Math.min(Math.max(y, minY), maxY);
+    
+    return { x: clampedX, y: clampedY };
+  };
+
+  const leftPos = (viewportWidth - currentWidth) / 2 + offsetX;
+  const topPos = (viewportHeight - currentHeight) / 2 + offsetY;
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - offsetX, y: e.clientY - offsetY });
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(true);
+    const touch = e.touches[0];
+    setDragStart({ x: touch.clientX - offsetX, y: touch.clientY - offsetY });
+  };
+
+  // Window listeners to allow holding and moving anywhere with boundary clamping
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      const newX = e.clientX - dragStart.x;
+      const newY = e.clientY - dragStart.y;
+      const clamped = clampOffsets(newX, newY, scale);
+      setOffsetX(clamped.x);
+      setOffsetY(clamped.y);
+    };
+
+    const handleWindowMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    const handleWindowTouchMove = (e: TouchEvent) => {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+      const touch = e.touches[0];
+      const newX = touch.clientX - dragStart.x;
+      const newY = touch.clientY - dragStart.y;
+      const clamped = clampOffsets(newX, newY, scale);
+      setOffsetX(clamped.x);
+      setOffsetY(clamped.y);
+    };
+
+    const handleWindowTouchEnd = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+    window.addEventListener('touchmove', handleWindowTouchMove, { passive: false });
+    window.addEventListener('touchend', handleWindowTouchEnd);
+
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+      window.removeEventListener('touchmove', handleWindowTouchMove);
+      window.removeEventListener('touchend', handleWindowTouchEnd);
+    };
+  }, [isDragging, dragStart, scale, initialWidth, initialHeight]);
+
+  const handleApply = () => {
+    if (!img) return;
+    const outputWidth = type === 'gallery' ? 640 : 400;
+    const outputHeight = type === 'gallery' ? 480 : 400;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const factorX = outputWidth / viewportWidth;
+    const factorY = outputHeight / viewportHeight;
+
+    const destW = currentWidth * factorX;
+    const destH = currentHeight * factorY;
+    const destX = leftPos * factorX;
+    const destY = topPos * factorY;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, outputWidth, outputHeight);
+    ctx.drawImage(img, destX, destY, destW, destH);
+    
+    onCropComplete(canvas.toDataURL('image/jpeg', 0.85));
+  };
+
+  if (!img) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
+        <div className="text-white text-xs font-bold animate-pulse">Loading image preview...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-55 flex items-center justify-center p-4">
+      <div onClick={onClose} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+      <div className="glass-pane-elevated max-w-md w-full relative z-10 overflow-hidden !rounded-2xl border border-white/10 shadow-2xl p-6 flex flex-col items-center">
+        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-2 flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary text-base">crop</span>
+          Crop and Arrange Photo
+        </h3>
+        <p className="text-[11px] text-slate-400 mb-6 text-center font-manrope">Drag inside the box to center, and zoom using the slider below.</p>
+
+        <div
+          style={{ width: viewportWidth, height: viewportHeight }}
+          className={`relative overflow-hidden cursor-move bg-slate-950 border-2 border-primary/40 shadow-inner ${
+            type === 'achiever' ? 'rounded-full' : 'rounded-xl'
+          }`}
+        >
+          <img
+            src={imageSrc}
+            alt="Crop viewport"
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+            style={{
+              position: 'absolute',
+              left: leftPos,
+              top: topPos,
+              width: currentWidth,
+              height: currentHeight,
+              maxWidth: 'none',
+              userSelect: 'none',
+              pointerEvents: 'auto',
+              touchAction: 'none'
+            }}
+          />
+        </div>
+
+        <div className="w-full mt-6 space-y-2">
+          <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase font-manrope">
+            <span>Zoom</span>
+            <span>{Math.round(scale * 100)}%</span>
+          </div>
+          <input
+            type="range"
+            min="1"
+            max="3"
+            step="0.05"
+            value={scale}
+            onChange={(e) => {
+              const newScale = parseFloat(e.target.value);
+              setScale(newScale);
+              const clamped = clampOffsets(offsetX, offsetY, newScale);
+              setOffsetX(clamped.x);
+              setOffsetY(clamped.y);
+            }}
+            className="w-full h-1 bg-slate-200 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
+          />
+        </div>
+
+        <div className="flex gap-3 w-full mt-8">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-ghost flex-1 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleApply}
+            className="btn-primary flex-1 py-2 text-xs rounded-xl font-bold flex items-center justify-center gap-1 shadow-lg"
+          >
+            <span className="material-symbols-outlined text-sm">check_circle</span>
+            Apply Crop
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function SettingsPage() {
   const { activeBranch } = useBranch();
   const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
 
-  // State for all settings
+  // Navigation tab state
+  const [activeTab, setActiveTab] = useState<'system' | 'gallery' | 'achievers'>('system');
+
+  // State for System settings
   const [libName, setLibName] = useState("Krishna Library");
   const [libPhone, setLibPhone] = useState("+91 8269144748");
   const [libAddress, setLibAddress] = useState("Plot 12, Bangali Chowk Area, Ambikapur, C.G.");
   const [upiId, setUpiId] = useState("krishnalibrary@okaxis");
   const [upiName, setUpiName] = useState("Krishna Library");
+  
+  // States for WhatsApp / Notification message templates
   const [welcomeMsg, setWelcomeMsg] = useState(
     "Dear {name},\n\nWelcome to Krishna Library! Your admission is confirmed.\nBranch: {branch}\nSeat No: {seat}\nShift: {shift}\nValid Till: {expiry}\n\nHappy Learning!\nKrishna Library"
   );
   const [dueMsg, setDueMsg] = useState(
     "Dear {name},\n\nThis is a friendly reminder that your Krishna Library subscription expires in 3 days on {expiry}.\n\nPlease renew to secure your seat (#{seat}).\n\nRegards,\nKrishna Library"
   );
+  const [invoiceMsg, setInvoiceMsg] = useState(
+    "Dear {name},\n\nYour invoice of {amount} has been generated. Due date: {due_date}.\n\nThank you for choosing Krishna Library."
+  );
+  const [seatMsg, setSeatMsg] = useState(
+    "Dear {name},\n\nYou have been assigned Seat No. {seat_no} for the {shift} shift at our {branch} branch."
+  );
+  const [overdueMsg, setOverdueMsg] = useState(
+    "Dear {name},\n\nYour payment of {amount} is overdue since {due_date}. Please clear your dues immediately to avoid seat cancellation.\n\nRegards,\nKrishna Library"
+  );
 
   const [isSaving, setIsSaving] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
 
-  // Load settings on component mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedName = localStorage.getItem("krishna_lib_name");
-      const savedPhone = localStorage.getItem("krishna_phone");
-      const savedAddress = localStorage.getItem("krishna_address");
-      const savedUpiId = localStorage.getItem("krishna_upi_id");
-      const savedUpiName = localStorage.getItem("krishna_upi_pn");
-      const savedWelcome = localStorage.getItem("krishna_welcome_msg");
-      const savedDue = localStorage.getItem("krishna_due_msg");
+  // Gallery states
+  const [gallery, setGallery] = useState<{ id: string; url: string; title: string; branch: string }[]>([]);
+  const [newPhotoUrl, setNewPhotoUrl] = useState("");
+  const [newPhotoTitle, setNewPhotoTitle] = useState("");
+  const [newPhotoBranch, setNewPhotoBranch] = useState("all");
 
-      if (savedName) setLibName(savedName);
-      if (savedPhone) setLibPhone(savedPhone);
-      if (savedAddress) setLibAddress(savedAddress);
-      if (savedUpiId) setUpiId(savedUpiId);
-      if (savedUpiName) setUpiName(savedUpiName);
-      if (savedWelcome) setWelcomeMsg(savedWelcome);
-      if (savedDue) setDueMsg(savedDue);
+  // Achievers states
+  const [achieversList, setAchieversList] = useState<{ id: string; name: string; achievement: string; photo_url: string; testimonial: string }[]>([]);
+  const [newAchieverName, setNewAchieverName] = useState("");
+  const [newAchieverRole, setNewAchieverRole] = useState("");
+  const [newAchieverPhoto, setNewAchieverPhoto] = useState("");
+  const [newAchieverQuote, setNewAchieverQuote] = useState("");
+  const [showGallerySelector, setShowGallerySelector] = useState(false);
+
+  // Cropper states
+  const [showCropper, setShowCropper] = useState(false);
+  const [cropperImage, setCropperImage] = useState("");
+  const [cropperType, setCropperType] = useState<'gallery' | 'achiever'>('gallery');
+
+  // Load all configurations from Supabase on mount
+  useEffect(() => {
+    async function loadAllData() {
+      // 1. Fetch system configs
+      try {
+        const { data, error } = await supabase.from('library_settings').select('*');
+        if (error) throw error;
+        if (data && data.length > 0) {
+          data.forEach((item: any) => {
+            if (item.id === 'lib_name') setLibName(item.value);
+            if (item.id === 'lib_phone') setLibPhone(item.value);
+            if (item.id === 'lib_address') setLibAddress(item.value);
+            if (item.id === 'upi_id') setUpiId(item.value);
+            if (item.id === 'upi_name') setUpiName(item.value);
+            if (item.id === 'welcome_msg') setWelcomeMsg(item.value);
+            if (item.id === 'due_soon_msg') setDueMsg(item.value);
+            if (item.id === 'invoice_msg') setInvoiceMsg(item.value);
+            if (item.id === 'seat_assigned_msg') setSeatMsg(item.value);
+            if (item.id === 'overdue_msg') setOverdueMsg(item.value);
+          });
+        }
+      } catch (err) {
+        console.warn("Failed to load settings from Supabase, loading localStorage", err);
+        // Localstorage fallback
+        if (typeof window !== 'undefined') {
+          const savedName = localStorage.getItem("krishna_lib_name");
+          const savedPhone = localStorage.getItem("krishna_phone");
+          const savedAddress = localStorage.getItem("krishna_address");
+          const savedUpiId = localStorage.getItem("krishna_upi_id");
+          const savedUpiName = localStorage.getItem("krishna_upi_pn");
+          const savedWelcome = localStorage.getItem("krishna_welcome_msg");
+          const savedDue = localStorage.getItem("krishna_due_msg");
+
+          if (savedName) setLibName(savedName);
+          if (savedPhone) setLibPhone(savedPhone);
+          if (savedAddress) setLibAddress(savedAddress);
+          if (savedUpiId) setUpiId(savedUpiId);
+          if (savedUpiName) setUpiName(savedUpiName);
+          if (savedWelcome) setWelcomeMsg(savedWelcome);
+          if (savedDue) setDueMsg(savedDue);
+        }
+      }
+
+      // 2. Fetch gallery
+      fetchGallery();
+
+      // 3. Fetch achievers
+      fetchAchievers();
     }
+
+    loadAllData();
   }, []);
 
-  const handleSave = (e: React.FormEvent) => {
+  const fetchGallery = async () => {
+    try {
+      const { data, error } = await supabase.from('gallery_photos').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      setGallery(data || []);
+    } catch (err) {
+      console.warn("Gallery table not loaded yet", err);
+    }
+  };
+
+  const fetchAchievers = async () => {
+    try {
+      const { data, error } = await supabase.from('achievers').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      setAchieversList(data || []);
+    } catch (err) {
+      console.warn("Achievers table not loaded yet", err);
+    }
+  };
+
+  // Save Settings handler
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
 
-    if (typeof window !== 'undefined') {
-      localStorage.setItem("krishna_lib_name", libName);
-      localStorage.setItem("krishna_phone", libPhone);
-      localStorage.setItem("krishna_address", libAddress);
-      localStorage.setItem("krishna_upi_id", upiId);
-      localStorage.setItem("krishna_upi_pn", upiName);
-      localStorage.setItem("krishna_welcome_msg", welcomeMsg);
-      localStorage.setItem("krishna_due_msg", dueMsg);
-    }
+    try {
+      const settingsPayload = [
+        { id: 'lib_name', value: libName, description: 'Name of the library' },
+        { id: 'lib_phone', value: libPhone, description: 'Contact phone number' },
+        { id: 'lib_address', value: libAddress, description: 'Invoice billing address' },
+        { id: 'upi_id', value: upiId, description: 'Merchant UPI ID for scanned invoice collections' },
+        { id: 'upi_name', value: upiName, description: 'Merchant display name for scanned invoice collections' },
+        { id: 'welcome_msg', value: welcomeMsg, description: 'WhatsApp template sent on new admission' },
+        { id: 'due_soon_msg', value: dueMsg, description: 'WhatsApp template sent 3 days before expiry' },
+        { id: 'invoice_msg', value: invoiceMsg, description: 'WhatsApp template sent on invoice generation' },
+        { id: 'seat_assigned_msg', value: seatMsg, description: 'WhatsApp template sent on seat assignment' },
+        { id: 'overdue_msg', value: overdueMsg, description: 'WhatsApp template sent for overdue payments' }
+      ];
 
-    setTimeout(() => {
-      setIsSaving(false);
+      const { error } = await supabase.from('library_settings').upsert(settingsPayload);
+      if (error) throw error;
+
+      // Also mirror to LocalStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem("krishna_lib_name", libName);
+        localStorage.setItem("krishna_phone", libPhone);
+        localStorage.setItem("krishna_address", libAddress);
+        localStorage.setItem("krishna_upi_id", upiId);
+        localStorage.setItem("krishna_upi_pn", upiName);
+        localStorage.setItem("krishna_welcome_msg", welcomeMsg);
+        localStorage.setItem("krishna_due_msg", dueMsg);
+      }
+
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
-    }, 800);
+    } catch (err) {
+      console.error("Error saving settings", err);
+      alert("Error saving settings. Make sure settings_setup.md SQL script is executed in your Supabase SQL Editor first.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Add gallery photo handler
+  const handleAddPhoto = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPhotoUrl.trim()) return;
+
+    try {
+      const { error } = await supabase.from('gallery_photos').insert([
+        { url: newPhotoUrl.trim(), title: newPhotoTitle.trim() || 'Library view', branch: newPhotoBranch }
+      ]);
+      if (error) throw error;
+      setNewPhotoUrl("");
+      setNewPhotoTitle("");
+      fetchGallery();
+    } catch (err) {
+      alert("Error adding photo: " + (err as Error).message);
+    }
+  };
+
+  // Delete gallery photo handler
+  const handleDeletePhoto = async (id: string) => {
+    if (!confirm("Remove this image from the gallery?")) return;
+    try {
+      const { error } = await supabase.from('gallery_photos').delete().eq('id', id);
+      if (error) throw error;
+      fetchGallery();
+    } catch (err) {
+      alert("Error deleting photo: " + (err as Error).message);
+    }
+  };
+
+  // Add achiever handler
+  const handleAddAchiever = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAchieverName.trim() || !newAchieverRole.trim()) return;
+
+    try {
+      const { error } = await supabase.from('achievers').insert([
+        {
+          name: newAchieverName.trim(),
+          achievement: newAchieverRole.trim(),
+          photo_url: newAchieverPhoto.trim() || "https://lh3.googleusercontent.com/aida-public/AB6AXuAXIyldosztmi8fNPYHddI3Ddsv7gSvYSw5EolHH-DQnTg4GfkF2Ng-ZPSCTwr1eUIHeVcVllJJbD17V6s1Ydd6_rAfMZFs6Qounf8a9P-WhPdR34KrWk0I6a6JlF6RnvzRlapPaiica1iWLhhRQBg5EMN_cPIml1df-in3jeIPiDj1OgKWBX6KyOZ5sFhvdBRUH9eNVvUoQ7itGs22Fm46XyOFDb3whdrbuxA_9pCBIqxqO5XbMUlmPbLgcmIo4IEnewxsmwYl-rIS",
+          testimonial: newAchieverQuote.trim()
+        }
+      ]);
+      if (error) throw error;
+      setNewAchieverName("");
+      setNewAchieverRole("");
+      setNewAchieverPhoto("");
+      setNewAchieverQuote("");
+      fetchAchievers();
+    } catch (err) {
+      alert("Error adding achiever: " + (err as Error).message);
+    }
+  };
+
+  // Delete achiever handler
+  const handleDeleteAchiever = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this achiever card?")) return;
+    try {
+      const { error } = await supabase.from('achievers').delete().eq('id', id);
+      if (error) throw error;
+      fetchAchievers();
+    } catch (err) {
+      alert("Error deleting achiever: " + (err as Error).message);
+    }
   };
 
   const handleExportBackup = async () => {
     setBackupLoading(true);
     try {
-      const { data: members, error: memErr } = await supabase.from('members').select('*');
-      const { data: payments, error: payErr } = await supabase.from('payments').select('*');
-      const { data: leads, error: leadErr } = await supabase.from('leads').select('*');
-      const { data: expenses, error: expErr } = await supabase.from('expenses').select('*');
-
-      if (memErr || payErr || leadErr || expErr) {
-        throw new Error("Failed to fetch tables for backup.");
-      }
+      const { data: members } = await supabase.from('members').select('*');
+      const { data: payments } = await supabase.from('payments').select('*');
+      const { data: leads } = await supabase.from('leads').select('*');
+      const { data: expenses } = await supabase.from('expenses').select('*');
 
       const backupData = {
         exportedAt: new Date().toISOString(),
@@ -117,181 +515,612 @@ export default function SettingsPage() {
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">SaaS Settings</h1>
-          <p className="page-subtitle">Configure invoice preferences, UPI payments, and automated WhatsApp templates.</p>
+          <h1 className="page-title">SaaS Control Center</h1>
+          <p className="page-subtitle">Configure invoice profile details, customize notification layouts, manage gallery photos, and edit achievers list.</p>
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Column - Profile & Payments */}
-        <div className="lg:col-span-2 space-y-6">
-          
-          {/* Library Profile Info */}
-          <div className="glass-pane-elevated">
-            <h3 className="text-sm font-bold text-slate-800 font-manrope mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-base">corporate_fare</span>
-              Library Profile
-            </h3>
+      {/* Navigation tabs */}
+      <div className="flex border-b border-slate-200 dark:border-white/10 gap-2 mb-6 overflow-x-auto pb-1">
+        <button
+          onClick={() => setActiveTab('system')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
+            activeTab === 'system'
+              ? 'border-[#003178] text-[#003178] dark:border-cyan-400 dark:text-cyan-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'
+          }`}
+        >
+          <span className="material-symbols-outlined text-base">settings_system_daydream</span>
+          Configs & Notification Templates
+        </button>
+        <button
+          onClick={() => setActiveTab('gallery')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
+            activeTab === 'gallery'
+              ? 'border-[#003178] text-[#003178] dark:border-cyan-400 dark:text-cyan-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'
+          }`}
+        >
+          <span className="material-symbols-outlined text-base">photo_library</span>
+          Photo Gallery ({gallery.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('achievers')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
+            activeTab === 'achievers'
+              ? 'border-[#003178] text-[#003178] dark:border-cyan-400 dark:text-cyan-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'
+          }`}
+        >
+          <span className="material-symbols-outlined text-base">military_tech</span>
+          Achievers success cards ({achieversList.length})
+        </button>
+      </div>
+
+      {/* ── Tab 1: System settings and notification templates ── */}
+      {activeTab === 'system' && (
+        <form onSubmit={handleSaveSettings} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Library Name</label>
-                <input
-                  type="text"
-                  value={libName}
-                  onChange={(e) => setLibName(e.target.value)}
-                  className="input-premium w-full py-2.5 px-3 text-sm"
-                  required
-                />
+            {/* Library Profile */}
+            <div className="glass-pane-elevated">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">corporate_fare</span>
+                Library Profile Details
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Library Name</label>
+                  <input
+                    type="text"
+                    value={libName}
+                    onChange={(e) => setLibName(e.target.value)}
+                    className="input-premium w-full py-2.5 px-3 text-sm text-[#0f172a] dark:text-white"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Contact Phone</label>
+                  <input
+                    type="text"
+                    value={libPhone}
+                    onChange={(e) => setLibPhone(e.target.value)}
+                    className="input-premium w-full py-2.5 px-3 text-sm text-[#0f172a] dark:text-white"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-1">
+                  <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Invoice Address</label>
+                  <textarea
+                    rows={2}
+                    value={libAddress}
+                    onChange={(e) => setLibAddress(e.target.value)}
+                    className="input-premium w-full py-2.5 px-3 text-sm text-[#0f172a] dark:text-white"
+                    required
+                  />
+                </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Contact Phone</label>
-                <input
-                  type="text"
-                  value={libPhone}
-                  onChange={(e) => setLibPhone(e.target.value)}
-                  className="input-premium w-full py-2.5 px-3 text-sm"
-                  required
-                />
+            </div>
+
+            {/* UPI */}
+            <div className="glass-pane-elevated">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">qr_code_2</span>
+                UPI Payment Gateways
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Merchant UPI ID</label>
+                  <input
+                    type="text"
+                    value={upiId}
+                    placeholder="e.g. library@ybl"
+                    onChange={(e) => setUpiId(e.target.value)}
+                    className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#003178] dark:text-cyan-300"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Merchant Name</label>
+                  <input
+                    type="text"
+                    value={upiName}
+                    onChange={(e) => setUpiName(e.target.value)}
+                    className="input-premium w-full py-2.5 px-3 text-sm text-[#0f172a] dark:text-white"
+                    required
+                  />
+                </div>
               </div>
-              <div className="md:col-span-2 space-y-1">
-                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Invoice Address</label>
-                <textarea
-                  rows={2}
-                  value={libAddress}
-                  onChange={(e) => setLibAddress(e.target.value)}
-                  className="input-premium w-full py-2.5 px-3 text-sm"
-                  required
-                />
+            </div>
+
+            {/* Notifications */}
+            <div className="glass-pane-elevated">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">chat_bubble</span>
+                Custom Notification Message Templates
+              </h3>
+              
+              <div className="space-y-5">
+                {/* Welcome template */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center flex-wrap gap-2">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Welcome Message (New Admission)</label>
+                    <span className="text-[10px] text-slate-400 font-bold font-mono">Tags: &#123;name&#125;, &#123;branch&#125;, &#123;seat&#125;, &#123;shift&#125;, &#123;expiry&#125;</span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={welcomeMsg}
+                    onChange={(e) => setWelcomeMsg(e.target.value)}
+                    className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a] dark:text-white"
+                    required
+                  />
+                </div>
+
+                {/* Seat assignment template */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center flex-wrap gap-2">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Seat Assignment Alert</label>
+                    <span className="text-[10px] text-slate-400 font-bold font-mono">Tags: &#123;name&#125;, &#123;seat_no&#125;, &#123;shift&#125;, &#123;branch&#125;</span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={seatMsg}
+                    onChange={(e) => setSeatMsg(e.target.value)}
+                    className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a] dark:text-white"
+                    required
+                  />
+                </div>
+
+                {/* Invoice generation template */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center flex-wrap gap-2">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Invoice Bill Receipt Message</label>
+                    <span className="text-[10px] text-slate-400 font-bold font-mono">Tags: &#123;name&#125;, &#123;amount&#125;, &#123;due_date&#125;</span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={invoiceMsg}
+                    onChange={(e) => setInvoiceMsg(e.target.value)}
+                    className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a] dark:text-white"
+                    required
+                  />
+                </div>
+
+                {/* Due Soon template */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center flex-wrap gap-2">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Due Soon Expiry Reminder (3 Days prior)</label>
+                    <span className="text-[10px] text-slate-400 font-bold font-mono">Tags: &#123;name&#125;, &#123;seat&#125;, &#123;expiry&#125;</span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={dueMsg}
+                    onChange={(e) => setDueMsg(e.target.value)}
+                    className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a] dark:text-white"
+                    required
+                  />
+                </div>
+
+                {/* Overdue template */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center flex-wrap gap-2">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Overdue Dues Reminder (Chase Up)</label>
+                    <span className="text-[10px] text-slate-400 font-bold font-mono">Tags: &#123;name&#125;, &#123;amount&#125;, &#123;due_date&#125;</span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={overdueMsg}
+                    onChange={(e) => setOverdueMsg(e.target.value)}
+                    className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a] dark:text-white"
+                    required
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* UPI Customization */}
-          <div className="glass-pane-elevated">
-            <h3 className="text-sm font-bold text-slate-800 font-manrope mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-base">qr_code_2</span>
-              UPI Collection Gateway Settings
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Merchant UPI ID</label>
-                <input
-                  type="text"
-                  value={upiId}
-                  placeholder="e.g. library@ybl"
-                  onChange={(e) => setUpiId(e.target.value)}
-                  className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#003178]"
-                  required
-                />
-                <p className="text-[10px] text-slate-400">Payments scanned on invoices will route directly to this address.</p>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Merchant Name</label>
-                <input
-                  type="text"
-                  value={upiName}
-                  onChange={(e) => setUpiName(e.target.value)}
-                  className="input-premium w-full py-2.5 px-3 text-sm"
-                  required
-                />
-                <p className="text-[10px] text-slate-400">Account holder name displayed on customer scan.</p>
-              </div>
+          <div className="space-y-6">
+            <div className="glass-pane-elevated">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-4">Operations</h3>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="btn-primary w-full py-3 text-sm rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
+              >
+                {isSaving ? (
+                  <>
+                    <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+                    Saving Configuration...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-base">save</span>
+                    Save Settings
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="glass-pane-elevated">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-2 flex items-center gap-2">
+                <span className="material-symbols-outlined text-slate-500 text-base">database</span>
+                Database Backup Control
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed mb-4">Export a complete branch JSON dump containing all branches&apos; students, leads, expenses, and payment logs for cold backup recovery.</p>
+              
+              <button
+                type="button"
+                onClick={handleExportBackup}
+                disabled={backupLoading}
+                className="btn-ghost !text-slate-800 dark:!text-slate-200 w-full py-3 text-xs rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+              >
+                {backupLoading ? (
+                  <>
+                    <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                    Compiling Backup JSON...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-sm">download</span>
+                    Export Complete JSON Backup
+                  </>
+                )}
+              </button>
             </div>
           </div>
+        </form>
+      )}
 
-          {/* WhatsApp Notification Templates */}
-          <div className="glass-pane-elevated">
-            <h3 className="text-sm font-bold text-slate-800 font-manrope mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-base">chat_bubble</span>
-              WhatsApp Notifications Layout
+      {/* ── Tab 2: Gallery manager ── */}
+      {activeTab === 'gallery' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Add photo form */}
+          <div className="glass-pane-elevated h-fit">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-base">add_a_photo</span>
+              Add Photo to Gallery
             </h3>
-            
-            <div className="space-y-4">
+            <form onSubmit={handleAddPhoto} className="space-y-4">
               <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Welcome Message (New Admission)</label>
-                  <span className="text-[10px] text-slate-400 font-bold font-mono">Dynamic Tags: &#123;name&#125;, &#123;branch&#125;, &#123;seat&#125;, &#123;shift&#125;, &#123;expiry&#125;</span>
+                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Photo Image Source</label>
+                <div className="space-y-2">
+                  <input
+                    type="url"
+                    placeholder="Paste Image URL (https://...)"
+                    value={newPhotoUrl}
+                    onChange={(e) => setNewPhotoUrl(e.target.value)}
+                    className="input-premium w-full py-2.5 px-3 text-sm text-[#0f172a] dark:text-white"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Or Upload from Computer:</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setCropperImage(reader.result as string);
+                            setCropperType('gallery');
+                            setShowCropper(true);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                    />
+                  </div>
                 </div>
-                <textarea
-                  rows={4}
-                  value={welcomeMsg}
-                  onChange={(e) => setWelcomeMsg(e.target.value)}
-                  className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a]"
-                  required
+                {newPhotoUrl && (
+                  <div className="mt-2 relative w-24 h-16 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10">
+                    <img src={newPhotoUrl} className="w-full h-full object-cover" alt="Preview" />
+                    <button
+                      type="button"
+                      onClick={() => setNewPhotoUrl("")}
+                      className="absolute top-0 right-0 bg-red-600 text-white rounded-bl p-0.5"
+                      title="Clear image"
+                    >
+                      <span className="material-symbols-outlined text-[10px]">close</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Photo Title / Caption</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Quiet Reading Hall"
+                  value={newPhotoTitle}
+                  onChange={(e) => setNewPhotoTitle(e.target.value)}
+                  className="input-premium w-full py-2.5 px-3 text-sm text-[#0f172a] dark:text-white"
                 />
               </div>
 
               <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Dues Renewal Reminder</label>
-                  <span className="text-[10px] text-slate-400 font-bold font-mono">Dynamic Tags: &#123;name&#125;, &#123;seat&#125;, &#123;expiry&#125;</span>
-                </div>
-                <textarea
-                  rows={4}
-                  value={dueMsg}
-                  onChange={(e) => setDueMsg(e.target.value)}
-                  className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a]"
-                  required
-                />
+                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Target Branch</label>
+                <select
+                  value={newPhotoBranch}
+                  onChange={(e) => setNewPhotoBranch(e.target.value)}
+                  className="input-premium w-full py-2.5 px-3 text-sm text-[#0f172a] dark:text-white bg-slate-900"
+                >
+                  <option value="all">All Branches</option>
+                  <option value="bengali-chowk">Bangali Chowk</option>
+                  <option value="namnakala">Namnakala</option>
+                </select>
               </div>
-            </div>
+
+              <button
+                type="submit"
+                className="btn-primary w-full py-2.5 text-xs rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
+              >
+                <span className="material-symbols-outlined text-sm">publish</span>
+                Publish to Live Gallery
+              </button>
+            </form>
+          </div>
+
+          {/* List of gallery photos */}
+          <div className="lg:col-span-2 glass-pane-elevated">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-base">grid_on</span>
+              Current Live Gallery Images
+            </h3>
+
+            {gallery.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs">
+                No custom gallery photos uploaded. Default local assets will be rendered on the landing page.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {gallery.map((img) => (
+                  <div key={img.id} className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 aspect-video bg-slate-100 dark:bg-slate-950">
+                    <img src={img.url} alt={img.title} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col justify-between p-3">
+                      <span className="inline-block px-1.5 py-0.5 text-[9px] font-bold uppercase bg-white/20 text-white rounded w-fit">
+                        {img.branch}
+                      </span>
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="text-[10px] text-white font-bold truncate flex-1">{img.title}</span>
+                        <button
+                          onClick={() => handleDeletePhoto(img.id)}
+                          className="w-7 h-7 rounded-full bg-red-600/95 text-white flex items-center justify-center hover:bg-red-700 transition-all shrink-0"
+                          title="Delete photo"
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
+      )}
 
-        {/* Right Column - Actions & Backup */}
-        <div className="space-y-6">
-          <div className="glass-pane-elevated">
-            <h3 className="text-sm font-bold text-slate-800 font-manrope mb-4">Operations</h3>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="btn-primary w-full py-3 text-sm rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
-            >
-              {isSaving ? (
-                <>
-                  <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
-                  Saving Config...
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-base">save</span>
-                  Save Settings
-                </>
-              )}
-            </button>
+      {/* ── Tab 3: Achievers success cards ── */}
+      {activeTab === 'achievers' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Add achiever form */}
+          <div className="glass-pane-elevated h-fit">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-base">military_tech</span>
+              Create Achiever Success Card
+            </h3>
+            <form onSubmit={handleAddAchiever} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Achiever Full Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Manish Dubey"
+                  value={newAchieverName}
+                  onChange={(e) => setNewAchieverName(e.target.value)}
+                  className="input-premium w-full py-2.5 px-3 text-sm text-[#0f172a] dark:text-white"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Achievement / Exam / Role</label>
+                <input
+                  type="text"
+                  placeholder="e.g. UPSC CSE 2025 - AIR 42"
+                  value={newAchieverRole}
+                  onChange={(e) => setNewAchieverRole(e.target.value)}
+                  className="input-premium w-full py-2.5 px-3 text-sm text-[#0f172a] dark:text-white"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Avatar / Profile Photo</label>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      placeholder="Paste Image URL (https://...)"
+                      value={newAchieverPhoto}
+                      onChange={(e) => setNewAchieverPhoto(e.target.value)}
+                      className="input-premium w-full py-2.5 px-3 text-sm text-[#0f172a] dark:text-white flex-1"
+                    />
+                    {gallery.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowGallerySelector(true)}
+                        className="px-3 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-slate-700 dark:text-slate-200 flex items-center justify-center transition-all"
+                        title="Select from Gallery"
+                      >
+                        <span className="material-symbols-outlined text-base">photo_library</span>
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Or Upload from Computer:</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setCropperImage(reader.result as string);
+                            setCropperType('achiever');
+                            setShowCropper(true);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                    />
+                  </div>
+                </div>
+                {newAchieverPhoto && (
+                  <div className="mt-2 relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10">
+                    <img src={newAchieverPhoto} className="w-full h-full object-cover" alt="Preview" />
+                    <button
+                      type="button"
+                      onClick={() => setNewAchieverPhoto("")}
+                      className="absolute top-0 right-0 bg-red-600 text-white rounded-bl p-0.5"
+                      title="Clear image"
+                    >
+                      <span className="material-symbols-outlined text-[10px]">close</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Student Testimonial Quote</label>
+                <textarea
+                  rows={4}
+                  placeholder="Tell us about their experience studying at Krishna Library..."
+                  value={newAchieverQuote}
+                  onChange={(e) => setNewAchieverQuote(e.target.value)}
+                  className="input-premium w-full py-2.5 px-3 text-sm text-[#0f172a] dark:text-white"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn-primary w-full py-2.5 text-xs rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
+              >
+                <span className="material-symbols-outlined text-sm">stars</span>
+                Add Achiever Success Story
+              </button>
+            </form>
           </div>
 
-          <div className="glass-pane-elevated">
-            <h3 className="text-sm font-bold text-slate-800 font-manrope mb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-slate-500 text-base">database</span>
-              SaaS Data Control
+          {/* List of achievers */}
+          <div className="lg:col-span-2 glass-pane-elevated">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-base">format_quote</span>
+              Currently Featured Success Stories
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-4">Export a complete encrypted JSON dump containing all branches&apos; students, leads, expenses, and payment logs for cold backups.</p>
-            
-            <button
-              type="button"
-              onClick={handleExportBackup}
-              disabled={backupLoading}
-              className="btn-ghost !text-slate-800 w-full py-3 text-xs rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-200 hover:bg-slate-50"
-            >
-              {backupLoading ? (
-                <>
-                  <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
-                  Compiling Table Dumps...
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-sm">download</span>
-                  Export Complete JSON Backup
-                </>
-              )}
-            </button>
+
+            {achieversList.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs">
+                No custom achievers uploaded. Default success stories will be rendered on the landing page.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {achieversList.map((a) => (
+                  <div key={a.id} className="relative bg-slate-50 dark:bg-white/[0.02] p-5 rounded-xl border border-slate-200 dark:border-white/10 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <img src={a.photo_url || "https://lh3.googleusercontent.com/aida-public/AB6AXuAXIyldosztmi8fNPYHddI3Ddsv7gSvYSw5EolHH-DQnTg4GfkF2Ng-ZPSCTwr1eUIHeVcVllJJbD17V6s1Ydd6_rAfMZFs6Qounf8a9P-WhPdR34KrWk0I6a6JlF6RnvzRlapPaiica1iWLhhRQBg5EMN_cPIml1df-in3jeIPiDj1OgKWBX6KyOZ5sFhvdBRUH9eNVvUoQ7itGs22Fm46XyOFDb3whdrbuxA_9pCBIqxqO5XbMUlmPbLgcmIo4IEnewxsmwYl-rIS"} alt={a.name} className="w-10 h-10 rounded-full object-cover" />
+                        <div>
+                          <h4 className="font-bold text-xs text-slate-800 dark:text-white">{a.name}</h4>
+                          <p className="text-[10px] text-primary font-bold">{a.achievement}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed italic mb-4">&quot;{a.testimonial}&quot;</p>
+                    </div>
+                    
+                    <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-white/5">
+                      <button
+                        onClick={() => handleDeleteAchiever(a.id)}
+                        className="btn-ghost !text-red-500 hover:bg-red-500/10 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 border border-transparent hover:border-red-500/20"
+                      >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </form>
+      )}
+
+      {/* Gallery Photo Selector Modal */}
+      {showGallerySelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => setShowGallerySelector(false)}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+          />
+          <div className="glass-pane-elevated max-w-2xl w-full relative z-10 overflow-hidden !rounded-2xl border border-white/10 shadow-2xl p-6">
+            <button
+              onClick={() => setShowGallerySelector(false)}
+              className="absolute right-4 top-4 w-8 h-8 rounded-full flex items-center justify-center bg-white/[0.05] border border-white/[0.08] hover:bg-white/[0.1] transition-all text-white"
+            >
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+            
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-base">photo_library</span>
+              Select Photo from Gallery
+            </h3>
+            
+            {gallery.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs">
+                No photos in the gallery to import.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto pr-2" data-lenis-prevent>
+                {gallery.map((img) => (
+                  <button
+                    key={img.id}
+                    type="button"
+                    onClick={() => {
+                      setNewAchieverPhoto(img.url);
+                      setShowGallerySelector(false);
+                    }}
+                    className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 aspect-video bg-slate-100 dark:bg-slate-950 hover:border-primary transition-all text-left"
+                  >
+                    <img src={img.url} alt={img.title} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-end p-2">
+                      <span className="text-[10px] text-white font-bold truncate">{img.title}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Image Cropper Modal */}
+      {showCropper && (
+        <ImageCropper
+          imageSrc={cropperImage}
+          type={cropperType}
+          onClose={() => setShowCropper(false)}
+          onCropComplete={(croppedBase64) => {
+            if (cropperType === 'gallery') {
+              setNewPhotoUrl(croppedBase64);
+            } else {
+              setNewAchieverPhoto(croppedBase64);
+            }
+            setShowCropper(false);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -18,6 +18,7 @@ function RecordPaymentInner() {
   const [allMembers, setAllMembers] = useState<any[]>([]);
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'overdue' | 'due-soon'>('all');
 
   // Student Details Modal States
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -510,12 +511,31 @@ function RecordPaymentInner() {
   // Local real-time filtering of pre-loaded students list
   const filteredMembers = allMembers.filter(m => {
     const query = searchQuery.toLowerCase().trim();
-    if (!query) return true;
-    return (
+    const matchesSearch = !query || (
       m.full_name?.toLowerCase().includes(query) ||
       m.permanent_id?.toLowerCase().includes(query) ||
       m.mobile?.includes(query)
     );
+
+    const today = new Date();
+    const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+    let matchesFilter = false;
+    if (filterStatus === 'all') {
+      matchesFilter = true;
+    } else if (filterStatus === 'pending') {
+      matchesFilter = m.pay_later === true;
+    } else if (filterStatus === 'overdue') {
+      matchesFilter = !m.is_active || (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero);
+    } else if (filterStatus === 'due-soon') {
+      if (m.is_active && m.subscription_end_date) {
+        const end = new Date(m.subscription_end_date);
+        matchesFilter = end >= todayZero && end <= in3Days;
+      }
+    }
+
+    return matchesSearch && matchesFilter;
   });
 
   return (
@@ -538,7 +558,7 @@ function RecordPaymentInner() {
               <span className="material-symbols-outlined text-primary text-lg">school</span>
               Students Directory
             </h2>
-            <div className="relative mb-4">
+            <div className="relative mb-3">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
               <input
                 type="text"
@@ -547,6 +567,32 @@ function RecordPaymentInner() {
                 placeholder="Search by name, ID, mobile..."
                 className="input-premium pl-9 w-full !rounded-xl"
               />
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex flex-wrap gap-1.5 mb-4 border-b border-white/[0.04] pb-3">
+              {[
+                { key: 'all', label: 'All' },
+                { key: 'pending', label: 'Pending' },
+                { key: 'overdue', label: 'Overdue' },
+                { key: 'due-soon', label: 'Due Soon' }
+              ].map(t => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setFilterStatus(t.key as any)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border ${
+                    filterStatus === t.key
+                      ? (t.key === 'overdue' ? 'bg-red-500/15 text-red-400 border-red-500/30 shadow-sm' :
+                         t.key === 'due-soon' ? 'bg-orange-500/15 text-orange-400 border-orange-500/30 shadow-sm' :
+                         t.key === 'pending' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 shadow-sm' :
+                         'bg-primary/15 text-primary border-primary/20 shadow-sm')
+                      : 'bg-white/[0.02] text-on-surface-variant border-white/[0.04] hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
 
             {/* Students List Box */}
@@ -562,10 +608,30 @@ function RecordPaymentInner() {
               ) : (
                 filteredMembers.map(m => {
                   const isSelected = selectedMember?.id === m.id;
-                  const isExpired = m.subscription_end_date ? new Date(m.subscription_end_date) < new Date() : true;
-                  const statusDotColor = !m.subscription_end_date
-                    ? "bg-amber-400"
-                    : isExpired ? "bg-red-500" : "bg-emerald-500";
+                  
+                  const today = new Date();
+                  const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                  const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
+                  
+                  const isOverdue = !m.is_active || (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero);
+                  const isDueSoon = m.is_active && m.subscription_end_date && (() => {
+                    const end = new Date(m.subscription_end_date);
+                    return end >= todayZero && end <= in3Days;
+                  })();
+                  const isPending = m.pay_later === true;
+
+                  let statusText = "Active";
+                  let statusDotColor = "bg-emerald-500";
+                  if (isOverdue) {
+                    statusText = "Overdue";
+                    statusDotColor = "bg-red-500";
+                  } else if (isDueSoon) {
+                    statusText = "Due Soon";
+                    statusDotColor = "bg-orange-500";
+                  } else if (isPending) {
+                    statusText = "Pending";
+                    statusDotColor = "bg-amber-400";
+                  }
                   
                   return (
                     <button
@@ -586,7 +652,17 @@ function RecordPaymentInner() {
                       <div className="flex items-center gap-2.5 truncate">
                         <span className={`w-2 h-2 rounded-full shrink-0 ${statusDotColor}`} />
                         <div className="truncate">
-                          <div className="text-white font-bold text-xs truncate student-list-item-name">{m.full_name}</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-white font-bold text-xs truncate student-list-item-name">{m.full_name}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${
+                              statusText === 'Overdue' ? 'bg-red-500/15 text-red-400 border border-red-500/20' :
+                              statusText === 'Due Soon' ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20' :
+                              statusText === 'Pending' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20' :
+                              'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                            }`}>
+                              {statusText}
+                            </span>
+                          </div>
                           <div className="text-[10px] text-primary font-mono mt-0.5 student-list-item-id">{m.permanent_id}</div>
                         </div>
                       </div>

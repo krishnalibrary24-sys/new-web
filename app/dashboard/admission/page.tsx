@@ -4,6 +4,7 @@ import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { logActivity } from "@/lib/activity";
+import { getLibrarySetting } from "@/lib/settings";
 
 function AdmissionPageInner() {
   const { activeBranch } = useBranch();
@@ -273,7 +274,8 @@ function AdmissionPageInner() {
 
       // Dispatch Welcome WhatsApp message
       const mobileClean = mobile.replace(/[^0-9]/g, '');
-      let welcomeTemplate = 
+      const welcomeTemplate = await getLibrarySetting(
+        "welcome_msg",
         "🌟 *Welcome to Krishna Library!* 🌟\n\n" +
         "Dear *{name}*,\n\n" +
         "Your admission is successfully confirmed! 🎉 We are thrilled to have you join our learning community.\n\n" +
@@ -285,12 +287,8 @@ function AdmissionPageInner() {
         "📖 *\"Success is the sum of small efforts, repeated day in and day out.\"* 💪✨ Stay focused, keep pushing, and achieve your dreams!\n\n" +
         "If you have any questions, feel free to visit the reception.\n\n" +
         "Happy Learning! 🚀\n" +
-        "*Krishna Library Team* 📚";
-      
-      if (typeof window !== 'undefined') {
-        const savedWelcome = localStorage.getItem("krishna_welcome_msg");
-        if (savedWelcome) welcomeTemplate = savedWelcome;
-      }
+        "*Krishna Library Team* 📚"
+      );
       
       const branchLabel = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
       

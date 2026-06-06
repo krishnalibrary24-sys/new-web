@@ -5,6 +5,7 @@ import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
 import { logActivity } from "@/lib/activity";
+import { getLibrarySetting } from "@/lib/settings";
 
 export default function SeatingPage() {
   const { activeBranch } = useBranch();
@@ -91,17 +92,16 @@ export default function SeatingPage() {
       const branchLabel = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
       const mobileClean = member.mobile ? member.mobile.replace(/[^0-9]/g, '') : '';
       
-      const seatMsg = 
-        "🎯 *Seat Allocated Successfully!* 🎯\n\n" +
-        "Dear *" + member.full_name + "*,\n\n" +
-        "Your study space has been officially reserved! 🪑✨\n\n" +
-        "📋 *Reservation Details:*\n" +
-        "📍 *Branch:* " + branchLabel + "\n" +
-        "🪑 *Seat Cabin:* Desk #" + selectedSeat + "\n" +
-        "🕒 *Shift:* " + member.shift + "\n\n" +
-        "📖 *\"The only place where success comes before work is in the dictionary.\"* 🧠💡 Make the most of this workspace, stay consistent, and unlock your true potential!\n\n" +
-        "Happy Learning! 🚀\n" +
-        "*Krishna Library Team* 📚";
+      const seatTemplate = await getLibrarySetting(
+        "seat_assigned_msg",
+        "Dear {name},\n\nYou have been assigned Seat No. {seat_no} for the {shift} shift at our {branch} branch."
+      );
+      
+      const seatMsg = seatTemplate
+        .replace(/{name}/g, member.full_name)
+        .replace(/{seat_no}/g, selectedSeat || '')
+        .replace(/{shift}/g, member.shift)
+        .replace(/{branch}/g, branchLabel);
 
       if (mobileClean) {
         window.open(`https://wa.me/${mobileClean}?text=${encodeURIComponent(seatMsg)}`, '_blank');
