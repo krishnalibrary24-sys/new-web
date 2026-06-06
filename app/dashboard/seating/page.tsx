@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
+import { logActivity } from "@/lib/activity";
 
 export default function SeatingPage() {
   const { activeBranch } = useBranch();
@@ -75,6 +76,7 @@ export default function SeatingPage() {
     
     const member = unassignedMembers.find(m => m.id === memberId);
     if (member) {
+      logActivity(activeBranch, "seating", `Allocated Seat #${selectedSeat} to ${member.full_name} (${member.permanent_id})`);
       // 1. Remove from unassigned list
       setUnassignedMembers(prev => prev.filter(m => m.id !== memberId));
       
@@ -120,6 +122,7 @@ export default function SeatingPage() {
     const member = currentOccupants.find(m => m.id === memberId);
     
     if (member) {
+      logActivity(activeBranch, "seating", `Unassigned Seat #${seatNo} from ${member.full_name} (${member.permanent_id})`);
       // 1. Add to unassigned list (filtering beforehand to avoid double entries)
       setUnassignedMembers(prev => {
         const filtered = prev.filter(m => m.id !== memberId);

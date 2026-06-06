@@ -257,11 +257,11 @@ export default function ReservationForm() {
 
           <Separator className="my-6 bg-v-outline-variant/20" />
           
-          <div className="flex items-center justify-end space-x-4">
+          <div className="flex items-center justify-center sm:justify-end">
             <Button
               type="submit"
               disabled={loading}
-              className="bg-v-secondary text-white hover:bg-v-secondary/90 px-8 py-3 rounded-xl transition-all font-semibold"
+              className="w-full sm:w-auto bg-v-secondary text-white hover:bg-v-secondary/90 px-8 py-3 rounded-xl transition-all font-semibold"
             >
               {loading ? "Submitting..." : "Submit Reservation"}
             </Button>

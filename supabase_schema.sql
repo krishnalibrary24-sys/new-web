@@ -64,12 +64,32 @@ CREATE INDEX IF NOT EXISTS idx_members_sub_end       ON public.members (subscrip
 
 
 -- ============================================================
--- 2. PAYMENTS TABLE
+-- 2. INVOICES TABLE
+--    Tracks total billing amount and current outstanding balance.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.invoices (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  member_id    UUID NOT NULL REFERENCES public.members(id) ON DELETE CASCADE,
+  total_amount INTEGER NOT NULL,
+  paid_amount  INTEGER NOT NULL DEFAULT 0,
+  due_amount   INTEGER NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'unpaid' CHECK (status IN ('unpaid', 'partially_paid', 'paid')),
+  due_date     DATE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_member_id ON public.invoices (member_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status    ON public.invoices (status);
+
+
+-- ============================================================
+-- 3. PAYMENTS TABLE
 --    Tracks every renewal / payment transaction.
 --    Used in: members/page.tsx (handleRenew), invoices/page.tsx
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.payments (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_id   UUID REFERENCES public.invoices(id) ON DELETE SET NULL, -- Link to invoice (nullable)
   member_id    UUID NOT NULL REFERENCES public.members(id) ON DELETE CASCADE,
   amount       INTEGER NOT NULL,
   branch       TEXT NOT NULL CHECK (branch IN ('bengali-chowk', 'namnakala')),
@@ -79,12 +99,13 @@ CREATE TABLE IF NOT EXISTS public.payments (
 );
 
 CREATE INDEX IF NOT EXISTS idx_payments_member_id ON public.payments (member_id);
+CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON public.payments (invoice_id);
 CREATE INDEX IF NOT EXISTS idx_payments_branch    ON public.payments (branch);
 CREATE INDEX IF NOT EXISTS idx_payments_paid_at   ON public.payments (paid_at DESC);
 
 
 -- ============================================================
--- 3. LEADS TABLE (Enquiries)
+-- 4. LEADS TABLE (Enquiries)
 --    Used in: enquiries/page.tsx
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.leads (
@@ -103,7 +124,7 @@ CREATE INDEX IF NOT EXISTS idx_leads_status     ON public.leads (status);
 
 
 -- ============================================================
--- 4. EXPENSES TABLE
+-- 5. EXPENSES TABLE
 --    Tracks all library expenditures
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.expenses (
@@ -121,27 +142,26 @@ CREATE INDEX IF NOT EXISTS idx_expenses_date ON public.expenses (expense_date DE
 
 
 -- ============================================================
--- 5. PERMISSIONS & ROW LEVEL SECURITY (RLS)
+-- 6. PERMISSIONS & ROW LEVEL SECURITY (RLS)
 -- ============================================================
 
 -- Grant direct table access to anon and authenticated roles
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.members      TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.invoices     TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.payments     TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.leads        TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.expenses     TO anon, authenticated;
 
 -- Ensure RLS is enabled
 ALTER TABLE public.members  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.leads    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 
 -- Drop old policies
-DROP POLICY IF EXISTS "Allow full anon access to members"  ON public.members;
-DROP POLICY IF EXISTS "Allow full anon access to payments" ON public.payments;
-DROP POLICY IF EXISTS "Allow full anon access to leads"    ON public.leads;
-DROP POLICY IF EXISTS "Allow full anon access to expenses" ON public.expenses;
 DROP POLICY IF EXISTS "anon_all_members"  ON public.members;
+DROP POLICY IF EXISTS "anon_all_invoices" ON public.invoices;
 DROP POLICY IF EXISTS "anon_all_payments" ON public.payments;
 DROP POLICY IF EXISTS "anon_all_leads"    ON public.leads;
 DROP POLICY IF EXISTS "anon_all_expenses" ON public.expenses;
@@ -149,6 +169,10 @@ DROP POLICY IF EXISTS "anon_all_expenses" ON public.expenses;
 -- Create new policies
 CREATE POLICY "anon_all_members"
   ON public.members FOR ALL TO anon, authenticated
+  USING (true) WITH CHECK (true);
+
+CREATE POLICY "anon_all_invoices"
+  ON public.invoices FOR ALL TO anon, authenticated
   USING (true) WITH CHECK (true);
 
 CREATE POLICY "anon_all_payments"
@@ -168,11 +192,12 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 
 
 -- ============================================================
--- 6. ENABLE REALTIME PUBLICATIONS
+-- 7. ENABLE REALTIME PUBLICATIONS
 -- ============================================================
 DO $$
 BEGIN
   ALTER PUBLICATION supabase_realtime ADD TABLE public.members;
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.invoices;
   ALTER PUBLICATION supabase_realtime ADD TABLE public.payments;
   ALTER PUBLICATION supabase_realtime ADD TABLE public.leads;
   ALTER PUBLICATION supabase_realtime ADD TABLE public.expenses;
@@ -182,7 +207,7 @@ END $$;
 
 
 -- ============================================================
--- 7. SEED DATA
+-- 8. SEED DATA
 -- ============================================================
 
 -- Bengali Chowk members
@@ -231,7 +256,6 @@ VALUES
   ('Tushar Bhatt',  '9900112237', 'Morning',  'new')
 ON CONFLICT DO NOTHING;
 
-
 -- Verify: this should return rows if seed data was inserted
 SELECT 'members' AS tbl, COUNT(*) AS rows FROM public.members
 UNION ALL
@@ -241,20 +265,37 @@ SELECT 'leads',    COUNT(*) FROM public.leads
 UNION ALL
 SELECT 'expenses', COUNT(*) FROM public.expenses;
 
+
 -- ============================================================
--- AUTO-EXPIRE MEMBERS DAILY (Optional - requires pg_cron)
--- Enable pg_cron: Database > Extensions > pg_cron
--- Then uncomment and run:
+-- 9. ACTIVITY LOGS TABLE
+--    Tracks all operations (inserts, updates, deletes)
 -- ============================================================
-/*
-SELECT cron.schedule(
-  'expire-members-daily',
-  '0 0 * * *',
-  $$
-    UPDATE public.members
-    SET is_active = FALSE
-    WHERE is_active = TRUE
-      AND subscription_end_date < NOW();
-  $$
+CREATE TABLE IF NOT EXISTS public.activity_logs (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  branch      TEXT NOT NULL CHECK (branch IN ('bengali-chowk', 'namnakala')),
+  staff_id    TEXT NOT NULL,
+  action_type TEXT NOT NULL,
+  details     TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-*/
+
+CREATE INDEX IF NOT EXISTS idx_activity_logs_branch ON public.activity_logs (branch);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON public.activity_logs (created_at DESC);
+
+-- Enable RLS and add policy
+ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.activity_logs TO anon, authenticated;
+
+DROP POLICY IF EXISTS "anon_all_activity_logs" ON public.activity_logs;
+CREATE POLICY "anon_all_activity_logs"
+  ON public.activity_logs FOR ALL TO anon, authenticated
+  USING (true) WITH CHECK (true);
+
+-- Enable realtime
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.activity_logs;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Realtime publication note: %', SQLERRM;
+END $$;
+

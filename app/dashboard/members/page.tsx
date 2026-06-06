@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
+import { logActivity } from "@/lib/activity";
 
 export default function MembersPage() {
   const { activeBranch } = useBranch();
@@ -28,6 +29,19 @@ export default function MembersPage() {
   const [renewDuration, setRenewDuration] = useState<number>(1);
   const [renewCustomMonths, setRenewCustomMonths] = useState<string>("");
   const [renewIsCustomDuration, setRenewIsCustomDuration] = useState<boolean>(false);
+  const [renewDurationType, setRenewDurationType] = useState<"Months" | "Days">("Months");
+  const [renewDurationDays, setRenewDurationDays] = useState<number | "">(30);
+
+  const handleDurationTypeChange = (type: "Months" | "Days") => {
+    if (type === renewDurationType) return;
+    setRenewDurationType(type);
+    const val = Number(renewPrice);
+    if (type === "Days") {
+      setRenewPrice(Math.round(val / 30));
+    } else {
+      setRenewPrice(val * 30);
+    }
+  };
 
   // Mark as Left states
   const [isMarkingLeft, setIsMarkingLeft] = useState<boolean>(false);
@@ -67,6 +81,8 @@ export default function MembersPage() {
       setRenewDuration(1);
       setRenewCustomMonths("");
       setRenewIsCustomDuration(false);
+      setRenewDurationType(selectedMember.permanent_id?.includes('U') ? "Days" : "Months");
+      setRenewDurationDays(30);
 
       setIsMarkingLeft(false);
       setLeftWithDues(false);
@@ -128,7 +144,11 @@ export default function MembersPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to permanently delete this member? This cannot be undone.")) return;
     setIsActionLoading(true);
+    const member = members.find(m => m.id === id);
     await supabase.from('members').delete().eq('id', id);
+    if (member) {
+      logActivity(activeBranch, "student_delete", `Permanently deleted member: ${member.full_name} (${member.permanent_id})`);
+    }
     setMembers(prev => prev.filter(m => m.id !== id));
     setSelectedMember(null);
     setIsActionLoading(false);
@@ -136,11 +156,24 @@ export default function MembersPage() {
 
   const handleRenew = async (member: any) => {
     setIsActionLoading(true);
+    const isDays = renewDurationType === "Days";
+    const durationDaysVal = Math.max(1, Number(renewDurationDays) || 30);
     const months = renewIsCustomDuration ? Math.max(1, parseInt(renewCustomMonths) || 1) : renewDuration;
-    const totalPayable = Math.max(0, (renewPrice * months) - renewDiscount);
-    const currentEnd = new Date(member.subscription_end_date);
-    const baseDate = currentEnd < new Date() ? new Date() : currentEnd;
-    baseDate.setMonth(baseDate.getMonth() + months);
+    
+    const currentEnd = member.subscription_end_date ? new Date(member.subscription_end_date) : new Date();
+    const baseDate = (currentEnd < new Date() || isNaN(currentEnd.getTime())) ? new Date() : currentEnd;
+
+    let totalPayable = 0;
+    let durationStr = "";
+    if (isDays) {
+      totalPayable = Math.max(0, (renewPrice * durationDaysVal) - renewDiscount);
+      durationStr = `${durationDaysVal} day(s)`;
+      baseDate.setDate(baseDate.getDate() + durationDaysVal);
+    } else {
+      totalPayable = Math.max(0, (renewPrice * months) - renewDiscount);
+      durationStr = `${months} month(s)`;
+      baseDate.setMonth(baseDate.getMonth() + months);
+    }
     const newEnd = baseDate;
 
     let seatToAllot = member.seat_no || null;
@@ -181,7 +214,7 @@ export default function MembersPage() {
       amount: totalPayable,
       branch: member.branch,
       payment_mode: renewPaymentMode,
-      notes: `Subscription Renewal — Duration: ${months} month(s). Base Price/mo: ₹${renewPrice}, Discount: ₹${renewDiscount}`
+      notes: `Subscription Renewal — Duration: ${durationStr}. Base Price: ₹${renewPrice}/${isDays ? "day" : "mo"}, Discount: ₹${renewDiscount}`
     }]);
 
     const updatedData = { 
@@ -197,6 +230,8 @@ export default function MembersPage() {
       seat_no: seatToAllot,
       previous_seat_no: prevSeatVal
     };
+
+    logActivity(activeBranch, "student_renew", `Renewed subscription for ${member.full_name} (${member.permanent_id}) by ${durationStr}`);
 
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...updatedData } : m));
     setSelectedMember({ ...member, ...updatedData });
@@ -246,6 +281,8 @@ export default function MembersPage() {
 
       if (error) throw new Error(error.message);
 
+      logActivity(activeBranch, "student_left", `Marked ${member.full_name} (${member.permanent_id}) as LEFT. Dues left: ${leftWithDues ? 'Yes (Loss: ₹' + leftLossAmount + ')' : 'No'}`);
+
       setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...leftPayload } : m));
       setSelectedMember(null); // Close the profile modal
       setIsMarkingLeft(false);
@@ -267,6 +304,7 @@ export default function MembersPage() {
         };
         const { error } = await supabase.from('members').update(payload).eq('id', member.id);
         if (error) throw error;
+        logActivity(activeBranch, "student_suspend", `Suspended membership of ${member.full_name} (${member.permanent_id})`);
         setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...payload } : m));
         setSelectedMember({ ...member, ...payload });
       } else {
@@ -296,6 +334,7 @@ export default function MembersPage() {
         };
         const { error } = await supabase.from('members').update(payload).eq('id', member.id);
         if (error) throw error;
+        logActivity(activeBranch, "student_activate", `Re-activated membership of ${member.full_name} (${member.permanent_id})`);
         setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...payload } : m));
         setSelectedMember({ ...member, ...payload });
       }
@@ -632,57 +671,103 @@ export default function MembersPage() {
                     Renewal Payment Customization
                   </div>
                   
-                  {/* Membership Duration Selection */}
+                  {/* Duration Period Type */}
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold text-on-surface-variant block">Membership Duration</label>
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {[1, 3, 6, 12].map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => {
-                            setRenewDuration(m);
-                            setRenewIsCustomDuration(false);
-                          }}
-                          className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border ${
-                            !renewIsCustomDuration && renewDuration === m
-                              ? "bg-[#003178] text-white border-[#003178] shadow-md"
-                              : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
-                          }`}
-                        >
-                          {m}M
-                        </button>
-                      ))}
+                    <label className="text-[10px] uppercase font-bold text-on-surface-variant">Duration Period Type</label>
+                    <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() => setRenewIsCustomDuration(true)}
-                        className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border ${
-                          renewIsCustomDuration
-                            ? "bg-[#003178] text-white border-[#003178] shadow-md"
+                        onClick={() => handleDurationTypeChange("Months")}
+                        className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${
+                          renewDurationType === "Months"
+                            ? "bg-[#1e40af] text-white border-[#1e40af]"
                             : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
                         }`}
                       >
-                        Custom
+                        Months System
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDurationTypeChange("Days")}
+                        className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${
+                          renewDurationType === "Days"
+                            ? "bg-[#1e40af] text-white border-[#1e40af]"
+                            : "bg-slate-200 hover:bg-slate-300 text-[#003178] border-[#003178]"
+                        }`}
+                      >
+                        Days System
                       </button>
                     </div>
-                    {renewIsCustomDuration && (
-                      <div className="max-w-[150px] mt-1.5">
-                        <input
-                          type="number"
-                          min="1"
-                          value={renewCustomMonths}
-                          onChange={(e) => setRenewCustomMonths(e.target.value)}
-                          className="input-premium !py-1.5 !text-xs"
-                          placeholder="Enter months..."
-                        />
-                      </div>
-                    )}
                   </div>
+
+                  {/* Membership Duration Selection */}
+                  {renewDurationType === "Months" ? (
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase font-bold text-on-surface-variant block">Membership Duration (Months)</label>
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {[1, 3, 6, 12].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => {
+                              setRenewDuration(m);
+                              setRenewIsCustomDuration(false);
+                            }}
+                            className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border ${
+                              !renewIsCustomDuration && renewDuration === m
+                                ? "bg-[#1e40af] text-white border-[#1e40af] shadow-md"
+                                : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
+                            }`}
+                          >
+                            {m}M
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setRenewIsCustomDuration(true)}
+                          className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border ${
+                            renewIsCustomDuration
+                              ? "bg-[#1e40af] text-white border-[#1e40af] shadow-md"
+                              : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
+                          }`}
+                        >
+                          Custom
+                        </button>
+                      </div>
+                      {renewIsCustomDuration && (
+                        <div className="max-w-[150px] mt-1.5">
+                          <input
+                            type="number"
+                            min="1"
+                            value={renewCustomMonths}
+                            onChange={(e) => setRenewCustomMonths(e.target.value)}
+                            className="input-premium !py-1.5 !text-xs w-full"
+                            placeholder="Enter months..."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold text-on-surface-variant block">Membership Duration (Days)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={renewDurationDays}
+                        onChange={(e) => setRenewDurationDays(e.target.value === "" ? "" : Math.max(1, Number(e.target.value)))}
+                        className="input-premium !py-1.5 !text-xs max-w-[150px]"
+                        placeholder="e.g. 15"
+                      />
+                    </div>
+                  )}
 
                   {/* Pricing Configurations */}
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">Base Price (₹/mo)</label>
+                      <label className="text-[10px] uppercase font-bold text-on-surface-variant mb-1 block">
+                        Base Price (₹/{renewDurationType === "Days" ? "day" : "mo"})
+                      </label>
                       <input
                         type="number"
                         min="0"
@@ -719,10 +804,18 @@ export default function MembersPage() {
 
                   <div className="flex justify-between items-center bg-white/[0.02] border border-white/[0.04] p-3 rounded-xl text-xs mt-2">
                     <span className="text-on-surface-variant">
-                      Calculated: ₹{renewPrice.toLocaleString('en-IN')}/mo * {renewIsCustomDuration ? (renewCustomMonths || '1') : renewDuration} month(s) - ₹{renewDiscount.toLocaleString('en-IN')}
+                      {renewDurationType === "Days" ? (
+                        <>Calculated: ₹{renewPrice.toLocaleString('en-IN')}/day * {renewDurationDays || '30'} day(s) - ₹{renewDiscount.toLocaleString('en-IN')}</>
+                      ) : (
+                        <>Calculated: ₹{renewPrice.toLocaleString('en-IN')}/mo * {renewIsCustomDuration ? (renewCustomMonths || '1') : renewDuration} month(s) - ₹{renewDiscount.toLocaleString('en-IN')}</>
+                      )}
                     </span>
                     <span className="font-bold text-emerald-400">
-                      <span>Final Price: ₹{Math.max(0, (renewPrice * (renewIsCustomDuration ? (renewCustomMonths || '1') : renewDuration)) - renewDiscount).toLocaleString('en-IN')}</span>
+                      {renewDurationType === "Days" ? (
+                        <span>Final Price: ₹{Math.max(0, (renewPrice * (Number(renewDurationDays) || 30)) - renewDiscount).toLocaleString('en-IN')}</span>
+                      ) : (
+                        <span>Final Price: ₹{Math.max(0, (renewPrice * (renewIsCustomDuration ? (parseInt(renewCustomMonths) || 1) : renewDuration)) - renewDiscount).toLocaleString('en-IN')}</span>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -807,7 +900,7 @@ export default function MembersPage() {
                     <span className="material-symbols-outlined text-base">delete</span>
                     Delete
                   </button>
-                  <button disabled={isActionLoading} onClick={() => handleToggleStatus(selectedMember)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-[#003178] border border-[#003178]/25 hover:bg-[#003178]/5 text-xs font-bold flex justify-center items-center gap-1.5">
+                  <button disabled={isActionLoading} onClick={() => handleToggleStatus(selectedMember)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-[#1e40af] border border-[#1e40af]/30 hover:bg-[#1e40af]/5 text-xs font-bold flex justify-center items-center gap-1.5">
                     <span className="material-symbols-outlined text-base">{selectedMember.is_active ? 'toggle_off' : 'toggle_on'}</span>
                     {selectedMember.is_active ? 'Deactivate' : 'Activate'}
                   </button>
@@ -815,7 +908,10 @@ export default function MembersPage() {
                     <span className="material-symbols-outlined text-base">directions_run</span>
                     Mark as Left
                   </button>
-                  <button disabled={isActionLoading} onClick={() => router.push('/dashboard/admission')} className="btn-ghost px-4 py-2.5 flex-1 disabled:opacity-50 text-xs font-bold">
+                  <button disabled={isActionLoading} onClick={() => {
+                    setSelectedMember(null);
+                    router.push(`/dashboard/admission?edit=${selectedMember.id}`);
+                  }} className="btn-ghost px-4 py-2.5 flex-1 disabled:opacity-50 text-xs font-bold">
                     Update Details
                   </button>
                   <button disabled={isActionLoading} onClick={() => setIsRenewingInline(true)} className="btn-primary px-4 py-2.5 flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold">

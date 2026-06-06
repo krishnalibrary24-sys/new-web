@@ -4,6 +4,7 @@ import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { logActivity } from "@/lib/activity";
 
 function RecordPaymentInner() {
   const { activeBranch } = useBranch();
@@ -28,6 +29,7 @@ function RecordPaymentInner() {
 
   // Payment Form States
   const [purpose, setPurpose] = useState<"dues" | "renewal">("renewal");
+  const [extendMembershipInDues, setExtendMembershipInDues] = useState<boolean>(false);
   const [amount, setAmount] = useState<number | "">("");
   const [paymentMode, setPaymentMode] = useState("Cash");
   const [paidAtDate, setPaidAtDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
@@ -41,6 +43,7 @@ function RecordPaymentInner() {
   const [renewIsCustomDuration, setRenewIsCustomDuration] = useState<boolean>(false);
   const [renewDurationType, setRenewDurationType] = useState<"Months" | "Days">("Months");
   const [renewDurationDays, setRenewDurationDays] = useState<number | "">(30);
+  const [renewShift, setRenewShift] = useState<string>("Full Day");
 
   // Auto-scale price on switching duration type
   const handleDurationTypeChange = (type: "Months" | "Days") => {
@@ -133,8 +136,18 @@ function RecordPaymentInner() {
     if (selectedMember) {
       fetchPaymentsHistory(selectedMember.id);
       
-      const defaultPrice = selectedMember.plan_amount || (selectedMember.shift === 'Full Day' ? 1000 : 600);
-      setBasePrice(defaultPrice);
+      const isUnreservedMember = selectedMember.permanent_id?.includes('U');
+      const defaultPrice = (selectedMember.plan_amount && Number(selectedMember.plan_amount) > 0)
+        ? Number(selectedMember.plan_amount)
+        : (selectedMember.shift === 'Full Day' ? 1000 : 600);
+      
+      setRenewDurationType(isUnreservedMember ? "Days" : "Months");
+      if (isUnreservedMember) {
+        setBasePrice(Math.round(defaultPrice / 30));
+      } else {
+        setBasePrice(defaultPrice);
+      }
+      setRenewShift(selectedMember.shift || "Full Day");
       setDiscount("");
       setSuccessMsg(null);
       setErrorMsg(null);
@@ -142,7 +155,6 @@ function RecordPaymentInner() {
       setRenewCustomMonths("");
       setRenewIsCustomDuration(false);
       setRenewDurationDays(30);
-      setRenewDurationType(selectedMember.permanent_id?.includes('U') ? "Days" : "Months");
       setPayLater(false);
       if (selectedMember.payment_due_date) {
         setDueDate(selectedMember.payment_due_date);
@@ -159,33 +171,97 @@ function RecordPaymentInner() {
   const discountVal = Number(discount) || 0;
   const isUnreserved = selectedMember?.permanent_id?.includes('U');
   
-  const finalDurationType = isUnreserved ? renewDurationType : "Months";
+  const finalDurationType = renewDurationType;
   const durationMonths = renewIsCustomDuration ? Math.max(1, parseInt(renewCustomMonths) || 1) : renewDuration;
   const durationDaysVal = Math.max(1, Number(renewDurationDays) || 30);
 
-  const calculatedTotal = purpose === "renewal"
+  const showDurationPicker = purpose === "renewal" || (purpose === "dues" && extendMembershipInDues);
+
+  const calculatedTotal = showDurationPicker
     ? (finalDurationType === "Days"
         ? Math.max(0, (basePriceVal * durationDaysVal) - discountVal)
         : Math.max(0, (basePriceVal * durationMonths) - discountVal))
-    : 0;
+    : Math.max(0, basePriceVal - discountVal);
 
-  // Auto-sync computed total to Amount Paid for renewal
+  const dueBalance = Math.max(0, calculatedTotal - (Number(amount) || 0));
+
+  // Synchronize extendMembershipInDues when purpose changes
   useEffect(() => {
     if (purpose === "renewal") {
-      setAmount(calculatedTotal);
-    } else {
-      setAmount("");
-    }
-  }, [calculatedTotal, purpose]);
-
-  // Force payLater to false if purpose is dues
-  useEffect(() => {
-    if (purpose === "dues") {
-      setPayLater(false);
+      setExtendMembershipInDues(false);
+    } else if (purpose === "dues") {
+      setExtendMembershipInDues(true);
     }
   }, [purpose]);
 
-  // Sync customExpiryDate when student, purpose, or duration type changes
+  // Load invoice-based due amount when purpose changes to dues
+  useEffect(() => {
+    if (!selectedMember) return;
+    let active = true;
+    
+    if (purpose === "dues") {
+      if (extendMembershipInDues) {
+        const defaultPrice = (selectedMember.plan_amount && Number(selectedMember.plan_amount) > 0)
+          ? Number(selectedMember.plan_amount)
+          : (selectedMember.shift === 'Full Day' ? 1000 : 600);
+          
+        if (renewDurationType === "Days") {
+          setBasePrice(Math.round(defaultPrice / 30));
+        } else {
+          setBasePrice(defaultPrice);
+        }
+      } else {
+        const getDuesAmount = async () => {
+          const { data } = await supabase
+            .from('invoices')
+            .select('due_amount')
+            .eq('member_id', selectedMember.id)
+            .gt('due_amount', 0)
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+            
+          if (!active) return;
+          if (data) {
+            setBasePrice(data.due_amount);
+          } else {
+            setBasePrice(0);
+          }
+        };
+        getDuesAmount();
+      }
+    } else {
+      const defaultPrice = (selectedMember.plan_amount && Number(selectedMember.plan_amount) > 0)
+        ? Number(selectedMember.plan_amount)
+        : (selectedMember.shift === 'Full Day' ? 1000 : 600);
+        
+      if (renewDurationType === "Days") {
+        setBasePrice(Math.round(defaultPrice / 30));
+      } else {
+        setBasePrice(defaultPrice);
+      }
+    }
+    setDiscount("");
+
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [purpose, selectedMember, extendMembershipInDues]);
+
+  // Auto-sync computed total to Amount Paid
+  useEffect(() => {
+    setAmount(calculatedTotal);
+  }, [calculatedTotal]);
+
+  // Force payLater to false if purpose is dues (unless extending validity)
+  useEffect(() => {
+    if (purpose === "dues" && !extendMembershipInDues) {
+      setPayLater(false);
+    }
+  }, [purpose, extendMembershipInDues]);
+
+  // Sync customExpiryDate when student, purpose, duration type, or extendMembership changes
   useEffect(() => {
     if (!selectedMember) return;
     const currentEnd = selectedMember.subscription_end_date ? new Date(selectedMember.subscription_end_date) : new Date();
@@ -198,7 +274,14 @@ function RecordPaymentInner() {
       baseDate.setMonth(baseDate.getMonth() + durationMonths);
     }
     setCustomExpiryDate(baseDate.toISOString().split('T')[0]);
-  }, [selectedMember, finalDurationType, durationDaysVal, durationMonths, purpose]);
+  }, [selectedMember, finalDurationType, durationDaysVal, durationMonths, purpose, extendMembershipInDues]);
+
+  // Sync dueDate to customExpiryDate when customExpiryDate changes (for partial payment setups)
+  useEffect(() => {
+    if (showDurationPicker && customExpiryDate) {
+      setDueDate(customExpiryDate);
+    }
+  }, [showDurationPicker, customExpiryDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,18 +292,33 @@ function RecordPaymentInner() {
 
     try {
       const amountVal = payLater ? 0 : (Number(amount) || 0);
+      if (!payLater && amountVal > calculatedTotal) {
+        throw new Error(`Amount paid (₹${amountVal}) cannot exceed the total payable amount (₹${calculatedTotal}). To charge less, use a discount instead.`);
+      }
       let notesText = notes.trim();
 
       let finalNewEnd: Date | null = null;
       let durationStr = "";
 
-      if (purpose === "renewal") {
+      const isRenewalAction = purpose === "renewal" || (purpose === "dues" && extendMembershipInDues);
+
+      if (isRenewalAction) {
         if (!customExpiryDate) {
           throw new Error("Please specify a valid expiry date.");
         }
         finalNewEnd = new Date(customExpiryDate);
         if (isNaN(finalNewEnd.getTime())) {
           throw new Error("Invalid expiry date format.");
+        }
+
+        // Prevent duplicate payment for already paid subscription period
+        if (selectedMember.subscription_end_date) {
+          const currentEnd = new Date(selectedMember.subscription_end_date);
+          const currentEndZero = new Date(currentEnd.getFullYear(), currentEnd.getMonth(), currentEnd.getDate());
+          const finalNewEndZero = new Date(finalNewEnd.getFullYear(), finalNewEnd.getMonth(), finalNewEnd.getDate());
+          if (finalNewEndZero <= currentEndZero) {
+            throw new Error(`This member's subscription is already active until ${currentEnd.toLocaleDateString()}. The new renewal expiry must be after this date to prevent duplicate payments.`);
+          }
         }
 
         if (finalDurationType === "Days") {
@@ -236,14 +334,92 @@ function RecordPaymentInner() {
         }
       } else {
         if (!notesText) {
-          notesText = `Dues/Partial Payment — Amount Paid: ₹${amountVal}`;
+          notesText = discountVal > 0
+            ? `Dues/Partial Payment — Amount Paid: ₹${amountVal}, Discount: ₹${discountVal}.`
+            : `Dues/Partial Payment — Amount Paid: ₹${amountVal}`;
         }
       }
 
-      // 1. Insert Payment Record (Only if not pay later)
-      if (!payLater) {
+      // 1. Create/Update Invoice & get invoiceId
+      let invoiceId: string | null = null;
+      const dueBalance = isRenewalAction ? Math.max(0, calculatedTotal - amountVal) : 0;
+
+      if (isRenewalAction) {
+        const { data: invoiceData, error: invoiceErr } = await supabase
+          .from('invoices')
+          .insert([{
+            member_id: selectedMember.id,
+            total_amount: calculatedTotal,
+            paid_amount: amountVal,
+            due_amount: dueBalance,
+            status: amountVal === 0 ? 'unpaid' : (dueBalance === 0 ? 'paid' : 'partially_paid'),
+            due_date: dueBalance > 0 ? dueDate : null
+          }])
+          .select()
+          .single();
+
+        if (invoiceErr) throw new Error(invoiceErr.message);
+        if (invoiceData) invoiceId = invoiceData.id;
+      } else {
+        // For Dues Payment, pay towards the oldest active invoice with pending dues
+        const { data: pendingInvoices, error: pendingErr } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('member_id', selectedMember.id)
+          .gt('due_amount', 0)
+          .order('created_at', { ascending: true })
+          .limit(1);
+
+        if (pendingErr) throw new Error(pendingErr.message);
+
+        if (pendingInvoices && pendingInvoices.length > 0) {
+          const invoice = pendingInvoices[0];
+          invoiceId = invoice.id;
+          const newPaidAmount = Number(invoice.paid_amount) + amountVal;
+          // Deduct both the payment and any discount entered
+          const newDueAmount = Math.max(0, Number(invoice.due_amount) - amountVal - discountVal);
+          const newStatus = newDueAmount === 0 ? 'paid' : 'partially_paid';
+
+          // Update total_amount to reflect discount if any was given
+          const newTotalAmount = Math.max(0, Number(invoice.total_amount) - discountVal);
+
+          const { error: invoiceUpdErr } = await supabase
+            .from('invoices')
+            .update({
+              total_amount: newTotalAmount,
+              paid_amount: newPaidAmount,
+              due_amount: newDueAmount,
+              status: newStatus,
+              due_date: newDueAmount > 0 ? dueDate : null
+            })
+            .eq('id', invoiceId);
+
+          if (invoiceUpdErr) throw new Error(invoiceUpdErr.message);
+        } else {
+          // Fallback if no invoice exists (older legacy members), create a paid/partially paid invoice
+          const { data: newInvoice, error: fallbackErr } = await supabase
+            .from('invoices')
+            .insert([{
+              member_id: selectedMember.id,
+              total_amount: calculatedTotal,
+              paid_amount: amountVal,
+              due_amount: dueBalance,
+              status: amountVal === 0 ? 'unpaid' : (dueBalance === 0 ? 'paid' : 'partially_paid'),
+              due_date: dueBalance > 0 ? dueDate : null
+            }])
+            .select()
+            .single();
+
+          if (fallbackErr) throw new Error(fallbackErr.message);
+          if (newInvoice) invoiceId = newInvoice.id;
+        }
+      }
+
+      // 2. Insert Payment Record (Only if amountVal > 0)
+      if (amountVal > 0) {
         const { error: paymentErr } = await supabase.from('payments').insert([{
           member_id: selectedMember.id,
+          invoice_id: invoiceId,
           amount: amountVal,
           branch: activeBranch,
           payment_mode: paymentMode,
@@ -254,20 +430,33 @@ function RecordPaymentInner() {
         if (paymentErr) throw new Error(paymentErr.message);
       }
 
-      // 2. Update Member Record
+      // 3. Fetch remaining due amount for the member across all invoices
+      const { data: memberDues } = await supabase
+        .from('invoices')
+        .select('due_amount')
+        .eq('member_id', selectedMember.id);
+      
+      const totalRemainingDues = memberDues 
+        ? memberDues.reduce((sum, inv) => sum + Number(inv.due_amount), 0)
+        : 0;
+
+      // 4. Update Member Record
       const memberUpdatePayload: any = {
-        plan_amount: basePriceVal, // Update plan configuration
-        pay_later: payLater,
-        payment_due_date: payLater ? dueDate : null,
+        pay_later: totalRemainingDues > 0,
+        payment_due_date: totalRemainingDues > 0 ? dueDate : null,
         left_with_dues: false,
         loss_amount: 0,
         left_at: null,
         left_reason: null
       };
 
-      if (purpose === "renewal" && finalNewEnd) {
-        memberUpdatePayload.subscription_end_date = finalNewEnd.toISOString();
-        memberUpdatePayload.is_active = true;
+      if (isRenewalAction) {
+        memberUpdatePayload.plan_amount = basePriceVal;
+        memberUpdatePayload.shift = renewShift;
+        if (finalNewEnd) {
+          memberUpdatePayload.subscription_end_date = finalNewEnd.toISOString();
+          memberUpdatePayload.is_active = true;
+        }
       }
 
       const { error: memberErr } = await supabase
@@ -276,6 +465,8 @@ function RecordPaymentInner() {
         .eq('id', selectedMember.id);
 
       if (memberErr) throw new Error(memberErr.message);
+
+      logActivity(activeBranch, "payment", `Recorded payment of ₹${amountVal} for ${selectedMember.full_name} (${selectedMember.permanent_id}). Purpose: ${purpose === "renewal" ? "Renewal" : "Dues"}.`);
 
       setSuccessMsg(purpose === "renewal" 
         ? "Payment recorded & membership activated successfully! Redirecting..." 
@@ -395,11 +586,11 @@ function RecordPaymentInner() {
                       <div className="flex items-center gap-2.5 truncate">
                         <span className={`w-2 h-2 rounded-full shrink-0 ${statusDotColor}`} />
                         <div className="truncate">
-                          <div className="text-white font-bold text-xs truncate">{m.full_name}</div>
-                          <div className="text-[10px] text-primary font-mono mt-0.5">{m.permanent_id}</div>
+                          <div className="text-white font-bold text-xs truncate student-list-item-name">{m.full_name}</div>
+                          <div className="text-[10px] text-primary font-mono mt-0.5 student-list-item-id">{m.permanent_id}</div>
                         </div>
                       </div>
-                      <span className="text-[9px] text-on-surface-variant shrink-0 select-none">
+                      <span className="text-[9px] text-on-surface-variant shrink-0 select-none student-list-item-hint">
                         Double-click for details
                       </span>
                     </button>
@@ -513,17 +704,30 @@ function RecordPaymentInner() {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Purpose Select */}
-                    <div className="space-y-1">
+                                      <div className="space-y-1">
                       <label className="text-[10px] uppercase font-bold text-on-surface-variant pl-0.5">Payment Purpose</label>
                       <select
                         value={purpose}
                         onChange={(e) => setPurpose(e.target.value as any)}
                         className="input-premium appearance-none w-full"
                       >
-                        <option value="renewal">Plan Setup / Subscription Renewal</option>
-                        <option value="dues">Dues / Partial Payment (No extension)</option>
+                        <option value="renewal">Plan Setup / Subscription Renewal (Full / Partial Payment)</option>
+                        <option value="dues">Pay Pending Dues / Partial Payment</option>
                       </select>
+
+                      {purpose === "dues" && (
+                        <label className="flex items-center gap-2 mt-2 cursor-pointer group select-none pl-0.5">
+                          <input
+                            type="checkbox"
+                            checked={extendMembershipInDues}
+                            onChange={(e) => setExtendMembershipInDues(e.target.checked)}
+                            className="w-4 h-4 text-[#1e40af] border-white/10 rounded focus:ring-0 focus:ring-offset-0 bg-[#f8fafc]"
+                          />
+                          <span className="text-[10px] font-bold text-slate-600 group-hover:text-slate-800 transition-colors">
+                            Extend Membership Validity? (Renewal + Partial)
+                          </span>
+                        </label>
+                      )}
                     </div>
 
                     {/* Amount Paid */}
@@ -535,22 +739,51 @@ function RecordPaymentInner() {
                         required
                         value={amount}
                         onChange={(e) => setAmount(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))}
-                        className="input-premium w-full"
+                        className={`input-premium w-full ${!payLater && Number(amount) > calculatedTotal ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                         placeholder="e.g. 1000"
                       />
+                      {!payLater && Number(amount) > calculatedTotal && (
+                        <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1 animate-fade-in-fast">
+                          <span className="material-symbols-outlined text-xs">warning</span>
+                          Exceeds total payable amount (₹{calculatedTotal}). Use discount instead.
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   {/* Shifted Pricing & Payment Details section */}
-                  {purpose === "renewal" && (
-                    <div className="p-5 bg-white/[0.01] border border-[#fdac29]/20 rounded-2xl space-y-5 animate-scale-in">
-                      <div className="flex items-center gap-2 text-[#fdac29] text-[10px] font-bold uppercase tracking-wider">
-                        <span className="material-symbols-outlined text-xs">tune</span>
-                        Pricing & Plan Duration Details
-                      </div>
+                  <div className="p-5 bg-white/[0.01] border border-[#fdac29]/20 rounded-2xl space-y-5 animate-scale-in">
+                    <div className="flex items-center gap-2 text-[#fdac29] text-[10px] font-bold uppercase tracking-wider">
+                      <span className="material-symbols-outlined text-xs">tune</span>
+                      {showDurationPicker ? "Pricing & Plan Duration Details" : "Pricing & Settlement Details"}
+                    </div>
 
-                      {/* Unreserved duration type picker */}
-                      {isUnreserved && (
+                    {showDurationPicker && (
+                      <>
+                        {/* Shift Selector */}
+                        <div className="space-y-2">
+                          <label className="text-[9px] uppercase font-bold text-on-surface-variant">Shift / Time Slot</label>
+                          <select
+                            value={renewShift}
+                            onChange={(e) => {
+                              const newShift = e.target.value;
+                              setRenewShift(newShift);
+                              const defaultPrice = newShift === 'Full Day' ? 1000 : 600;
+                              if (renewDurationType === "Days") {
+                                setBasePrice(Math.round(defaultPrice / 30));
+                              } else {
+                                setBasePrice(defaultPrice);
+                              }
+                            }}
+                            className="input-premium appearance-none w-full !py-2 !text-xs"
+                          >
+                            <option value="Morning">Morning Shift (₹600)</option>
+                            <option value="Evening">Evening Shift (₹600)</option>
+                            <option value="Full Day">Full Day Shift (₹1000)</option>
+                          </select>
+                        </div>
+
+                        {/* Duration Period Type */}
                         <div className="space-y-2">
                           <label className="text-[9px] uppercase font-bold text-on-surface-variant">Duration Period Type</label>
                           <div className="flex gap-2">
@@ -559,7 +792,7 @@ function RecordPaymentInner() {
                               onClick={() => handleDurationTypeChange("Months")}
                               className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${
                                 renewDurationType === "Months"
-                                  ? "bg-[#003178] text-white border-[#003178]"
+                                  ? "bg-[#1e40af] text-white border-[#1e40af]"
                                   : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
                               }`}
                             >
@@ -570,7 +803,7 @@ function RecordPaymentInner() {
                               onClick={() => handleDurationTypeChange("Days")}
                               className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${
                                 renewDurationType === "Days"
-                                  ? "bg-[#003178] text-white border-[#003178]"
+                                  ? "bg-[#1e40af] text-white border-[#1e40af]"
                                   : "bg-slate-200 hover:bg-slate-300 text-[#003178] border-[#003178]"
                               }`}
                             >
@@ -578,104 +811,108 @@ function RecordPaymentInner() {
                             </button>
                           </div>
                         </div>
-                      )}
 
-                      {/* Membership Duration Selection */}
-                      {finalDurationType === "Months" ? (
-                        <div className="space-y-2">
-                          <label className="text-[9px] uppercase font-bold text-on-surface-variant block">Membership Duration (Months)</label>
-                          <div className="grid grid-cols-5 gap-1.5">
-                            {[1, 3, 6, 12].map((m) => (
+                        {/* Membership Duration Selection */}
+                        {finalDurationType === "Months" ? (
+                          <div className="space-y-2">
+                            <label className="text-[9px] uppercase font-bold text-on-surface-variant block">Membership Duration (Months)</label>
+                            <div className="grid grid-cols-5 gap-1.5">
+                              {[1, 3, 6, 12].map((m) => (
+                                <button
+                                  key={m}
+                                  type="button"
+                                  onClick={() => {
+                                    setRenewDuration(m);
+                                    setRenewIsCustomDuration(false);
+                                  }}
+                                  className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border ${
+                                    !renewIsCustomDuration && renewDuration === m
+                                      ? "bg-[#1e40af] text-white border-[#1e40af]"
+                                      : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
+                                  }`}
+                                >
+                                  {m}M
+                                </button>
+                              ))}
                               <button
-                                key={m}
                                 type="button"
-                                onClick={() => {
-                                  setRenewDuration(m);
-                                  setRenewIsCustomDuration(false);
-                                }}
+                                onClick={() => setRenewIsCustomDuration(true)}
                                 className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border ${
-                                  !renewIsCustomDuration && renewDuration === m
-                                    ? "bg-[#003178] text-white border-[#003178]"
+                                  renewIsCustomDuration
+                                    ? "bg-[#1e40af] text-white border-[#1e40af]"
                                     : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
                                 }`}
                               >
-                                {m}M
+                                Custom
                               </button>
-                            ))}
-                            <button
-                              type="button"
-                              onClick={() => setRenewIsCustomDuration(true)}
-                              className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border ${
-                                renewIsCustomDuration
-                                  ? "bg-[#003178] text-white border-[#003178]"
-                                  : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
-                              }`}
-                            >
-                              Custom
-                            </button>
-                          </div>
-                          {renewIsCustomDuration && (
-                            <div className="max-w-[150px] mt-1.5 animate-fade-in-fast">
-                              <input
-                                type="number"
-                                min="1"
-                                value={renewCustomMonths}
-                                onChange={(e) => setRenewCustomMonths(e.target.value)}
-                                className="input-premium !py-1.5 !text-xs w-full"
-                                placeholder="Enter months..."
-                                required={renewIsCustomDuration}
-                              />
                             </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-bold text-on-surface-variant block">Membership Duration (Days)</label>
-                          <input
-                            type="number"
-                            min="1"
-                            required
-                            value={renewDurationDays}
-                            onChange={(e) => setRenewDurationDays(e.target.value === "" ? "" : Math.max(1, Number(e.target.value)))}
-                            className="input-premium !py-1.5 !text-xs max-w-[150px]"
-                            placeholder="e.g. 15"
-                          />
-                        </div>
-                      )}
+                            {renewIsCustomDuration && (
+                              <div className="max-w-[150px] mt-1.5 animate-fade-in-fast">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={renewCustomMonths}
+                                  onChange={(e) => setRenewCustomMonths(e.target.value)}
+                                  className="input-premium !py-1.5 !text-xs w-full"
+                                  placeholder="Enter months..."
+                                  required={renewIsCustomDuration}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase font-bold text-on-surface-variant block">Membership Duration (Days)</label>
+                            <input
+                              type="number"
+                              min="1"
+                              required
+                              value={renewDurationDays}
+                              onChange={(e) => setRenewDurationDays(e.target.value === "" ? "" : Math.max(1, Number(e.target.value)))}
+                              className="input-premium !py-1.5 !text-xs max-w-[150px]"
+                              placeholder="e.g. 15"
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
 
-                      {/* Base price & Discount configs */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-bold text-on-surface-variant block">
-                            Base Plan Price (₹/{finalDurationType === "Days" ? "day" : "mo"})
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            required
-                            value={basePrice}
-                            onChange={(e) => setBasePrice(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))}
-                            className="input-premium !py-1.5 !text-xs w-full"
-                            placeholder="e.g. 1000"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-bold text-on-surface-variant block">Total Discount (₹)</label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={discount}
-                            onChange={(e) => setDiscount(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))}
-                            className="input-premium !py-1.5 !text-xs w-full"
-                            placeholder="No pre-filled zero"
-                          />
-                        </div>
+                    {/* Base price & Discount configs */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-bold text-on-surface-variant block">
+                          {showDurationPicker 
+                            ? `Base Plan Price (₹/${finalDurationType === "Days" ? "day" : "mo"})`
+                            : "Total Dues/Amount (₹)"}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          required
+                          value={basePrice}
+                          onChange={(e) => setBasePrice(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                          placeholder={showDurationPicker ? "e.g. 1000" : "e.g. 400"}
+                        />
                       </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-bold text-on-surface-variant block">Total Discount (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={discount}
+                          onChange={(e) => setDiscount(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                          placeholder="No pre-filled zero"
+                        />
+                      </div>
+                    </div>
 
-                      {/* Expiry and pricing summaries */}
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs gap-2">
-                        <div className="text-on-surface-variant font-medium">
-                          {finalDurationType === "Days" ? (
+                    {/* Expiry and pricing summaries */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs gap-2">
+                      <div className="text-on-surface-variant font-medium">
+                        {showDurationPicker ? (
+                          finalDurationType === "Days" ? (
                             <span>
                               Calculated: ₹{basePriceVal.toLocaleString('en-IN')}/day * {durationDaysVal} day(s) - ₹{discountVal.toLocaleString('en-IN')} (Discount)
                             </span>
@@ -683,14 +920,20 @@ function RecordPaymentInner() {
                             <span>
                               Calculated: ₹{basePriceVal.toLocaleString('en-IN')}/mo * {durationMonths} month(s) - ₹{discountVal.toLocaleString('en-IN')} (Discount)
                             </span>
-                          )}
-                        </div>
-                        <div className="font-bold text-emerald-400">
-                          <span>Total Payable: ₹{calculatedTotal.toLocaleString('en-IN')}</span>
-                        </div>
+                          )
+                        ) : (
+                          <span>
+                            Settlement: ₹{basePriceVal.toLocaleString('en-IN')} (Dues) - ₹{discountVal.toLocaleString('en-IN')} (Discount)
+                          </span>
+                        )}
                       </div>
+                      <div className="font-bold text-emerald-400">
+                        <span>Total Payable: ₹{calculatedTotal.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
 
-                      {/* Pay Later Option Toggle */}
+                    {/* Pay Later Option Toggle */}
+                    {showDurationPicker && (
                       <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                         <div className="space-y-0.5">
                           <label className="text-xs font-bold text-white block">Pay Later / Defer Payment</label>
@@ -698,7 +941,14 @@ function RecordPaymentInner() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => setPayLater(!payLater)}
+                          onClick={() => {
+                            setPayLater(!payLater);
+                            if (!payLater) {
+                              setAmount(0);
+                            } else {
+                              setAmount(calculatedTotal);
+                            }
+                          }}
                           className={`w-11 h-6 rounded-full transition-all relative ${
                             payLater ? "bg-primary shadow-[0_0_10px_rgba(0,49,120,0.3)]" : "bg-slate-300"
                           }`}
@@ -710,20 +960,31 @@ function RecordPaymentInner() {
                           />
                         </button>
                       </div>
+                    )}
 
-                      {purpose === "renewal" && payLater && (
-                        <div className="space-y-1.5 w-full animate-fade-in-fast">
-                          <label className="text-[10px] uppercase font-bold text-on-surface-variant block pl-0.5">Payment Due Date</label>
-                          <input
-                            type="date"
-                            required
-                            value={dueDate}
-                            onChange={(e) => setDueDate(e.target.value)}
-                            className="input-premium w-full !py-2.5"
-                          />
-                        </div>
-                      )}
+                    {dueBalance > 0 && !payLater && (
+                      <div className="p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-semibold flex items-center gap-2">
+                        <span className="material-symbols-outlined text-base">info</span>
+                        <span>Remaining Balance: ₹{dueBalance.toLocaleString('en-IN')} will be recorded as pending dues.</span>
+                      </div>
+                    )}
 
+                    {(payLater || dueBalance > 0) && (
+                      <div className="space-y-1.5 w-full animate-fade-in-fast">
+                        <label className="text-[10px] uppercase font-bold text-on-surface-variant block pl-0.5">
+                          {dueBalance > 0 ? "Dues Payment Deadline (Due Date)" : "Payment Due Date"}
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={dueDate}
+                          onChange={(e) => setDueDate(e.target.value)}
+                          className="input-premium w-full !py-2.5"
+                        />
+                      </div>
+                    )}
+
+                    {showDurationPicker && (
                       <div className="space-y-1.5 w-full">
                         <label className="text-[10px] uppercase font-bold text-on-surface-variant block pl-0.5">New Validity Expiry Date</label>
                         <input
@@ -731,11 +992,21 @@ function RecordPaymentInner() {
                           required
                           value={customExpiryDate}
                           onChange={(e) => setCustomExpiryDate(e.target.value)}
-                          className="input-premium w-full !py-2.5 !text-xs font-semibold"
+                          className={`input-premium w-full !py-2.5 !text-xs font-semibold ${
+                            selectedMember?.subscription_end_date && customExpiryDate && new Date(customExpiryDate) <= new Date(selectedMember.subscription_end_date)
+                              ? 'border-red-500 text-red-400 bg-red-500/5'
+                              : ''
+                          }`}
                         />
+                        {selectedMember?.subscription_end_date && customExpiryDate && new Date(customExpiryDate) <= new Date(selectedMember.subscription_end_date) && (
+                          <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 mt-1">
+                            <span className="material-symbols-outlined text-xs">warning</span>
+                            Expiry must be after current subscription end date ({new Date(selectedMember.subscription_end_date).toLocaleDateString()}).
+                          </p>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {!payLater && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -782,7 +1053,7 @@ function RecordPaymentInner() {
 
                   {/* Submit Button */}
                   <button
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || (!payLater && Number(amount) > calculatedTotal)}
                     type="submit"
                     className="w-full btn-primary py-3.5 flex justify-center items-center gap-2 disabled:opacity-50 font-bold"
                   >

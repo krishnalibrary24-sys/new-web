@@ -11,7 +11,7 @@ export const SquishyPricing = () => {
         <p className="font-v-body-md text-v-body-md text-v-on-surface-variant mt-4">Choose a study slot that fits your schedule. Premium amenities included in all slots.</p>
       </div>
 
-      <div className="mx-auto flex w-fit flex-wrap justify-center gap-8">
+      <div className="mx-auto flex w-full max-w-[1100px] flex-wrap justify-center gap-8 px-4">
           <PricingCard
             label="Morning Slot"
             monthlyPrice="₹600"
@@ -57,7 +57,7 @@ const PricingCard = ({ label, monthlyPrice, suffix, timeSlotBC, timeSlotNK, desc
       whileHover="hover"
       transition={{ duration: 1, ease: "backInOut" }}
       variants={{ hover: { scale: 1.05 } }}
-      className={`relative h-[440px] w-80 shrink-0 overflow-hidden rounded-2xl p-8 ${background} shadow-lg hover:shadow-xl transition-shadow`}
+      className={`relative h-[440px] w-full max-w-[320px] sm:w-80 shrink-0 overflow-hidden rounded-2xl p-8 ${background} shadow-lg hover:shadow-xl transition-shadow`}
     >
       {isPopular && (
         <div className="absolute top-0 right-0 bg-yellow-400 text-neutral-900 font-bold px-4 py-1 rounded-bl-xl text-xs uppercase tracking-wider z-20">

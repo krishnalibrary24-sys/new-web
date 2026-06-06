@@ -25,9 +25,15 @@
 
 /* ── Desktop nav links container ── */
 .kl-nav-links {
-  display: flex;
-  align-items: center;
-  gap: 2px;
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .kl-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
 }
 
 /* ── Individual nav link ── */
@@ -130,6 +136,7 @@
 
 /* ── Staff Login ghost button ── */
 .kl-staff-btn {
+  display: none;
   font-family: 'Montserrat', sans-serif;
   font-size: 12px;
   font-weight: 600;
@@ -144,6 +151,11 @@
   white-space: nowrap;
   background: transparent;
   transition: background 0.2s ease, border-color 0.2s ease;
+}
+@media (min-width: 768px) {
+  .kl-staff-btn {
+    display: inline-flex;
+  }
 }
 .kl-staff-btn:hover {
   background: rgba(0, 49, 120, 0.06);
@@ -962,6 +974,18 @@ html.lenis, html.lenis body {
   box-shadow: 0 6px 20px rgba(6, 182, 212, 0.5);
 }
 
+/* ── Squishy Pricing button in dark mode override ── */
+.dark .visitor-page section#membership button {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #ffffff !important;
+}
+.dark .visitor-page section#membership button:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
 /* ═══════════════════════════════════════════════════════════
    DASHBOARD LIGHT MODE SYSTEM (White & Blue)
    ═══════════════════════════════════════════════════════════ */
@@ -1042,10 +1066,21 @@ html.lenis, html.lenis body {
 
 .dashboard-light-theme .text-white.badge,
 .dashboard-light-theme .text-white.btn-primary,
+.dashboard-light-theme .text-white.btn-danger,
 .dashboard-light-theme .text-white.badge-success,
 .dashboard-light-theme .text-white.badge-danger,
 .dashboard-light-theme .text-white.badge-info,
-.dashboard-light-theme .text-white.badge-warning {
+.dashboard-light-theme .text-white.badge-warning,
+.dashboard-light-theme button.btn-primary .text-white,
+.dashboard-light-theme button.btn-danger .text-white,
+.dashboard-light-theme button[type="submit"] .text-white,
+.dashboard-light-theme button.bg-\[\#003178\],
+.dashboard-light-theme button.bg-\[\#1e40af\],
+.dashboard-light-theme button.bg-primary,
+.dashboard-light-theme .bg-\[\#003178\],
+.dashboard-light-theme .bg-\[\#003178\] *,
+.dashboard-light-theme .bg-\[\#1e40af\],
+.dashboard-light-theme .bg-\[\#1e40af\] * {
   color: #ffffff !important;
 }
 
@@ -1412,6 +1447,17 @@ html.lenis, html.lenis body {
 .dashboard-light-theme .bg-slate-200.border-slate-300:hover {
   background-color: #f1f5f9 !important;
   border-color: #cbd5e1 !important;
+}
+
+/* Student directory list item contrast overrides */
+.dashboard-light-theme .student-list-item-name {
+  color: #0f172a !important;
+}
+.dashboard-light-theme .student-list-item-id {
+  color: #1e40af !important;
+}
+.dashboard-light-theme .student-list-item-hint {
+  color: #64748b !important;
 }
 
 

@@ -3,12 +3,46 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BranchProvider, useBranch } from "@/components/branch-context";
+import { supabase } from "@/lib/supabase";
 
 function DashboardInner({ children, role }: { children: React.ReactNode, role: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const isAdmin = role === "admin";
   const { activeBranch, setActiveBranch } = useBranch();
+  const [duesCount, setDuesCount] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchDuesCount = async () => {
+      const { data } = await supabase
+        .from('invoices')
+        .select('*, member:members(branch)')
+        .gt('due_amount', 0);
+      
+      if (data) {
+        const filtered = data.filter(inv => inv.member && inv.member.branch === activeBranch);
+        setDuesCount(filtered.length);
+      }
+    };
+    
+    if (activeBranch) {
+      fetchDuesCount();
+    }
+  }, [activeBranch]);
+
+  // Prevent numeric inputs from changing value on mouse wheel scroll
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      const activeEl = document.activeElement as HTMLInputElement;
+      if (activeEl && activeEl.type === "number") {
+        activeEl.blur();
+      }
+    };
+    document.addEventListener("wheel", handleWheel);
+    return () => {
+      document.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
 
   const navLinks = [
     { name: "Overview", icon: "space_dashboard", path: "/dashboard" },
@@ -20,6 +54,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
     { name: "Invoices", icon: "receipt_long", path: "/dashboard/invoices" },
     { name: "Enquiries", icon: "contact_mail", path: "/dashboard/enquiries" },
     { name: "Expenses", icon: "trending_up", path: "/dashboard/expenses" },
+    { name: "Activities", icon: "history", path: "/dashboard/activities" },
     ...(isAdmin ? [{ name: "Loss Payments", icon: "money_off", path: "/dashboard/loss-payment" }] : []),
     { name: "Settings", icon: "settings", path: "/dashboard/settings" },
   ];
@@ -107,6 +142,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
           <div className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest px-4 mt-5 mb-2">Finance</div>
           {navLinks.slice(5).map((link) => {
             const isActive = pathname === link.path;
+            const isDues = link.name === "Dues";
             return (
               <Link 
                 key={link.path} 
@@ -114,7 +150,12 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
                 className={`sidebar-link ${isActive ? 'active' : 'text-[#475569] hover:bg-[#003178]/5 hover:text-[#003178]'}`}
               >
                 <span className="material-symbols-outlined text-lg" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>{link.icon}</span>
-                <span>{link.name}</span>
+                <span className="flex-1">{link.name}</span>
+                {isDues && duesCount > 0 && (
+                  <span className="bg-[#fdac29]/15 text-[#fdac29] text-[9px] font-black px-2 py-0.5 rounded-full border border-[#fdac29]/20 ml-auto animate-pulse">
+                    {duesCount}
+                  </span>
+                )}
               </Link>
             );
           })}

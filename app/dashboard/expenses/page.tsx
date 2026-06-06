@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
+import { logActivity } from "@/lib/activity";
 
 export default function ExpensesPage() {
   const { activeBranch } = useBranch();
@@ -51,6 +52,8 @@ export default function ExpensesPage() {
       expense_date: expenseDate
     }]);
     
+    logActivity(activeBranch, "expense_added", `Recorded new expense: Category: ${category}, Amount: ₹${amount}, Details: ${description}`);
+    
     setCategory('Rent');
     setAmount('');
     setDescription('');
@@ -63,7 +66,11 @@ export default function ExpensesPage() {
 
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this expense?")) {
+      const exp = expenses.find(e => e.id === id);
       await supabase.from('expenses').delete().eq('id', id);
+      if (exp) {
+        logActivity(activeBranch, "expense_delete", `Deleted expense: Category: ${exp.category}, Amount: ₹${exp.amount}`);
+      }
       fetchExpenses();
     }
   };

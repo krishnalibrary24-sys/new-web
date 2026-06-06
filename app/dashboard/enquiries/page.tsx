@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
+import { logActivity } from "@/lib/activity";
 
 interface Lead {
   id: string;
@@ -83,6 +84,7 @@ export default function EnquiriesPage() {
     }]).select();
     
     if (!error && data) {
+      logActivity(activeBranch, "enquiry_added", `Added new enquiry lead: ${newLead.name} (Phone: ${newLead.phone}, Interest: ${newLead.interest})`);
       setLeads([data[0], ...leads]);
       setShowAddModal(false);
       setNewLead({ name: '', phone: '', interest: 'Full Day', branch: activeBranch, address: '' });
@@ -92,7 +94,11 @@ export default function EnquiriesPage() {
 
   const handleDeleteLead = async (id: string) => {
     if (confirm("Are you sure you want to delete this enquiry?")) {
+      const lead = leads.find(l => l.id === id);
       await supabase.from('leads').delete().eq('id', id);
+      if (lead) {
+        logActivity(activeBranch, "enquiry_delete", `Deleted enquiry lead: ${lead.full_name} (${lead.phone})`);
+      }
       setLeads(leads.filter(l => l.id !== id));
     }
   };
@@ -222,6 +228,13 @@ export default function EnquiriesPage() {
                     </td>
                     <td className="text-right">
                       <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        <a 
+                          href={`/dashboard/admission?name=${encodeURIComponent(lead.full_name)}&mobile=${encodeURIComponent(lead.phone)}&shift=${encodeURIComponent(lead.interest === 'Half Day' ? 'Morning' : (lead.interest === 'Night Shift' ? 'Evening' : lead.interest))}&address=${encodeURIComponent(parseNotes(lead.notes).address)}`}
+                          className="p-1.5 rounded-lg hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-all"
+                          title="Convert to Admission"
+                        >
+                          <span className="material-symbols-outlined text-base">person_add</span>
+                        </a>
                         <a 
                           href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${lead.full_name}, thank you for your enquiry at Krishna Library! How can we assist you today?`)}`} 
                           target="_blank" rel="noreferrer"

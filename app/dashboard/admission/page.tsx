@@ -1,13 +1,17 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { logActivity } from "@/lib/activity";
 
-export default function AdmissionPage() {
+function AdmissionPageInner() {
   const { activeBranch } = useBranch();
-  const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
+  const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('edit');
+  const isEditing = !!editId;
   
   const [mobile, setMobile] = useState("");
   const [fullName, setFullName] = useState("");
@@ -18,6 +22,9 @@ export default function AdmissionPage() {
   const [shift, setShift] = useState("Full Day");
   const [isReserved, setIsReserved] = useState<boolean>(true);
   
+  const [customPlanAmount, setCustomPlanAmount] = useState<number | "">(1000);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
   // No pricing or payment states here anymore
   const [recordFound, setRecordFound] = useState(false);
   const [permanentId, setPermanentId] = useState("");
@@ -25,20 +32,81 @@ export default function AdmissionPage() {
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showRecordPopup, setShowRecordPopup] = useState(false);
+  const [tempMemberData, setTempMemberData] = useState<any | null>(null);
 
+  // Load data from query parameters (e.g. from Enquiries/Leads page)
   useEffect(() => {
-    const checkExistingMember = async (phone: string) => {
-      const { data } = await supabase.from('members').select('*').eq('mobile', phone).maybeSingle();
+    if (isEditing) return;
+    const nameParam = searchParams.get('name');
+    const mobileParam = searchParams.get('mobile');
+    const addressParam = searchParams.get('address');
+    const shiftParam = searchParams.get('shift');
+
+    if (nameParam) setFullName(nameParam);
+    if (mobileParam) setMobile(mobileParam);
+    if (addressParam && addressParam !== 'N/A' && addressParam !== 'None') setAddress(addressParam);
+    if (shiftParam) {
+      if (shiftParam === 'Full Day' || shiftParam === 'Morning' || shiftParam === 'Evening') {
+        setShift(shiftParam);
+      } else if (shiftParam.toLowerCase().includes('half')) {
+        setShift('Morning'); // Default half-day interest to Morning shift
+      }
+    }
+  }, [searchParams, isEditing]);
+
+  // Load member info for editing if editId is provided
+  useEffect(() => {
+    const fetchMemberForEdit = async () => {
+      if (!editId) return;
+      
+      const { data } = await supabase
+        .from('members')
+        .select('*')
+        .eq('id', editId)
+        .maybeSingle();
+        
       if (data) {
+        setMobile(data.mobile || "");
         setFullName(data.full_name || "");
         setFatherName(data.father_name || "");
         setDob(data.dob ? data.dob.split('T')[0] : "");
         setGender(data.gender || "");
         setAddress(data.address || "");
+        setShift(data.shift || "Full Day");
+        setPermanentId(data.permanent_id || "");
+        
+        const unreserved = data.permanent_id && data.permanent_id.includes('U');
+        setIsReserved(!unreserved);
+        if (data.plan_amount !== undefined && data.plan_amount !== null) {
+          setCustomPlanAmount(data.plan_amount);
+        }
+        setIsInitialLoad(false);
+        setRecordFound(true);
+      }
+    };
+    
+    fetchMemberForEdit();
+  }, [editId]);
+
+  // Sync shift changes to customPlanAmount
+  useEffect(() => {
+    if (isEditing && isInitialLoad) return;
+    const defaultPrice = shift === 'Full Day' ? 1000 : 600;
+    setCustomPlanAmount(defaultPrice);
+  }, [shift, isEditing, isInitialLoad]);
+
+  useEffect(() => {
+    if (isEditing) return;
+
+    const checkExistingMember = async (phone: string) => {
+      const { data } = await supabase.from('members').select('*').eq('mobile', phone).maybeSingle();
+      if (data) {
+        setTempMemberData(data);
         setPermanentId(data.permanent_id || "");
         setRecordFound(true);
         setShowRecordPopup(true);
       } else {
+        setTempMemberData(null);
         setRecordFound(false);
         setPermanentId("");
         setShowRecordPopup(false);
@@ -48,9 +116,12 @@ export default function AdmissionPage() {
     if (mobile.replace(/[^0-9]/g, '').length >= 10) {
       checkExistingMember(mobile);
     } else {
+      setTempMemberData(null);
       setRecordFound(false);
+      setPermanentId("");
+      setShowRecordPopup(false);
     }
-  }, [mobile]);
+  }, [mobile, isEditing]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +129,37 @@ export default function AdmissionPage() {
     
     try {
       let finalId = permanentId;
+      
+      if (isEditing) {
+        const basePriceVal = Number(customPlanAmount) || (shift === 'Full Day' ? 1000 : 600);
+        const editPayload = {
+          full_name: fullName,
+          father_name: fatherName,
+          dob: dob || null,
+          gender: gender,
+          mobile: mobile,
+          address: address,
+          shift: shift,
+          plan_amount: basePriceVal
+        };
+
+        const { data: updatedMember, error: updErr } = await supabase
+          .from('members')
+          .update(editPayload)
+          .eq('id', editId)
+          .select()
+          .single();
+
+        if (updErr) throw new Error(updErr.message);
+
+        logActivity(activeBranch, "admission_edit", `Updated profile details for member: ${fullName} (${permanentId})`);
+
+        setSuccess(true);
+        setErrorMsg(null);
+        alert("Member details updated successfully!");
+        router.push('/dashboard/members');
+        return;
+      }
       
       if (!recordFound) {
         const branchCode = activeBranch === 'namnakala' ? 'N' : 'B';
@@ -95,8 +197,8 @@ export default function AdmissionPage() {
         setPermanentId(finalId);
       }
 
-      // Default plan amount based on shift
-      const basePriceVal = shift === 'Full Day' ? 1000 : 600;
+      // Default plan amount based on shift, or custom edited price
+      const basePriceVal = Number(customPlanAmount) || (shift === 'Full Day' ? 1000 : 600);
 
       let seatToAllot = null;
       let prevSeatVal = null;
@@ -164,6 +266,8 @@ export default function AdmissionPage() {
         if (insertedMember) memberId = insertedMember.id;
       }
 
+      logActivity(activeBranch, "admission", recordFound ? `Re-activated profile for: ${fullName} (${finalId})` : `Registered new member: ${fullName} (${finalId})`);
+
       setSuccess(true);
       setErrorMsg(null);
 
@@ -222,13 +326,17 @@ export default function AdmissionPage() {
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Admission Portal</h1>
-          <p className="page-subtitle">Register new members for {branchName} Branch</p>
+          <h1 className="page-title">{isEditing ? "Update Student Profile" : "Admission Portal"}</h1>
+          <p className="page-subtitle">
+            {isEditing 
+              ? `Modify profile details for student: ${fullName} (${permanentId || "No ID"})` 
+              : `Register new members for ${branchName} Branch`}
+          </p>
         </div>
         {recordFound && (
           <span className="badge badge-success text-xs py-1.5 px-3">
             <span className="material-symbols-outlined text-sm">verified</span>
-            Existing Record Found
+            {isEditing ? "Editing Member Record" : "Existing Record Found"}
           </span>
         )}
       </div>
@@ -237,13 +345,19 @@ export default function AdmissionPage() {
         {/* Form Header */}
         <div className="px-6 md:px-8 py-5 border-b border-white/[0.06] bg-white/[0.02] flex justify-between items-center">
           <div>
-            <h2 className="text-base font-bold text-white font-manrope">Member Registration</h2>
-            <p className="text-xs text-on-surface-variant mt-0.5">Fill in the details below to register a new member</p>
+            <h2 className="text-base font-bold text-white font-manrope">{isEditing ? "Edit Profile Info" : "Member Registration"}</h2>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              {isEditing 
+                ? "Update core profile information in the directory" 
+                : "Fill in the details below to register a new member"}
+            </p>
           </div>
-          <div className="text-right">
-            <div className="text-xs text-on-surface-variant">Step 1 of 2</div>
-            <div className="text-sm font-bold text-primary">Profile Info</div>
-          </div>
+          {!isEditing && (
+            <div className="text-right">
+              <div className="text-xs text-on-surface-variant">Step 1 of 2</div>
+              <div className="text-sm font-bold text-primary">Profile Info</div>
+            </div>
+          )}
         </div>
         
         <div className="p-6 md:p-8">
@@ -251,7 +365,7 @@ export default function AdmissionPage() {
           {success && (
             <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl mb-6 text-center font-medium flex items-center justify-center gap-2 animate-fade-in-fast">
               <span className="material-symbols-outlined text-lg">check_circle</span>
-              Admission Successful! Redirecting to Payment Setup...
+              {isEditing ? "Profile updated successfully! Redirecting..." : "Admission Successful! Redirecting to Payment Setup..."}
             </div>
           )}
 
@@ -324,7 +438,7 @@ export default function AdmissionPage() {
                     checked={isReserved}
                     onChange={() => setIsReserved(true)}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-5 h-5 text-[#003178] focus:ring-[#003178] border-slate-300 cursor-pointer"
+                    className="w-5 h-5 text-[#1e40af] focus:ring-[#1e40af] border-slate-300 cursor-pointer"
                   />
                   <div>
                     <span className="text-sm font-bold text-slate-800 block">Reserved Slot</span>
@@ -345,7 +459,7 @@ export default function AdmissionPage() {
                     checked={!isReserved}
                     onChange={() => setIsReserved(false)}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-5 h-5 text-[#003178] focus:ring-[#003178] border-slate-300 cursor-pointer"
+                    className="w-5 h-5 text-[#1e40af] focus:ring-[#1e40af] border-slate-300 cursor-pointer"
                   />
                   <div>
                     <span className="text-sm font-bold text-slate-800 block">Unreserved Slot</span>
@@ -377,20 +491,36 @@ export default function AdmissionPage() {
                     onClick={() => setShift(option.value)}
                     className={`relative p-[2px] rounded-xl text-left transition-all group ${
                       shift === option.value
-                        ? 'bg-gradient-to-r from-[#003178] to-[#60a5fa] shadow-lg shadow-blue-500/20'
+                        ? 'bg-gradient-to-r from-[#1e40af] to-[#60a5fa] shadow-lg shadow-blue-500/20'
                         : 'bg-slate-200 hover:bg-slate-300'
                     }`}
                   >
                     <div className={`p-4 rounded-[10px] h-full w-full ${shift === option.value ? 'bg-[#f5f7ff]' : 'bg-white group-hover:bg-slate-50'}`}>
                       <div className="flex justify-between items-start mb-1">
-                        <span className={`text-sm font-bold ${shift === option.value ? 'text-[#003178]' : 'text-slate-800'}`}>{option.label}</span>
-                        <span className={`text-xs font-bold ${shift === option.value ? 'text-[#003178]' : 'text-slate-600'}`}>{option.price}</span>
+                        <span className={`text-sm font-bold ${shift === option.value ? 'text-[#1e40af]' : 'text-slate-800'}`}>{option.label}</span>
+                        <span className={`text-xs font-bold ${shift === option.value ? 'text-[#1e40af]' : 'text-slate-600'}`}>{option.price}</span>
                       </div>
-                      <span className={`text-xs ${shift === option.value ? 'text-[#003178]/70' : 'text-slate-500'}`}>{option.time}</span>
+                      <span className={`text-xs ${shift === option.value ? 'text-[#1e40af]/70' : 'text-slate-500'}`}>{option.time}</span>
                     </div>
                   </button>
                 ))}
               </div>
+
+              {/* Monthly Plan Price Input */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                <FormField label="Monthly Plan Price (₹)" icon="payments" required>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={customPlanAmount}
+                    onChange={(e) => setCustomPlanAmount(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))}
+                    className="input-premium !pl-11"
+                    placeholder="e.g. 1000"
+                  />
+                </FormField>
+              </div>
+
               {isReserved ? (
                 <div className="flex items-start gap-2 text-xs text-on-surface-variant bg-white/[0.02] border border-white/[0.04] rounded-lg p-3">
                   <span className="material-symbols-outlined text-sm text-tertiary mt-0.5">info</span>
@@ -425,7 +555,7 @@ export default function AdmissionPage() {
             {/* Submit */}
             <button disabled={isSubmitting} type="submit" className="w-full btn-primary py-4 mt-4 flex justify-center items-center gap-2 disabled:opacity-50">
               {isSubmitting ? <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span> : null}
-              {isSubmitting ? "Processing..." : recordFound ? "Re-Activate & Update Member" : "Complete Admission"}
+              {isSubmitting ? "Processing..." : isEditing ? "Confirm & Update Profile" : recordFound ? "Re-Activate & Update Member" : "Complete Admission"}
             </button>
           </form>
         </div>
@@ -446,7 +576,22 @@ export default function AdmissionPage() {
               <div className="flex gap-2 mt-3">
                 <button 
                   type="button"
-                  onClick={() => setShowRecordPopup(false)}
+                  onClick={() => {
+                    if (tempMemberData) {
+                      setFullName(tempMemberData.full_name || "");
+                      setFatherName(tempMemberData.father_name || "");
+                      setDob(tempMemberData.dob ? tempMemberData.dob.split('T')[0] : "");
+                      setGender(tempMemberData.gender || "");
+                      setAddress(tempMemberData.address || "");
+                      setShift(tempMemberData.shift || "Full Day");
+                      if (tempMemberData.plan_amount !== undefined && tempMemberData.plan_amount !== null) {
+                        setCustomPlanAmount(tempMemberData.plan_amount);
+                      }
+                      const unreserved = tempMemberData.permanent_id && tempMemberData.permanent_id.includes('U');
+                      setIsReserved(!unreserved);
+                    }
+                    setShowRecordPopup(false);
+                  }}
                   className="px-3 py-1.5 bg-gradient-to-r from-[#003178] to-[#60a5fa] text-white text-xs font-bold rounded-lg hover:shadow-lg hover:shadow-blue-500/20 transition-all"
                 >
                   Yes, Update
@@ -457,6 +602,12 @@ export default function AdmissionPage() {
                     setShowRecordPopup(false);
                     setRecordFound(false);
                     setPermanentId("");
+                    setTempMemberData(null);
+                    setFullName("");
+                    setFatherName("");
+                    setDob("");
+                    setGender("");
+                    setAddress("");
                   }}
                   className="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all border border-slate-200"
                 >
@@ -468,6 +619,21 @@ export default function AdmissionPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdmissionPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-outlined animate-spin text-2xl text-[#fdac29]">progress_activity</span>
+          <span className="text-sm font-bold text-white/70">Loading Admission Form...</span>
+        </div>
+      </div>
+    }>
+      <AdmissionPageInner />
+    </Suspense>
   );
 }
 
