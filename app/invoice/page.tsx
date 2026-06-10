@@ -10,126 +10,61 @@ function InvoiceContent() {
   const [member, setMember] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Settings loaded from Supabase/localStorage
+  // Settings loaded from localStorage
   const [libName, setLibName] = useState("Krishna Library");
   const [libPhone, setLibPhone] = useState("+91 8269144748");
   const [libAddress, setLibAddress] = useState("Plot 12, Bengali Chowk Area, Ambikapur, C.G.");
   const [upiId, setUpiId] = useState("krishnalibrary@okaxis");
   const [upiName, setUpiName] = useState("Krishna Library");
-  const [invoiceMsg, setInvoiceMsg] = useState(
-    "Dear {name},\n\nYour invoice of {amount} has been generated. Due date: {due_date}.\n\nThank you for choosing Krishna Library."
-  );
 
   useEffect(() => {
-    async function loadSettings() {
-      try {
-        const { data, error } = await supabase.from('library_settings').select('*');
-        if (error) throw error;
-        if (data && data.length > 0) {
-          data.forEach((item: any) => {
-            if (item.id === 'lib_name') setLibName(item.value);
-            if (item.id === 'lib_phone') setLibPhone(item.value);
-            if (item.id === 'lib_address') setLibAddress(item.value);
-            if (item.id === 'upi_id') setUpiId(item.value);
-            if (item.id === 'upi_name') setUpiName(item.value);
-            if (item.id === 'invoice_msg') setInvoiceMsg(item.value);
-          });
-        }
-      } catch (err) {
-        console.warn("Failed to load settings from DB in invoice, loading from localStorage", err);
-        if (typeof window !== 'undefined') {
-          const savedName = localStorage.getItem("krishna_lib_name");
-          const savedPhone = localStorage.getItem("krishna_phone");
-          const savedAddress = localStorage.getItem("krishna_address");
-          const savedUpiId = localStorage.getItem("krishna_upi_id");
-          const savedUpiName = localStorage.getItem("krishna_upi_pn");
+    if (typeof window !== 'undefined') {
+      const savedName = localStorage.getItem("krishna_lib_name");
+      const savedPhone = localStorage.getItem("krishna_phone");
+      const savedAddress = localStorage.getItem("krishna_address");
+      const savedUpiId = localStorage.getItem("krishna_upi_id");
+      const savedUpiName = localStorage.getItem("krishna_upi_pn");
 
-          if (savedName) setLibName(savedName);
-          if (savedPhone) setLibPhone(savedPhone);
-          if (savedAddress) setLibAddress(savedAddress);
-          if (savedUpiId) setUpiId(savedUpiId);
-          if (savedUpiName) setUpiName(savedUpiName);
-        }
-      }
+      if (savedName) setLibName(savedName);
+      if (savedPhone) setLibPhone(savedPhone);
+      if (savedAddress) setLibAddress(savedAddress);
+      if (savedUpiId) setUpiId(savedUpiId);
+      if (savedUpiName) setUpiName(savedUpiName);
     }
-    loadSettings();
   }, []);
-
-  const [invoice, setInvoice] = useState<any>(null);
 
   useEffect(() => {
     if (!id) return;
-    const fetchInvoiceAndMember = async () => {
-      // 1. Try fetching invoice by invoice ID
-      const { data: invData } = await supabase
-        .from('invoices')
-        .select('*, member:members(*)')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (invData) {
-        setInvoice(invData);
-        setMember(invData.member);
-      } else {
-        // 2. Try fetching latest invoice by member ID
-        const { data: latestInv } = await supabase
-          .from('invoices')
-          .select('*, member:members(*)')
-          .eq('member_id', id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (latestInv) {
-          setInvoice(latestInv);
-          setMember(latestInv.member);
-        } else {
-          // 3. Fallback: fetch member directly
-          const { data: memData } = await supabase
-            .from('members')
-            .select('*')
-            .eq('id', id)
-            .maybeSingle();
-
-          if (memData) {
-            setMember(memData);
-            setInvoice({
-              id: 'fallback',
-              total_amount: memData.plan_amount || 1000,
-              paid_amount: memData.plan_amount || 1000,
-              due_amount: 0,
-              status: 'paid',
-              created_at: memData.created_at
-            });
-          }
-        }
+    const fetchMember = async () => {
+      const { data } = await supabase.from('members').select('*').eq('id', id).single();
+      if (data) {
+        setMember(data);
       }
       setLoading(false);
     };
-    fetchInvoiceAndMember();
+    fetchMember();
   }, [id]);
 
-  // Deterministic stable receipt number based on invoice ID or member ID
+  // Deterministic stable receipt number based on member ID
   const receiptNo = React.useMemo(() => {
-    if (!invoice || !member) return "";
-    const idToHash = invoice.id || member.id;
+    if (!member) return "";
     let hash = 0;
-    for (let i = 0; i < idToHash.length; i++) {
-      hash = idToHash.charCodeAt(i) + ((hash << 5) - hash);
+    for (let i = 0; i < member.id.length; i++) {
+      hash = member.id.charCodeAt(i) + ((hash << 5) - hash);
     }
     const code = Math.abs(hash % 90000) + 10000;
     return `REC-${code}`;
-  }, [invoice, member]);
+  }, [member]);
 
-  // Construct stable payment UPI URL based on outstanding dues
+  // Construct stable payment UPI URL
   const upiUrl = React.useMemo(() => {
-    if (!member || !invoice) return "";
-    const am = invoice.due_amount > 0 ? invoice.due_amount : invoice.total_amount;
-    return `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${am}&cu=INR&tn=${encodeURIComponent(`Renewal ${receiptNo}`)}`;
-  }, [member, invoice, upiId, upiName, receiptNo]);
+    if (!member) return "";
+    const finalAmount = Math.max(0, (member.plan_amount || 0) - (member.discount || 0));
+    return `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${finalAmount}&cu=INR&tn=${encodeURIComponent(`Renewal ${receiptNo}`)}`;
+  }, [member, upiId, upiName, receiptNo]);
 
   if (loading) return <div className="p-10 text-center text-white">Loading Invoice...</div>;
-  if (!member || !invoice) return <div className="p-10 text-center text-error">Invoice Data Not Found</div>;
+  if (!member) return <div className="p-10 text-center text-error">Invoice Data Not Found</div>;
 
   return (
     <div className="bg-white text-black min-h-screen p-8 md:p-16 max-w-4xl mx-auto font-sans">
@@ -142,12 +77,7 @@ function InvoiceContent() {
           Print Invoice
         </button>
         <a 
-          href={`https://wa.me/${member.mobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-            invoiceMsg
-              .replace(/{name}/g, member.full_name)
-              .replace(/{amount}/g, `₹${invoice.due_amount > 0 ? invoice.due_amount : invoice.total_amount}`)
-              .replace(/{due_date}/g, invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : new Date().toLocaleDateString())
-          )}`}
+          href={`https://wa.me/${member.mobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${member.full_name}, here is your latest invoice for ${libName}. You can view it here: ${typeof window !== 'undefined' ? window.location.href : ''}`)}`}
           target="_blank" rel="noreferrer"
           className="bg-[#10b981] hover:bg-[#059669] text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all hover:scale-105 shadow-md animate-fade-in"
         >
@@ -200,6 +130,7 @@ function InvoiceContent() {
             <h3 className="text-[11px] font-montserrat font-bold uppercase text-[#737783] mb-3 border-b border-[#efecff] pb-2 tracking-widest">Subscription Details</h3>
             <p className="text-sm mb-1.5 font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Shift:</span> <span className="font-bold text-[#1a1a2e]">{member.shift}</span></p>
             <p className="text-sm mb-1.5 font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Seat No:</span> <span className="font-bold text-[#1a1a2e]">{member.seat_no || 'Unassigned'}</span></p>
+            <p className="text-sm mb-1.5 font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Joining Date:</span> <span className="font-bold text-[#1a1a2e]">{member.joining_date ? new Date(member.joining_date).toLocaleDateString() : 'N/A'}</span></p>
             <p className="text-sm font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Valid Till:</span> <span className="font-bold text-[#0D47A1]">{new Date(member.subscription_end_date).toLocaleDateString()}</span></p>
           </div>
         </div>
@@ -220,7 +151,7 @@ function InvoiceContent() {
                 <p className="text-xs text-[#737783] mt-1 font-lexend leading-relaxed">Includes high-speed Wi-Fi, premium AC seating, and digital resources access.</p>
               </td>
               <td className="py-5 px-6 text-center font-lexend text-[#1a1a2e] font-medium border-l border-[#e2e0fc]">30 Days</td>
-              <td className="py-5 px-6 text-right font-bold font-mono text-[#1a1a2e] text-lg border-l border-[#e2e0fc]">₹{invoice.total_amount}.00</td>
+              <td className="py-5 px-6 text-right font-bold font-mono text-[#1a1a2e] text-lg border-l border-[#e2e0fc]">₹{member.plan_amount}.00</td>
             </tr>
           </tbody>
         </table>
@@ -252,22 +183,20 @@ function InvoiceContent() {
           {/* TOTAL Section */}
           <div className="bg-[#f5f7ff] p-6 rounded-xl border border-[#e2e0fc]">
             <div className="flex justify-between py-2 border-b border-[#e2e0fc] text-sm font-lexend">
-              <span className="text-[#434652]">Total Fees</span>
-              <span className="font-mono font-medium">₹{invoice.total_amount}.00</span>
+              <span className="text-[#434652]">Subtotal (Plan Price)</span>
+              <span className="font-mono font-medium">₹{member.plan_amount || 0}.00</span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-[#e2e0fc] text-sm font-lexend text-red-600">
+              <span className="text-[#434652]">Discount</span>
+              <span className="font-mono font-medium">-₹{member.discount || 0}.00</span>
             </div>
             <div className="flex justify-between py-2 border-b border-[#e2e0fc] text-sm font-lexend">
-              <span className="text-emerald-600 font-bold">Paid Amount</span>
-              <span className="font-mono font-bold text-emerald-600">₹{invoice.paid_amount}.00</span>
+              <span className="text-[#434652]">Tax (0%)</span>
+              <span className="font-mono font-medium">₹0.00</span>
             </div>
-            {invoice.due_amount > 0 && (
-              <div className="flex justify-between py-2 border-b border-[#e2e0fc] text-sm font-lexend">
-                <span className="text-orange-500 font-bold">Outstanding Dues</span>
-                <span className="font-mono font-bold text-orange-500">₹{invoice.due_amount}.00</span>
-              </div>
-            )}
             <div className="flex justify-between items-center pt-4 mt-2">
-              <span className="font-montserrat font-bold tracking-widest text-[#1a1a2e]">TOTAL DUE</span>
-              <span className="text-[#0D47A1] font-mono font-black text-2xl">₹{invoice.due_amount}.00</span>
+              <span className="font-montserrat font-bold tracking-widest text-[#1a1a2e]">TOTAL PAID</span>
+              <span className="text-[#0D47A1] font-mono font-black text-2xl">₹{Math.max(0, (member.plan_amount || 0) - (member.discount || 0))}.00</span>
             </div>
           </div>
         </div>
@@ -279,8 +208,8 @@ function InvoiceContent() {
         </div>
 
         {/* Watermark */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[100px] font-montserrat font-black text-[#f5f7ff] opacity-60 -z-10 transform -rotate-12 pointer-events-none uppercase tracking-widest">
-          {invoice.status === 'paid' ? 'PAID' : invoice.status === 'partially_paid' ? 'PARTIAL' : 'UNPAID'}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-montserrat font-black text-[#f5f7ff] opacity-60 -z-10 transform -rotate-12 pointer-events-none uppercase tracking-widest">
+          PAID
         </div>
       </div>
       
