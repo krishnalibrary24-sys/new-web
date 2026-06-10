@@ -112,9 +112,11 @@ export default function MembersPage() {
     } else if (filterStatus === 'unreserved') {
       matchesFilter = !!(m.permanent_id && m.permanent_id.includes('U'));
     } else if (filterStatus === 'pending') {
-      matchesFilter = m.pay_later === true;
+      matchesFilter = m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZero);
     } else if (filterStatus === 'overdue') {
-      matchesFilter = !m.is_active || (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero);
+      matchesFilter = !m.is_active || 
+                      (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero) ||
+                      (m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZero);
     } else if (filterStatus === 'due-soon') {
       if (m.is_active && m.subscription_end_date) {
         const end = new Date(m.subscription_end_date);
@@ -165,8 +167,11 @@ export default function MembersPage() {
   const activeCount = members.filter(m => m.is_active && !(m.permanent_id && m.permanent_id.includes('U'))).length;
   const inactiveCount = members.filter(m => !m.is_active && !(m.permanent_id && m.permanent_id.includes('U'))).length;
   const unreservedCount = members.filter(m => m.permanent_id && m.permanent_id.includes('U')).length;
-  const pendingCount = members.filter(m => m.pay_later === true).length;
-  const overdueCount = members.filter(m => !m.is_active || (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZeroVal)).length;
+  const pendingCount = members.filter(m => m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZeroVal)).length;
+  const overdueCount = members.filter(m => !m.is_active || 
+    (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZeroVal) ||
+    (m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZeroVal)
+  ).length;
   const dueSoonCount = members.filter(m => {
     if (!m.is_active || !m.subscription_end_date) return false;
     const end = new Date(m.subscription_end_date);
@@ -192,8 +197,12 @@ export default function MembersPage() {
     const durationDaysVal = Math.max(1, Number(renewDurationDays) || 30);
     const months = renewIsCustomDuration ? Math.max(1, parseInt(renewCustomMonths) || 1) : renewDuration;
     
-    const currentEnd = member.subscription_end_date ? new Date(member.subscription_end_date) : new Date();
-    const baseDate = (currentEnd < new Date() || isNaN(currentEnd.getTime())) ? new Date() : currentEnd;
+    const currentEnd = member.subscription_end_date ? new Date(member.subscription_end_date) : null;
+    const today = new Date();
+    const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const baseDate = (currentEnd && currentEnd > todayZero) ? currentEnd : todayZero;
+    
+    const joiningDateStr = baseDate.toISOString().split('T')[0];
 
     let totalPayable = 0;
     let durationStr = "";
@@ -204,7 +213,7 @@ export default function MembersPage() {
     } else {
       totalPayable = Math.max(0, (renewPrice * months) - renewDiscount);
       durationStr = `${months} month(s)`;
-      baseDate.setMonth(baseDate.getMonth() + months);
+      baseDate.setDate(baseDate.getDate() + (months * 30));
     }
     const newEnd = baseDate;
 
@@ -238,7 +247,9 @@ export default function MembersPage() {
       left_at: null,
       left_reason: null,
       seat_no: seatToAllot,
-      previous_seat_no: prevSeatVal
+      previous_seat_no: prevSeatVal,
+      joining_date: joiningDateStr,
+      discount: renewDiscount
     }).eq('id', member.id);
 
     await supabase.from('payments').insert([{
@@ -246,7 +257,7 @@ export default function MembersPage() {
       amount: totalPayable,
       branch: member.branch,
       payment_mode: renewPaymentMode,
-      notes: `Subscription Renewal — Duration: ${durationStr}. Base Price: ₹${renewPrice}/${isDays ? "day" : "mo"}, Discount: ₹${renewDiscount}`
+      notes: `Subscription Renewal — Joining: ${new Date(joiningDateStr).toLocaleDateString()}, Expiry: ${newEnd.toLocaleDateString()}. Duration: ${durationStr}. Base Price: ₹${renewPrice}/${isDays ? "day" : "mo"}, Discount: ₹${renewDiscount}`
     }]);
 
     const updatedData = { 
@@ -260,7 +271,9 @@ export default function MembersPage() {
       left_at: null,
       left_reason: null,
       seat_no: seatToAllot,
-      previous_seat_no: prevSeatVal
+      previous_seat_no: prevSeatVal,
+      joining_date: joiningDateStr,
+      discount: renewDiscount
     };
 
     logActivity(activeBranch, "student_renew", `Renewed subscription for ${member.full_name} (${member.permanent_id}) by ${durationStr}`);

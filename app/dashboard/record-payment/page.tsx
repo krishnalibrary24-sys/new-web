@@ -4,6 +4,7 @@ import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { logActivity } from "@/lib/activity";
 
 function RecordPaymentInner() {
   const { activeBranch } = useBranch();
@@ -184,11 +185,15 @@ function RecordPaymentInner() {
   // Auto-sync computed total to Amount Paid for renewal
   useEffect(() => {
     if (purpose === "renewal") {
-      setAmount(calculatedTotal);
+      if (payLater) {
+        setAmount(0);
+      } else {
+        setAmount(calculatedTotal);
+      }
     } else {
       setAmount("");
     }
-  }, [calculatedTotal, purpose]);
+  }, [calculatedTotal, purpose, payLater]);
 
   // Force payLater to false if purpose is dues
   useEffect(() => {
@@ -291,6 +296,15 @@ function RecordPaymentInner() {
 
       if (memberErr) throw new Error(memberErr.message);
 
+      // 3. Log Activity
+      const logDetails = purpose === "renewal"
+        ? (payLater
+            ? `Deferred payment (Pay Later) set up for ${selectedMember.full_name} (${selectedMember.permanent_id}). Due: ${new Date(dueDate).toLocaleDateString()}, Expiry: ${finalNewEnd?.toLocaleDateString() || 'N/A'}.`
+            : `Recorded payment of ₹${amountVal} for ${selectedMember.full_name} (${selectedMember.permanent_id}). Purpose: Renewal. Expiry: ${finalNewEnd?.toLocaleDateString() || 'N/A'}.`)
+        : `Recorded payment of ₹${amountVal} for ${selectedMember.full_name} (${selectedMember.permanent_id}). Purpose: Dues.`;
+
+      logActivity(activeBranch, purpose === "renewal" ? "payment_renew" : "payment_recorded", logDetails);
+
       setSuccessMsg(purpose === "renewal" 
         ? "Payment recorded & membership activated successfully! Redirecting..." 
         : "Payment recorded successfully! Redirecting..."
@@ -347,9 +361,11 @@ function RecordPaymentInner() {
     if (filterStatus === 'all') {
       matchesFilter = true;
     } else if (filterStatus === 'pending') {
-      matchesFilter = m.pay_later === true;
+      matchesFilter = m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZero);
     } else if (filterStatus === 'overdue') {
-      matchesFilter = !m.is_active || (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero);
+      matchesFilter = !m.is_active || 
+                      (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero) ||
+                      (m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZero);
     } else if (filterStatus === 'due-soon') {
       if (m.is_active && m.subscription_end_date) {
         const end = new Date(m.subscription_end_date);
@@ -621,9 +637,10 @@ function RecordPaymentInner() {
                         type="number"
                         min="0"
                         required
+                        disabled={purpose === "renewal" && payLater}
                         value={amount}
                         onChange={(e) => setAmount(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))}
-                        className="input-premium w-full"
+                        className={`input-premium w-full ${purpose === "renewal" && payLater ? "opacity-60 cursor-not-allowed" : ""}`}
                         placeholder="e.g. 1000"
                       />
                     </div>
