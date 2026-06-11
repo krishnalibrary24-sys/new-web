@@ -49,13 +49,11 @@ function RecordPaymentInner() {
   const handleDurationTypeChange = (type: "Months" | "Days") => {
     if (type === renewDurationType) return;
     setRenewDurationType(type);
-    if (basePrice !== "") {
-      const val = Number(basePrice);
-      if (type === "Days") {
-        setBasePrice(Math.round(val / 30));
-      } else {
-        setBasePrice(val * 30);
-      }
+    const defaultMonthly = shift === 'Full Day' ? 1000 : 600;
+    if (type === "Days") {
+      setBasePrice(Math.round(defaultMonthly / 30));
+    } else {
+      setBasePrice(defaultMonthly);
     }
   };
 
@@ -137,9 +135,16 @@ function RecordPaymentInner() {
     if (selectedMember) {
       fetchPaymentsHistory(selectedMember.id);
       
-      const defaultPrice = selectedMember.plan_amount || (selectedMember.shift === 'Full Day' ? 1000 : 600);
+      let defaultPrice = selectedMember.plan_amount || (selectedMember.shift === 'Full Day' ? 1000 : 600);
+      // Auto-heal: if plan_amount was stored as a daily rate (less than 100), convert it to monthly
+      if (defaultPrice > 0 && defaultPrice < 100) {
+        defaultPrice = defaultPrice * 30;
+      }
       const isUnreservedMember = selectedMember.permanent_id?.includes('U');
-      setBasePrice(isUnreservedMember ? Math.round(defaultPrice / 30) : defaultPrice);
+      const initialDurationType = isUnreservedMember ? "Days" : "Months";
+      
+      setRenewDurationType(initialDurationType);
+      setBasePrice(initialDurationType === "Days" ? Math.round(defaultPrice / 30) : defaultPrice);
       setShift(selectedMember.shift || "Morning");
       setDiscount("");
       setSuccessMsg(null);
@@ -148,7 +153,6 @@ function RecordPaymentInner() {
       setRenewCustomMonths("");
       setRenewIsCustomDuration(false);
       setRenewDurationDays(30);
-      setRenewDurationType(selectedMember.permanent_id?.includes('U') ? "Days" : "Months");
       setPayLater(false);
       if (selectedMember.payment_due_date) {
         setDueDate(selectedMember.payment_due_date);
@@ -175,7 +179,7 @@ function RecordPaymentInner() {
   const discountVal = Number(discount) || 0;
   const isUnreserved = selectedMember?.permanent_id?.includes('U');
   
-  const finalDurationType = isUnreserved ? renewDurationType : "Months";
+  const finalDurationType = renewDurationType;
   const durationMonths = renewIsCustomDuration ? Math.max(1, parseInt(renewCustomMonths) || 1) : renewDuration;
   const durationDaysVal = Math.max(1, Number(renewDurationDays) || 30);
 
@@ -276,7 +280,7 @@ function RecordPaymentInner() {
 
       // 2. Update Member Record
       const memberUpdatePayload: any = {
-        plan_amount: basePriceVal, // Update plan configuration
+        plan_amount: renewDurationType === "Days" ? (basePriceVal * 30) : basePriceVal, // Update plan configuration
         pay_later: payLater,
         payment_due_date: payLater ? dueDate : null,
         left_with_dues: false,
@@ -649,10 +653,9 @@ function RecordPaymentInner() {
                         }}
                         className="input-premium appearance-none w-full"
                       >
-                        <option value="Morning">Morning</option>
-                        <option value="Evening">Evening</option>
-                        <option value="Night">Night</option>
-                        <option value="Full Day">Full Day</option>
+                        <option value="Morning">Morning Shift (₹600)</option>
+                        <option value="Evening">Evening Shift (₹600)</option>
+                        <option value="Full Day">Full Day Shift (₹1000)</option>
                       </select>
                     </div>
 
@@ -680,36 +683,34 @@ function RecordPaymentInner() {
                         Pricing & Plan Duration Details
                       </div>
 
-                      {/* Unreserved duration type picker */}
-                      {isUnreserved && (
-                        <div className="space-y-2">
-                          <label className="text-[9px] uppercase font-bold text-on-surface-variant">Duration Period Type</label>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleDurationTypeChange("Months")}
-                              className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${
-                                renewDurationType === "Months"
-                                  ? "bg-[#003178] text-white border-[#003178]"
-                                  : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
-                              }`}
-                            >
-                              Months System
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDurationTypeChange("Days")}
-                              className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${
-                                renewDurationType === "Days"
-                                  ? "bg-[#003178] text-white border-[#003178]"
-                                  : "bg-slate-200 hover:bg-slate-300 text-[#003178] border-[#003178]"
-                              }`}
-                            >
-                              Days System
-                            </button>
-                          </div>
+                      {/* Duration period type picker */}
+                      <div className="space-y-2">
+                        <label className="text-[9px] uppercase font-bold text-on-surface-variant">Duration Period Type</label>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleDurationTypeChange("Months")}
+                            className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${
+                              renewDurationType === "Months"
+                                ? "bg-[#003178] text-white border-[#003178]"
+                                : "bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300"
+                            }`}
+                          >
+                            Months System
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDurationTypeChange("Days")}
+                            className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${
+                              renewDurationType === "Days"
+                                ? "bg-[#003178] text-white border-[#003178]"
+                                : "bg-slate-200 hover:bg-slate-300 text-[#003178] border-[#003178]"
+                            }`}
+                          >
+                            Days System
+                          </button>
                         </div>
-                      )}
+                      </div>
 
                       {/* Membership Duration Selection */}
                       {finalDurationType === "Months" ? (
