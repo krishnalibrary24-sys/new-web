@@ -7,6 +7,64 @@ import { useRouter } from 'next/navigation';
 import { logActivity } from "@/lib/activity";
 import { getLibrarySetting } from "@/lib/settings";
 
+const getMemberStatus = (member: any) => {
+  const today = new Date();
+  const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+  if (!member.is_active) {
+    return {
+      type: 'inactive',
+      label: 'Inactive',
+      badgeClass: 'bg-slate-500/10 border border-slate-500/20 text-slate-400 font-bold flex items-center gap-1'
+    };
+  }
+
+  const isExpired = member.subscription_end_date && new Date(member.subscription_end_date) < todayZero;
+  const isPayLaterOverdue = member.pay_later === true && member.payment_due_date && new Date(member.payment_due_date) < todayZero;
+
+  if (isExpired || isPayLaterOverdue) {
+    return {
+      type: 'overdue',
+      label: 'Overdue',
+      badgeClass: 'badge badge-danger animate-pulse flex items-center gap-1 font-bold'
+    };
+  }
+
+  if (member.pay_later === true) {
+    return {
+      type: 'pending',
+      label: 'Pending',
+      badgeClass: 'bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1 font-bold'
+    };
+  }
+
+  if (member.subscription_end_date) {
+    const end = new Date(member.subscription_end_date);
+    if (end >= todayZero && end <= in3Days) {
+      return {
+        type: 'due-soon',
+        label: 'Due Soon',
+        badgeClass: 'bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center gap-1 font-bold'
+      };
+    }
+  }
+
+  if (!member.seat_no) {
+    return {
+      type: 'active-no-seat',
+      label: 'Active (No Seat)',
+      badgeClass: 'bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center gap-1 font-bold'
+    };
+  }
+
+  return {
+    type: 'active',
+    label: 'Active',
+    badgeClass: 'badge badge-success flex items-center gap-1 font-bold'
+  };
+};
+
 export default function MembersPage() {
   const { activeBranch } = useBranch();
   const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
@@ -102,26 +160,35 @@ export default function MembersPage() {
     const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
 
+    const isUnreserved = !!(m.permanent_id && m.permanent_id.includes('U'));
+    const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < todayZero;
+    const isPayLaterOverdue = m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZero;
+    const isOverdue = m.is_active && (isExpired || isPayLaterOverdue);
+    
+    const isPending = m.is_active && m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZero);
+    
+    const isDueSoon = m.is_active && !isOverdue && !isPending && m.subscription_end_date && (() => {
+      const end = new Date(m.subscription_end_date);
+      return end >= todayZero && end <= in3Days;
+    })();
+    
+    const isActivePaid = m.is_active && !isOverdue && !isPending && !isUnreserved;
+
     let matchesFilter = false;
     if (filterStatus === 'all') {
       matchesFilter = true;
     } else if (filterStatus === 'active') {
-      matchesFilter = m.is_active && !(m.permanent_id && m.permanent_id.includes('U'));
+      matchesFilter = isActivePaid;
     } else if (filterStatus === 'inactive') {
-      matchesFilter = !m.is_active && !(m.permanent_id && m.permanent_id.includes('U'));
+      matchesFilter = !m.is_active && !isUnreserved;
     } else if (filterStatus === 'unreserved') {
-      matchesFilter = !!(m.permanent_id && m.permanent_id.includes('U'));
+      matchesFilter = isUnreserved;
     } else if (filterStatus === 'pending') {
-      matchesFilter = m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZero);
+      matchesFilter = isPending;
     } else if (filterStatus === 'overdue') {
-      matchesFilter = !m.is_active || 
-                      (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero) ||
-                      (m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZero);
+      matchesFilter = isOverdue;
     } else if (filterStatus === 'due-soon') {
-      if (m.is_active && m.subscription_end_date) {
-        const end = new Date(m.subscription_end_date);
-        matchesFilter = end >= todayZero && end <= in3Days;
-      }
+      matchesFilter = isDueSoon;
     }
     return matchesSearch && matchesFilter;
   }).sort((a, b) => {
@@ -164,16 +231,38 @@ export default function MembersPage() {
   const todayZeroVal = new Date(todayVal.getFullYear(), todayVal.getMonth(), todayVal.getDate());
   const in3DaysVal = new Date(todayZeroVal.getTime() + 3 * 24 * 60 * 60 * 1000);
 
-  const activeCount = members.filter(m => m.is_active && !(m.permanent_id && m.permanent_id.includes('U'))).length;
-  const inactiveCount = members.filter(m => !m.is_active && !(m.permanent_id && m.permanent_id.includes('U'))).length;
+  const activeCount = members.filter(m => {
+    const isUnreserved = !!(m.permanent_id && m.permanent_id.includes('U'));
+    const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < todayZeroVal;
+    const isPayLaterOverdue = m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZeroVal;
+    const isOverdue = m.is_active && (isExpired || isPayLaterOverdue);
+    const isPending = m.is_active && m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZeroVal);
+    return m.is_active && !isOverdue && !isPending && !isUnreserved;
+  }).length;
+
+  const inactiveCount = members.filter(m => {
+    const isUnreserved = !!(m.permanent_id && m.permanent_id.includes('U'));
+    return !m.is_active && !isUnreserved;
+  }).length;
+
   const unreservedCount = members.filter(m => m.permanent_id && m.permanent_id.includes('U')).length;
-  const pendingCount = members.filter(m => m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZeroVal)).length;
-  const overdueCount = members.filter(m => !m.is_active || 
-    (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZeroVal) ||
-    (m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZeroVal)
-  ).length;
+
+  const pendingCount = members.filter(m => {
+    return m.is_active && m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZeroVal);
+  }).length;
+
+  const overdueCount = members.filter(m => {
+    const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < todayZeroVal;
+    const isPayLaterOverdue = m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZeroVal;
+    return m.is_active && (isExpired || isPayLaterOverdue);
+  }).length;
+
   const dueSoonCount = members.filter(m => {
-    if (!m.is_active || !m.subscription_end_date) return false;
+    const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < todayZeroVal;
+    const isPayLaterOverdue = m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZeroVal;
+    const isOverdue = m.is_active && (isExpired || isPayLaterOverdue);
+    const isPending = m.is_active && m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZeroVal);
+    if (!m.is_active || isOverdue || isPending || !m.subscription_end_date) return false;
     const end = new Date(m.subscription_end_date);
     return end >= todayZeroVal && end <= in3DaysVal;
   }).length;
@@ -522,39 +611,15 @@ export default function MembersPage() {
                     </div>
                   </div>
                   {(() => {
-                    const today = new Date();
-                    const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                    const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
-                    
-                    const isOverdue = !member.is_active || (member.is_active && member.subscription_end_date && new Date(member.subscription_end_date) < todayZero);
-                    const isDueSoon = member.is_active && member.subscription_end_date && (() => {
-                      const end = new Date(member.subscription_end_date);
-                      return end >= todayZero && end <= in3Days;
-                    })();
-                    const isPending = member.pay_later === true;
-                    
-                    if (isOverdue) return (
-                      <span className="badge badge-danger animate-pulse flex items-center gap-1 font-bold">
-                        <span className="material-symbols-outlined text-[12px]">warning</span>
-                        Overdue
-                      </span>
-                    );
-                    if (isDueSoon) return (
-                      <span className="badge bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center gap-1 font-bold">
-                        <span className="material-symbols-outlined text-[12px]">schedule</span>
-                        Due Soon
-                      </span>
-                    );
-                    if (isPending) return (
-                      <span className="badge bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1 font-bold">
-                        <span className="material-symbols-outlined text-[12px]">payments</span>
-                        Pending
-                      </span>
-                    );
+                    const status = getMemberStatus(member);
                     return (
-                      <span className="badge badge-success">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        Active
+                      <span className={status.badgeClass}>
+                        {status.type === 'overdue' && <span className="material-symbols-outlined text-[12px]">warning</span>}
+                        {status.type === 'due-soon' && <span className="material-symbols-outlined text-[12px]">schedule</span>}
+                        {status.type === 'pending' && <span className="material-symbols-outlined text-[12px]">payments</span>}
+                        {status.type === 'active-no-seat' && <span className="material-symbols-outlined text-[12px]">event_seat</span>}
+                        {status.type === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                        {status.label}
                       </span>
                     );
                   })()}
@@ -617,43 +682,19 @@ export default function MembersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 border-b border-[#f1f5f9]">
-                        {(() => {
-                          const today = new Date();
-                          const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                          const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
-                          
-                          const isOverdue = !member.is_active || (member.is_active && member.subscription_end_date && new Date(member.subscription_end_date) < todayZero);
-                          const isDueSoon = member.is_active && member.subscription_end_date && (() => {
-                            const end = new Date(member.subscription_end_date);
-                            return end >= todayZero && end <= in3Days;
-                          })();
-                          const isPending = member.pay_later === true;
-                          
-                          if (isOverdue) return (
-                            <span className="badge badge-danger animate-pulse flex items-center gap-1 font-bold">
-                              <span className="material-symbols-outlined text-[10px]">warning</span>
-                              Overdue
-                            </span>
-                          );
-                          if (isDueSoon) return (
-                            <span className="badge bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center gap-1 font-bold">
-                              <span className="material-symbols-outlined text-[10px]">schedule</span>
-                              Due Soon
-                            </span>
-                          );
-                          if (isPending) return (
-                            <span className="badge bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1 font-bold">
-                              <span className="material-symbols-outlined text-[10px]">payments</span>
-                              Pending
-                            </span>
-                          );
-                          return (
-                            <span className="badge badge-success">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                              Active
-                            </span>
-                          );
-                        })()}
+                          {(() => {
+                            const status = getMemberStatus(member);
+                            return (
+                              <span className={status.badgeClass}>
+                                {status.type === 'overdue' && <span className="material-symbols-outlined text-[10px]">warning</span>}
+                                {status.type === 'due-soon' && <span className="material-symbols-outlined text-[10px]">schedule</span>}
+                                {status.type === 'pending' && <span className="material-symbols-outlined text-[10px]">payments</span>}
+                                {status.type === 'active-no-seat' && <span className="material-symbols-outlined text-[10px]">event_seat</span>}
+                                {status.type === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                                {status.label}
+                              </span>
+                            );
+                          })()}
                       </td>
                       <td className="px-6 py-4 border-b border-[#f1f5f9]">
                         <div className="text-xs font-bold text-[#003178]">
@@ -705,36 +746,17 @@ export default function MembersPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
                       {(() => {
-                        const today = new Date();
-                        const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                        const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
-                        
-                        const isOverdue = !selectedMember.is_active || (selectedMember.is_active && selectedMember.subscription_end_date && new Date(selectedMember.subscription_end_date) < todayZero);
-                        const isDueSoon = selectedMember.is_active && selectedMember.subscription_end_date && (() => {
-                          const end = new Date(selectedMember.subscription_end_date);
-                          return end >= todayZero && end <= in3Days;
-                        })();
-                        const isPending = selectedMember.pay_later === true;
-                        
-                        if (isOverdue) return (
-                          <span className="badge badge-danger animate-pulse flex items-center gap-1 font-bold">
-                            <span className="material-symbols-outlined text-[12px]">warning</span>
-                            Overdue
+                        const status = getMemberStatus(selectedMember);
+                        return (
+                          <span className={status.badgeClass}>
+                            {status.type === 'overdue' && <span className="material-symbols-outlined text-[12px]">warning</span>}
+                            {status.type === 'due-soon' && <span className="material-symbols-outlined text-[12px]">schedule</span>}
+                            {status.type === 'pending' && <span className="material-symbols-outlined text-[12px]">payments</span>}
+                            {status.type === 'active-no-seat' && <span className="material-symbols-outlined text-[12px]">event_seat</span>}
+                            {status.type === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                            {status.label}
                           </span>
                         );
-                        if (isDueSoon) return (
-                          <span className="badge bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center gap-1 font-bold">
-                            <span className="material-symbols-outlined text-[12px]">schedule</span>
-                            Due Soon
-                          </span>
-                        );
-                        if (isPending) return (
-                          <span className="badge bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1 font-bold">
-                            <span className="material-symbols-outlined text-[12px]">payments</span>
-                            Pending
-                          </span>
-                        );
-                        return <span className="badge badge-success">Active</span>;
                       })()}
                       {/* Pay Later badge removed */}
                       <span className="text-[10px] text-on-surface-variant font-medium">
@@ -742,11 +764,13 @@ export default function MembersPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                  <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
                     <InfoField label="Father's Name" value={selectedMember.father_name || 'N/A'} />
                     <InfoField label="Mobile" value={selectedMember.mobile} />
                     <InfoField label="DOB / Gender" value={`${selectedMember.dob ? selectedMember.dob.split('T')[0] : 'N/A'} / ${selectedMember.gender || 'N/A'}`} />
                     <InfoField label="Address" value={selectedMember.address || 'N/A'} />
+                    <InfoField label="Assigned Seat" value={selectedMember.seat_no ? `Seat ${selectedMember.seat_no}` : 'Not Allocated'} />
+                    <InfoField label="Shift" value={selectedMember.shift || 'N/A'} />
                   </div>
                 </div>
               </div>
