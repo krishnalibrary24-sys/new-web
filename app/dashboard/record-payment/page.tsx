@@ -197,8 +197,8 @@ function RecordPaymentInner() {
       if (payLater) {
         setAmount(0);
       } else {
-        // Default to calculatedTotal if currently empty/0, allowing manual override
-        setAmount((prev) => (prev === "" || prev === 0 || prev === "0") ? calculatedTotal : prev);
+        // Default to half of calculatedTotal for dues/partial payment
+        setAmount(Math.round(calculatedTotal / 2));
       }
     }
   }, [calculatedTotal, purpose, payLater]);
@@ -234,6 +234,9 @@ function RecordPaymentInner() {
 
     try {
       const amountVal = payLater ? 0 : (Number(amount) || 0);
+      if (purpose === "dues" && !payLater && amountVal === 0) {
+        throw new Error("Please enable the 'Pay Later' toggle to record a deferred payment with 0 amount.");
+      }
       let notesText = notes.trim();
 
       if (!customExpiryDate) {
@@ -670,6 +673,12 @@ function RecordPaymentInner() {
                         className={`input-premium w-full ${purpose === "renewal" || payLater ? "opacity-60 cursor-not-allowed" : ""}`}
                         placeholder="e.g. 1000"
                       />
+                      {purpose === "dues" && !payLater && (Number(amount) === 0 || amount === "") && (
+                        <div className="text-[10px] text-amber-400 font-semibold pl-0.5 pt-0.5 animate-fade-in-fast flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[12px]">warning</span>
+                          Enable 'Pay Later' to defer payment.
+                        </div>
+                      )}
                     </div>
                   </div>
 
