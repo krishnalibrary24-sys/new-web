@@ -272,7 +272,7 @@ function RecordPaymentInner() {
         member_id: selectedMember.id,
         amount: amountVal,
         branch: activeBranch,
-        payment_mode: payLater ? "Deferred" : paymentMode,
+        payment_mode: payLater ? "Cash" : paymentMode,
         paid_at: new Date(paidAtDate).toISOString(),
         notes: notesText
       }]);
