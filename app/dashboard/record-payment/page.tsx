@@ -183,28 +183,29 @@ function RecordPaymentInner() {
   const durationMonths = renewIsCustomDuration ? Math.max(1, parseInt(renewCustomMonths) || 1) : renewDuration;
   const durationDaysVal = Math.max(1, Number(renewDurationDays) || 30);
 
-  const calculatedTotal = purpose === "renewal"
+  const calculatedTotal = (purpose === "renewal" || purpose === "dues")
     ? (finalDurationType === "Days"
         ? Math.max(0, (basePriceVal * durationDaysVal) - discountVal)
         : Math.max(0, (basePriceVal * durationMonths) - discountVal))
     : 0;
 
-  // Auto-sync computed total to Amount Paid for renewal
+  // Auto-sync computed total to Amount Paid
   useEffect(() => {
     if (purpose === "renewal") {
+      setAmount(calculatedTotal);
+    } else {
       if (payLater) {
         setAmount(0);
       } else {
-        setAmount(calculatedTotal);
+        // Default to calculatedTotal if currently empty/0, allowing manual override
+        setAmount((prev) => (prev === "" || prev === 0 || prev === "0") ? calculatedTotal : prev);
       }
-    } else {
-      setAmount("");
     }
   }, [calculatedTotal, purpose, payLater]);
 
-  // Force payLater to false if purpose is dues
+  // Force payLater to false if purpose is renewal
   useEffect(() => {
-    if (purpose === "dues") {
+    if (purpose === "renewal") {
       setPayLater(false);
     }
   }, [purpose]);
@@ -235,67 +236,62 @@ function RecordPaymentInner() {
       const amountVal = payLater ? 0 : (Number(amount) || 0);
       let notesText = notes.trim();
 
-      let finalNewEnd: Date | null = null;
+      if (!customExpiryDate) {
+        throw new Error("Please specify a valid expiry date.");
+      }
+      const finalNewEnd = new Date(customExpiryDate);
+      if (isNaN(finalNewEnd.getTime())) {
+        throw new Error("Invalid expiry date format.");
+      }
+
       let durationStr = "";
+      if (finalDurationType === "Days") {
+        durationStr = `${durationDaysVal} day(s)`;
+      } else {
+        durationStr = `${durationMonths} month(s)`;
+      }
 
       if (purpose === "renewal") {
-        if (!customExpiryDate) {
-          throw new Error("Please specify a valid expiry date.");
-        }
-        finalNewEnd = new Date(customExpiryDate);
-        if (isNaN(finalNewEnd.getTime())) {
-          throw new Error("Invalid expiry date format.");
-        }
-
-        if (finalDurationType === "Days") {
-          durationStr = `${durationDaysVal} day(s)`;
-        } else {
-          durationStr = `${durationMonths} month(s)`;
-        }
-
         if (!notesText) {
-          notesText = payLater
-            ? `Subscription Renewal (Deferred / Pay Later) — Joining: ${new Date(joiningDate).toLocaleDateString()}, Expiry: ${finalNewEnd.toLocaleDateString()}. Duration: ${durationStr}. Base Plan: ₹${basePriceVal}/${finalDurationType === "Days" ? "day" : "mo"}. Discount: ₹${discountVal}.`
-            : `Subscription Renewal — Joining: ${new Date(joiningDate).toLocaleDateString()}, Expiry: ${finalNewEnd.toLocaleDateString()}. Duration: ${durationStr}. Base Plan: ₹${basePriceVal}/${finalDurationType === "Days" ? "day" : "mo"}. Discount: ₹${discountVal}. Amount Paid: ₹${amountVal}`;
+          notesText = `Subscription Renewal — Joining: ${new Date(joiningDate).toLocaleDateString()}, Expiry: ${finalNewEnd.toLocaleDateString()}. Duration: ${durationStr}. Base Plan: ₹${basePriceVal}/${finalDurationType === "Days" ? "day" : "mo"}. Discount: ₹${discountVal}. Amount Paid: ₹${amountVal}`;
         }
       } else {
+        // Dues / Partial Payment / Pay Later
         if (!notesText) {
-          notesText = `Dues/Partial Payment — Amount Paid: ₹${amountVal}`;
+          notesText = payLater
+            ? `Subscription Renewal (Deferred / Pay Later) — Joining: ${new Date(joiningDate).toLocaleDateString()}, Expiry: ${finalNewEnd.toLocaleDateString()}. Duration: ${durationStr}. Base Plan: ₹${basePriceVal}/${finalDurationType === "Days" ? "day" : "mo"}. Discount: ₹${discountVal}. Due Date: ${new Date(dueDate).toLocaleDateString()}`
+            : `Subscription Renewal (Partial Payment) — Joining: ${new Date(joiningDate).toLocaleDateString()}, Expiry: ${finalNewEnd.toLocaleDateString()}. Duration: ${durationStr}. Base Plan: ₹${basePriceVal}/${finalDurationType === "Days" ? "day" : "mo"}. Discount: ₹${discountVal}. Amount Paid: ₹${amountVal}, Dues: ₹${calculatedTotal - amountVal}. Due Date: ${new Date(dueDate).toLocaleDateString()}`;
         }
       }
 
-      // 1. Insert Payment Record (Only if not pay later)
-      if (!payLater) {
-        const { error: paymentErr } = await supabase.from('payments').insert([{
-          member_id: selectedMember.id,
-          amount: amountVal,
-          branch: activeBranch,
-          payment_mode: paymentMode,
-          paid_at: new Date(paidAtDate).toISOString(),
-          notes: notesText
-        }]);
+      // 1. Insert Payment Record (Insert for all transactions so they show in history, even pay later/deferred)
+      const { error: paymentErr } = await supabase.from('payments').insert([{
+        member_id: selectedMember.id,
+        amount: amountVal,
+        branch: activeBranch,
+        payment_mode: payLater ? "Deferred" : paymentMode,
+        paid_at: new Date(paidAtDate).toISOString(),
+        notes: notesText
+      }]);
 
-        if (paymentErr) throw new Error(paymentErr.message);
-      }
+      if (paymentErr) throw new Error(paymentErr.message);
 
       // 2. Update Member Record
+      const hasDues = payLater || (amountVal < calculatedTotal);
       const memberUpdatePayload: any = {
         plan_amount: renewDurationType === "Days" ? (basePriceVal * 30) : basePriceVal, // Update plan configuration
         pay_later: payLater,
-        payment_due_date: payLater ? dueDate : null,
-        left_with_dues: false,
+        payment_due_date: hasDues ? dueDate : null,
+        left_with_dues: hasDues,
         loss_amount: 0,
         left_at: null,
         left_reason: null,
         joining_date: joiningDate,
         discount: discountVal,
-        shift: shift
+        shift: shift,
+        subscription_end_date: finalNewEnd.toISOString(),
+        is_active: true
       };
-
-      if (purpose === "renewal" && finalNewEnd) {
-        memberUpdatePayload.subscription_end_date = finalNewEnd.toISOString();
-        memberUpdatePayload.is_active = true;
-      }
 
       const { error: memberErr } = await supabase
         .from('members')
@@ -306,16 +302,16 @@ function RecordPaymentInner() {
 
       // 3. Log Activity
       const logDetails = purpose === "renewal"
-        ? (payLater
-            ? `Deferred payment (Pay Later) set up for ${selectedMember.full_name} (${selectedMember.permanent_id}). Due: ${new Date(dueDate).toLocaleDateString()}, Expiry: ${finalNewEnd?.toLocaleDateString() || 'N/A'}.`
-            : `Recorded payment of ₹${amountVal} for ${selectedMember.full_name} (${selectedMember.permanent_id}). Purpose: Renewal. Expiry: ${finalNewEnd?.toLocaleDateString() || 'N/A'}.`)
-        : `Recorded payment of ₹${amountVal} for ${selectedMember.full_name} (${selectedMember.permanent_id}). Purpose: Dues.`;
+        ? `Recorded full payment of ₹${amountVal} for ${selectedMember.full_name} (${selectedMember.permanent_id}). Expiry: ${finalNewEnd.toLocaleDateString()}.`
+        : (payLater
+            ? `Deferred payment (Pay Later) set up for ${selectedMember.full_name} (${selectedMember.permanent_id}). Due: ${new Date(dueDate).toLocaleDateString()}, Expiry: ${finalNewEnd.toLocaleDateString()}.`
+            : `Recorded partial payment of ₹${amountVal} (Dues: ₹${calculatedTotal - amountVal}) for ${selectedMember.full_name} (${selectedMember.permanent_id}). Due: ${new Date(dueDate).toLocaleDateString()}, Expiry: ${finalNewEnd.toLocaleDateString()}.`);
 
-      logActivity(activeBranch, purpose === "renewal" ? "payment_renew" : "payment_recorded", logDetails);
+      logActivity(activeBranch, "payment_recorded", logDetails);
 
       setSuccessMsg(purpose === "renewal" 
-        ? "Payment recorded & membership activated successfully! Redirecting..." 
-        : "Payment recorded successfully! Redirecting..."
+        ? "Payment recorded & membership activated successfully!" 
+        : "Subscription & Dues setup recorded successfully!"
       );
       setAmount("");
       setNotes("");
@@ -335,15 +331,17 @@ function RecordPaymentInner() {
       }
       fetchPaymentsHistory(selectedMember.id);
 
-      // Redirect
-      setTimeout(() => {
-        const isUnreservedMember = refreshedMember?.permanent_id && refreshedMember.permanent_id.includes('U');
-        if (isUnreservedMember) {
-          router.push('/dashboard/members');
-        } else {
-          router.push('/dashboard/seating');
-        }
-      }, 1500);
+      // Redirect only if the user was navigated here as part of the Admission Page workflow
+      if (memberIdParam) {
+        setTimeout(() => {
+          const isUnreservedMember = refreshedMember?.permanent_id && refreshedMember.permanent_id.includes('U');
+          if (isUnreservedMember) {
+            router.push('/dashboard/members');
+          } else {
+            router.push('/dashboard/seating');
+          }
+        }, 1500);
+      }
 
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to record payment.");
@@ -633,8 +631,8 @@ function RecordPaymentInner() {
                         onChange={(e) => setPurpose(e.target.value as any)}
                         className="input-premium appearance-none w-full"
                       >
-                        <option value="renewal">Plan Setup / Subscription Renewal</option>
-                        <option value="dues">Dues / Partial Payment (No extension)</option>
+                        <option value="renewal">Plan Setup / Subscription Renewal (Full Pay)</option>
+                        <option value="dues">Dues / Partial Payment / Pay Later</option>
                       </select>
                     </div>
 
@@ -666,17 +664,17 @@ function RecordPaymentInner() {
                         type="number"
                         min="0"
                         required
-                        disabled={purpose === "renewal" && payLater}
+                        disabled={purpose === "renewal" || payLater}
                         value={amount}
                         onChange={(e) => setAmount(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))}
-                        className={`input-premium w-full ${purpose === "renewal" && payLater ? "opacity-60 cursor-not-allowed" : ""}`}
+                        className={`input-premium w-full ${purpose === "renewal" || payLater ? "opacity-60 cursor-not-allowed" : ""}`}
                         placeholder="e.g. 1000"
                       />
                     </div>
                   </div>
 
                   {/* Shifted Pricing & Payment Details section */}
-                  {purpose === "renewal" && (
+                  {(purpose === "renewal" || purpose === "dues") && (
                     <div className="p-5 bg-white/[0.01] border border-[#fdac29]/20 rounded-2xl space-y-5 animate-scale-in">
                       <div className="flex items-center gap-2 text-[#fdac29] text-[10px] font-bold uppercase tracking-wider">
                         <span className="material-symbols-outlined text-xs">tune</span>
@@ -823,27 +821,29 @@ function RecordPaymentInner() {
                       </div>
 
                       {/* Pay Later Option Toggle */}
-                      <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                        <div className="space-y-0.5">
-                          <label className="text-xs font-bold text-white block">Pay Later / Defer Payment</label>
-                          <span className="text-[10px] text-on-surface-variant">Activate plan validity now, schedule payment manually</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setPayLater(!payLater)}
-                          className={`w-11 h-6 rounded-full transition-all relative ${
-                            payLater ? "bg-primary shadow-[0_0_10px_rgba(0,49,120,0.3)]" : "bg-slate-300"
-                          }`}
-                        >
-                          <div
-                            className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${
-                              payLater ? "right-1" : "left-1"
+                      {purpose === "dues" && (
+                        <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                          <div className="space-y-0.5">
+                            <label className="text-xs font-bold text-white block">Pay Later / Defer Payment</label>
+                            <span className="text-[10px] text-on-surface-variant">Activate plan validity now, schedule payment manually</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setPayLater(!payLater)}
+                            className={`w-11 h-6 rounded-full transition-all relative ${
+                              payLater ? "bg-primary shadow-[0_0_10px_rgba(0,49,120,0.3)]" : "bg-slate-300"
                             }`}
-                          />
-                        </button>
-                      </div>
+                          >
+                            <div
+                              className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${
+                                payLater ? "right-1" : "left-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      )}
 
-                      {purpose === "renewal" && payLater && (
+                      {purpose === "dues" && (payLater || (Number(amount) || 0) < calculatedTotal) && (
                         <div className="space-y-1.5 w-full animate-fade-in-fast">
                           <label className="text-[10px] uppercase font-bold text-on-surface-variant block pl-0.5">Payment Due Date</label>
                           <input
