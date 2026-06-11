@@ -367,14 +367,16 @@ function RecordPaymentInner() {
     const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
 
     let matchesFilter = false;
-    if (filterStatus === 'all') {
+    if (m.left_at) {
+      matchesFilter = false;
+    } else if (filterStatus === 'all') {
       matchesFilter = true;
     } else if (filterStatus === 'pending') {
-      matchesFilter = m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZero);
+      matchesFilter = m.is_active && (m.pay_later === true || m.payment_due_date) && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZero);
     } else if (filterStatus === 'overdue') {
       matchesFilter = !m.is_active || 
                       (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero) ||
-                      (m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZero);
+                      (m.payment_due_date && new Date(m.payment_due_date) < todayZero);
     } else if (filterStatus === 'due-soon') {
       if (m.is_active && m.subscription_end_date) {
         const end = new Date(m.subscription_end_date);

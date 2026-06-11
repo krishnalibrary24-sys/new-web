@@ -76,23 +76,71 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
       try {
         const { data: members } = await supabase
           .from('members')
-          .select('branch, is_active, plan_amount, subscription_end_date, left_with_dues, loss_amount')
+          .select('id, branch, is_active, plan_amount, subscription_end_date, left_with_dues, loss_amount, left_at, pay_later, payment_due_date')
           .eq('branch', activeBranch);
         
+        const { data: payments } = await supabase
+          .from('payments')
+          .select('member_id, amount, paid_at')
+          .eq('branch', activeBranch);
+
         if (members) {
-          const active = members.filter(m => m.is_active && !m.left_with_dues);
-          
-          // Received: active members who have paid
-          const receivedRevenueVal = active.reduce((sum, m) => sum + (m.plan_amount || 0), 0);
-          
-          // Upcoming: normal inactive/overdue members (excluding those who permanently left)
-          const overdue = members.filter(m => !m.is_active && !m.left_with_dues);
-          const upcomingRevenueVal = overdue.reduce((sum, m) => sum + (m.plan_amount || 0), 0);
-          
+          const today = new Date();
+          today.setHours(0,0,0,0);
+
+          // Active members who have not left
+          const activeMembers = members.filter(m => m.is_active && !m.left_at);
+
+          // Compute Received and Pending for active members
+          let receivedRevenueVal = 0;
+          let pendingDuesVal = 0;
+
+          activeMembers.forEach(m => {
+            const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < today;
+            
+            if (isExpired) {
+              // Expired active member: they paid for their past subscription,
+              // but their renewal is overdue (which goes to upcoming).
+              receivedRevenueVal += (m.plan_amount || 0);
+            } else if (m.pay_later) {
+              // Full pay later: paid 0, pending plan_amount
+              receivedRevenueVal += 0;
+              pendingDuesVal += (m.plan_amount || 0);
+            } else if (m.payment_due_date) {
+              // Partial payment: paid latestPaid, pending plan_amount - latestPaid
+              const mPayments = payments?.filter(p => p.member_id === m.id) || [];
+              const sorted = [...mPayments].sort((a, b) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime());
+              const latestPaid = sorted[0]?.amount || 0;
+              receivedRevenueVal += latestPaid;
+              pendingDuesVal += Math.max(0, (m.plan_amount || 0) - latestPaid);
+            } else {
+              // Paid in full
+              receivedRevenueVal += (m.plan_amount || 0);
+            }
+          });
+
+          // Overdue / Defaulter members (inactive and not left)
+          const overdueMembers = members.filter(m => 
+            !m.left_at && 
+            (!m.is_active || (m.subscription_end_date && new Date(m.subscription_end_date) < today))
+          );
+
+          // Expected renewal amount for overdue members
+          const overdueExpectedVal = overdueMembers.reduce((sum, m) => {
+            if (!m.is_active) {
+              return sum + (m.plan_amount || 0);
+            }
+            return sum;
+          }, 0);
+
+          // Upcoming Revenue = Pending Dues + Expected renewal of inactive members
+          const upcomingRevenueVal = pendingDuesVal + overdueExpectedVal;
+
           const totalRevenueVal = receivedRevenueVal + upcomingRevenueVal;
 
           // Loss Payments and Left Members count
-          const lossMembers = members.filter(m => m.left_with_dues);
+          // Only show/count members marked as left with dues AND outstanding loss amount > 0
+          const lossMembers = members.filter(m => m.left_with_dues && m.left_at && (m.loss_amount || 0) > 0);
           const lossRevenueVal = lossMembers.reduce((sum, m) => sum + (m.loss_amount || 0), 0);
           const leftMembersCount = lossMembers.length;
 
@@ -103,16 +151,16 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           const bcRevenue = bcData?.reduce((sum, m) => sum + (m.plan_amount || 0), 0) || 0;
           const nmRevenue = nmData?.reduce((sum, m) => sum + (m.plan_amount || 0), 0) || 0;
 
-          const fullDayCount = active.filter(m => m.plan_amount >= 1000).length;
-          const halfDayCount = active.filter(m => m.plan_amount && m.plan_amount < 1000).length;
-          const totalActive = active.length || 1; // Prevent div by 0
+          const fullDayCount = activeMembers.filter(m => m.plan_amount >= 1000).length;
+          const halfDayCount = activeMembers.filter(m => m.plan_amount && m.plan_amount < 1000).length;
+          const totalActive = activeMembers.length || 1; // Prevent div by 0
 
           setStats({
             totalRevenue: `₹${totalRevenueVal.toLocaleString('en-IN')}`,
             receivedRevenue: `₹${receivedRevenueVal.toLocaleString('en-IN')}`,
             upcomingRevenue: `₹${upcomingRevenueVal.toLocaleString('en-IN')}`,
-            members: active.length.toString(),
-            occupancy: Math.round((active.length / (activeBranch === 'bengali-chowk' ? 153 : 121)) * 100),
+            members: activeMembers.length.toString(),
+            occupancy: Math.round((activeMembers.length / (activeBranch === 'bengali-chowk' ? 153 : 121)) * 100),
             bcRevenue,
             nmRevenue,
             totalSeats: 274,
@@ -282,17 +330,18 @@ function OfficeDashboard({ branch }: { branch: string }) {
         .order('created_at', { ascending: false });
       
       if (data) {
-        const now = new Date();
-        const in3Days = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+        const today = new Date();
+        const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
         
         const dueSoonCount = data.filter(m => {
           if (!m.is_active || !m.subscription_end_date) return false;
           const end = new Date(m.subscription_end_date);
-          return end >= now && end <= in3Days;
+          return end >= todayZero && end <= in3Days;
         }).length;
 
-        const defaulterCount = data.filter(m => !m.is_active).length;
-        const activeMembers = data.filter(m => m.is_active);
+        const defaulterCount = data.filter(m => !m.is_active || (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero)).length;
+        const activeMembers = data.filter(m => m.is_active && !(m.subscription_end_date && new Date(m.subscription_end_date) < todayZero));
         
         setDueSoon(dueSoonCount);
         setOverdueCount(defaulterCount);

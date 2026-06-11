@@ -37,17 +37,21 @@ export default function DuesPage() {
 
     if (data) {
       setDueSoon(data.filter(m => {
-        if (!m.is_active || !m.subscription_end_date) return false;
+        if (!m.is_active || !m.subscription_end_date || m.left_at) return false;
         const end = new Date(m.subscription_end_date);
         return end >= todayZero && end <= in3Days;
       }));
       setDefaulters(data.filter(m => 
-        !m.is_active || 
-        (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero) ||
-        (m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZero)
+        !m.left_at && (
+          !m.is_active || 
+          (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero) ||
+          (m.payment_due_date && new Date(m.payment_due_date) < todayZero)
+        )
       ));
       setPending(data.filter(m => 
-        m.pay_later === true && 
+        !m.left_at &&
+        m.is_active &&
+        (m.pay_later === true || m.payment_due_date) &&
         (!m.payment_due_date || new Date(m.payment_due_date) >= todayZero)
       ));
     }

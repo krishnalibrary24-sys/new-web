@@ -21,6 +21,8 @@ export default function LossPaymentPage() {
         .select('*')
         .eq('branch', activeBranch)
         .eq('left_with_dues', true)
+        .not('left_at', 'is', null)
+        .gt('loss_amount', 0)
         .order('left_at', { ascending: false });
 
       if (error) throw error;
