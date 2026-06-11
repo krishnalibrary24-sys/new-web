@@ -112,6 +112,19 @@ export default function MembersPage() {
   // Display style toggler (tiles vs list)
   const [viewMode, setViewMode] = useState<'tiles' | 'list'>('tiles');
 
+  // Edit Profile States
+  const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
+  const [editFullName, setEditFullName] = useState("");
+  const [editMobile, setEditMobile] = useState("");
+  const [editFatherName, setEditFatherName] = useState("");
+  const [editDob, setEditDob] = useState("");
+  const [editGender, setEditGender] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editShift, setEditShift] = useState("");
+  const [editSeatNo, setEditSeatNo] = useState("");
+  const [editJoiningDate, setEditJoiningDate] = useState("");
+  const [editSubscriptionEndDate, setEditSubscriptionEndDate] = useState("");
+
   const fetchMembers = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
@@ -148,6 +161,19 @@ export default function MembersPage() {
       setLeftLossAmount(plan);
       setLeftDate(new Date().toISOString().split('T')[0]);
       setLeftReason("");
+
+      // Initialize Edit Profile states
+      setIsEditingProfile(false);
+      setEditFullName(selectedMember.full_name || "");
+      setEditMobile(selectedMember.mobile || "");
+      setEditFatherName(selectedMember.father_name || "");
+      setEditDob(selectedMember.dob ? selectedMember.dob.split('T')[0] : "");
+      setEditGender(selectedMember.gender || "");
+      setEditAddress(selectedMember.address || "");
+      setEditShift(selectedMember.shift || "Full Day");
+      setEditSeatNo(selectedMember.seat_no || "");
+      setEditJoiningDate(selectedMember.joining_date ? selectedMember.joining_date.split('T')[0] : "");
+      setEditSubscriptionEndDate(selectedMember.subscription_end_date ? selectedMember.subscription_end_date.split('T')[0] : "");
     }
   }, [selectedMember]);
 
@@ -420,6 +446,68 @@ export default function MembersPage() {
       setIsMarkingLeft(false);
     } catch (err: any) {
       alert(err.message || "Failed to mark member as left.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!editFullName.trim()) {
+      alert("Name is required");
+      return;
+    }
+    if (!editMobile.trim()) {
+      alert("Mobile is required");
+      return;
+    }
+    setIsActionLoading(true);
+    try {
+      const seatVal = editSeatNo.trim() || null;
+      if (seatVal) {
+        const { data: duplicateSeat } = await supabase
+          .from('members')
+          .select('id, full_name')
+          .eq('branch', activeBranch)
+          .eq('shift', editShift)
+          .eq('seat_no', seatVal)
+          .eq('is_active', true)
+          .neq('id', selectedMember.id)
+          .maybeSingle();
+
+        if (duplicateSeat) {
+          alert(`Seat number ${seatVal} is already occupied by ${duplicateSeat.full_name} in ${editShift} shift.`);
+          setIsActionLoading(false);
+          return;
+        }
+      }
+
+      const updatedFields = {
+        full_name: editFullName.trim(),
+        mobile: editMobile.trim(),
+        father_name: editFatherName.trim(),
+        dob: editDob ? new Date(editDob).toISOString() : null,
+        gender: editGender,
+        address: editAddress.trim(),
+        shift: editShift,
+        seat_no: seatVal,
+        joining_date: editJoiningDate ? new Date(editJoiningDate).toISOString().split('T')[0] : null,
+        subscription_end_date: editSubscriptionEndDate ? new Date(editSubscriptionEndDate).toISOString() : null,
+      };
+
+      const { error } = await supabase
+        .from('members')
+        .update(updatedFields)
+        .eq('id', selectedMember.id);
+
+      if (error) throw error;
+
+      logActivity(activeBranch, "student_update", `Updated profile/subscription for ${editFullName} (${selectedMember.permanent_id})`);
+
+      setMembers(prev => prev.map(m => m.id === selectedMember.id ? { ...m, ...updatedFields } : m));
+      setSelectedMember(prev => ({ ...prev, ...updatedFields }));
+      setIsEditingProfile(false);
+    } catch (err: any) {
+      alert(err.message || "Failed to update profile.");
     } finally {
       setIsActionLoading(false);
     }
@@ -723,7 +811,7 @@ export default function MembersPage() {
       {/* ═══ Member Profile Modal ═══ */}
       {selectedMember && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center p-4 dashboard-light-theme" onClick={() => setSelectedMember(null)}>
-          <div className="glass-pane-elevated rounded-3xl w-full max-w-2xl overflow-hidden animate-scale-in" onClick={(e) => e.stopPropagation()}>
+          <div className="glass-pane-elevated rounded-3xl w-full max-w-2xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-white/[0.06] flex justify-between items-center bg-white/[0.02]">
               <h2 className="text-lg font-bold text-white font-manrope">Member Profile</h2>
@@ -733,7 +821,7 @@ export default function MembersPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto flex-1" data-lenis-prevent="true">
               <div className="flex gap-5 items-start mb-6 pb-6 border-b border-white/[0.06]">
                 <div className="w-16 h-16 rounded-2xl bg-blue-100 border border-blue-200 flex items-center justify-center text-[#003178] text-2xl font-bold shrink-0">
                   {selectedMember.full_name.charAt(0)}
@@ -764,14 +852,118 @@ export default function MembersPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-                    <InfoField label="Father's Name" value={selectedMember.father_name || 'N/A'} />
-                    <InfoField label="Mobile" value={selectedMember.mobile} />
-                    <InfoField label="DOB / Gender" value={`${selectedMember.dob ? selectedMember.dob.split('T')[0] : 'N/A'} / ${selectedMember.gender || 'N/A'}`} />
-                    <InfoField label="Address" value={selectedMember.address || 'N/A'} />
-                    <InfoField label="Assigned Seat" value={selectedMember.seat_no ? `Seat ${selectedMember.seat_no}` : 'Not Allocated'} />
-                    <InfoField label="Shift" value={selectedMember.shift || 'N/A'} />
-                  </div>
+                  {isEditingProfile ? (
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm bg-white/[0.01] p-4 rounded-2xl border border-white/[0.04]">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Full Name</label>
+                        <input
+                          type="text"
+                          value={editFullName}
+                          onChange={(e) => setEditFullName(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Mobile</label>
+                        <input
+                          type="text"
+                          value={editMobile}
+                          onChange={(e) => setEditMobile(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Father's Name</label>
+                        <input
+                          type="text"
+                          value={editFatherName}
+                          onChange={(e) => setEditFatherName(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">DOB</label>
+                        <input
+                          type="date"
+                          value={editDob}
+                          onChange={(e) => setEditDob(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Gender</label>
+                        <select
+                          value={editGender}
+                          onChange={(e) => setEditGender(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full appearance-none [&>option]:bg-white [&>option]:text-slate-800"
+                        >
+                          <option value="">Select</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Address</label>
+                        <input
+                          type="text"
+                          value={editAddress}
+                          onChange={(e) => setEditAddress(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Assigned Seat</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 42"
+                          value={editSeatNo}
+                          onChange={(e) => setEditSeatNo(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Shift</label>
+                        <select
+                          value={editShift}
+                          onChange={(e) => setEditShift(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full appearance-none [&>option]:bg-white [&>option]:text-slate-800"
+                        >
+                          <option value="Full Day">Full Day</option>
+                          <option value="Morning">Morning</option>
+                          <option value="Evening">Evening</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Joining Date</label>
+                        <input
+                          type="date"
+                          value={editJoiningDate}
+                          onChange={(e) => setEditJoiningDate(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Validity Expiry Date</label>
+                        <input
+                          type="date"
+                          value={editSubscriptionEndDate}
+                          onChange={(e) => setEditSubscriptionEndDate(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+                      <InfoField label="Father's Name" value={selectedMember.father_name || 'N/A'} />
+                      <InfoField label="Mobile" value={selectedMember.mobile} />
+                      <InfoField label="DOB / Gender" value={`${selectedMember.dob ? selectedMember.dob.split('T')[0] : 'N/A'} / ${selectedMember.gender || 'N/A'}`} />
+                      <InfoField label="Address" value={selectedMember.address || 'N/A'} />
+                      <InfoField label="Assigned Seat" value={selectedMember.seat_no ? `Seat ${selectedMember.seat_no}` : 'Not Allocated'} />
+                      <InfoField label="Shift" value={selectedMember.shift || 'N/A'} />
+                      <InfoField label="Joining Date" value={selectedMember.joining_date ? new Date(selectedMember.joining_date).toLocaleDateString() : 'N/A'} />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1030,7 +1222,17 @@ export default function MembersPage() {
 
             {/* Modal Actions */}
             <div className="px-6 py-4 border-t border-white/[0.06] flex flex-wrap gap-3 bg-white/[0.02]">
-              {!isRenewingInline && !isMarkingLeft ? (
+              {isEditingProfile ? (
+                <>
+                  <button disabled={isActionLoading} onClick={() => setIsEditingProfile(false)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50">
+                    Cancel
+                  </button>
+                  <button disabled={isActionLoading} onClick={handleUpdateProfile} className="btn-primary px-4 py-2.5 flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold">
+                    {isActionLoading ? <span className="material-symbols-outlined animate-spin text-base">progress_activity</span> : null}
+                    Save Changes
+                  </button>
+                </>
+              ) : !isRenewingInline && !isMarkingLeft ? (
                 <>
                   <button disabled={isActionLoading} onClick={() => handleDelete(selectedMember.id)} className="btn-danger px-4 py-2.5 disabled:opacity-50 flex items-center gap-2 text-xs font-bold">
                     <span className="material-symbols-outlined text-base">delete</span>
@@ -1040,15 +1242,20 @@ export default function MembersPage() {
                     <span className="material-symbols-outlined text-base">{selectedMember.is_active ? 'toggle_off' : 'toggle_on'}</span>
                     {selectedMember.is_active ? 'Deactivate' : 'Activate'}
                   </button>
-                  <button disabled={isActionLoading} onClick={() => setIsMarkingLeft(true)} className="btn-ghost px-4 py-2.5 flex-1 disabled:opacity-50 text-red-500 border border-red-500/20 hover:bg-red-500/10 text-xs font-bold flex justify-center items-center gap-1">
+                  <button disabled={isActionLoading} onClick={() => setIsMarkingLeft(true)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-red-500 border border-red-500/20 hover:bg-red-500/10 text-xs font-bold flex justify-center items-center gap-1">
                     <span className="material-symbols-outlined text-base">directions_run</span>
                     Mark as Left
+                  </button>
+                  <button disabled={isActionLoading} onClick={() => setIsEditingProfile(true)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm">edit</span>
+                    Edit Profile
                   </button>
                   <button disabled={isActionLoading} onClick={() => {
                     setSelectedMember(null);
                     router.push(`/dashboard/admission?edit=${selectedMember.id}`);
-                  }} className="btn-ghost px-4 py-2.5 flex-1 disabled:opacity-50 text-xs font-bold">
-                    Update Details
+                  }} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm">app_registration</span>
+                    Edit in Admission
                   </button>
                   <button disabled={isActionLoading} onClick={() => setIsRenewingInline(true)} className="btn-primary px-4 py-2.5 flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold">
                     Renew Subscription
