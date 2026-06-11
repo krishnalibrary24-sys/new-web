@@ -34,6 +34,7 @@ function RecordPaymentInner() {
   const [paymentMode, setPaymentMode] = useState("Cash");
   const [paidAtDate, setPaidAtDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState("");
+  const [shift, setShift] = useState<string>("Morning");
 
   // Pricing & Duration configuration states (shifted from admission)
   const [basePrice, setBasePrice] = useState<number | "">(1000);
@@ -137,7 +138,9 @@ function RecordPaymentInner() {
       fetchPaymentsHistory(selectedMember.id);
       
       const defaultPrice = selectedMember.plan_amount || (selectedMember.shift === 'Full Day' ? 1000 : 600);
-      setBasePrice(defaultPrice);
+      const isUnreservedMember = selectedMember.permanent_id?.includes('U');
+      setBasePrice(isUnreservedMember ? Math.round(defaultPrice / 30) : defaultPrice);
+      setShift(selectedMember.shift || "Morning");
       setDiscount("");
       setSuccessMsg(null);
       setErrorMsg(null);
@@ -281,7 +284,8 @@ function RecordPaymentInner() {
         left_at: null,
         left_reason: null,
         joining_date: joiningDate,
-        discount: discountVal
+        discount: discountVal,
+        shift: shift
       };
 
       if (purpose === "renewal" && finalNewEnd) {
@@ -616,7 +620,7 @@ function RecordPaymentInner() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Purpose Select */}
                     <div className="space-y-1">
                       <label className="text-[10px] uppercase font-bold text-on-surface-variant pl-0.5">Payment Purpose</label>
@@ -627,6 +631,28 @@ function RecordPaymentInner() {
                       >
                         <option value="renewal">Plan Setup / Subscription Renewal</option>
                         <option value="dues">Dues / Partial Payment (No extension)</option>
+                      </select>
+                    </div>
+
+                    {/* Shift Selector */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold text-on-surface-variant pl-0.5">Shift / Time Slot</label>
+                      <select
+                        value={shift}
+                        onChange={(e) => {
+                          const newShift = e.target.value;
+                          setShift(newShift);
+                          // Auto update basePrice to default for new shift
+                          const defaultPrice = newShift === 'Full Day' ? 1000 : 600;
+                          const isDays = renewDurationType === "Days";
+                          setBasePrice(isDays ? Math.round(defaultPrice / 30) : defaultPrice);
+                        }}
+                        className="input-premium appearance-none w-full"
+                      >
+                        <option value="Morning">Morning</option>
+                        <option value="Evening">Evening</option>
+                        <option value="Night">Night</option>
+                        <option value="Full Day">Full Day</option>
                       </select>
                     </div>
 
