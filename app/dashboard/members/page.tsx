@@ -20,14 +20,6 @@ const getMemberStatus = (member: any) => {
     };
   }
 
-  if (member.status === 'SUSPENDED') {
-    return {
-      type: 'suspended',
-      label: 'Suspended',
-      badgeClass: 'bg-amber-500/10 border border-amber-500/20 text-amber-500 font-bold flex items-center gap-1 text-[11px]'
-    };
-  }
-
   if (!member.is_active) {
     return {
       type: 'inactive',
@@ -222,7 +214,7 @@ export default function MembersPage() {
     } else if (filterStatus === 'active') {
       matchesFilter = isActivePaid;
     } else if (filterStatus === 'inactive') {
-      matchesFilter = !m.is_active && !isUnreserved && m.status !== 'LEFT' && !m.left_at && m.status !== 'SUSPENDED';
+      matchesFilter = !m.is_active && !isUnreserved && m.status !== 'LEFT' && !m.left_at;
     } else if (filterStatus === 'unreserved') {
       matchesFilter = isUnreserved;
     } else if (filterStatus === 'pending') {
@@ -286,7 +278,7 @@ export default function MembersPage() {
 
   const inactiveCount = members.filter(m => {
     const isUnreserved = !!(m.permanent_id && m.permanent_id.includes('U'));
-    return !m.is_active && !isUnreserved && m.status !== 'LEFT' && !m.left_at && m.status !== 'SUSPENDED';
+    return !m.is_active && !isUnreserved && m.status !== 'LEFT' && !m.left_at;
   }).length;
 
   const unreservedCount = members.filter(m => m.permanent_id && m.permanent_id.includes('U')).length;
@@ -537,11 +529,11 @@ export default function MembersPage() {
           is_active: false,
           previous_seat_no: member.seat_no || member.previous_seat_no || null,
           seat_no: null,
-          status: 'SUSPENDED'
+          status: 'INACTIVE'
         };
         const { error } = await supabase.from('members').update(payload).eq('id', member.id);
         if (error) throw error;
-        logActivity(activeBranch, "student_suspend", `Suspended membership of ${member.full_name} (${member.permanent_id})`);
+        logActivity(activeBranch, "student_deactivate", `Deactivated membership of ${member.full_name} (${member.permanent_id})`);
         setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...payload } : m));
         setSelectedMember({ ...member, ...payload });
       } else {
@@ -728,7 +720,6 @@ export default function MembersPage() {
                         {status.type === 'active-no-seat' && <span className="material-symbols-outlined text-[12px]">event_seat</span>}
                         {status.type === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
                         {status.type === 'left' && <span className="material-symbols-outlined text-[12px]">directions_run</span>}
-                        {status.type === 'suspended' && <span className="material-symbols-outlined text-[12px]">pause_circle</span>}
                         {status.label}
                       </span>
                     );
@@ -802,7 +793,6 @@ export default function MembersPage() {
                                 {status.type === 'active-no-seat' && <span className="material-symbols-outlined text-[10px]">event_seat</span>}
                                 {status.type === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
                                 {status.type === 'left' && <span className="material-symbols-outlined text-[10px]">directions_run</span>}
-                                {status.type === 'suspended' && <span className="material-symbols-outlined text-[10px]">pause_circle</span>}
                                 {status.label}
                               </span>
                             );
