@@ -41,7 +41,7 @@ export default function AdmissionPage() {
         setGender(data.gender || "");
         setAddress(data.address || "");
         setShift(data.shift || "Full Day");
-        setIsReserved(!!data.seat_no);
+        setIsReserved(!data.permanent_id?.includes('U'));
         setPermanentId(data.permanent_id || "");
         setRecordFound(true);
         setExistingMemberState(data);
@@ -62,6 +62,7 @@ export default function AdmissionPage() {
         setGender(data.gender || "");
         setAddress(data.address || "");
         setPermanentId(data.permanent_id || "");
+        setIsReserved(!data.permanent_id?.includes('U'));
         setRecordFound(true);
         setShowRecordPopup(true);
       } else {
@@ -85,10 +86,9 @@ export default function AdmissionPage() {
     try {
       let finalId = permanentId;
       
-      if (!recordFound) {
-        const branchCode = activeBranch === 'namnakala' ? 'N' : 'B';
-        const prefix = isReserved ? `#KL26${branchCode}` : `#KL26${branchCode}U`;
-
+      const needsNewPermanentId = !recordFound || (existingMemberState && (existingMemberState.permanent_id.includes('U') !== !isReserved));
+      
+      if (needsNewPermanentId) {
         const { data: allIds } = await supabase
           .from('members')
           .select('permanent_id')
@@ -183,10 +183,22 @@ export default function AdmissionPage() {
         payload.status = 'INACTIVE';
         payload.payment_status = 'PENDING';
         payload.outstanding_dues = basePriceVal;
+      } else {
+        // For existing member edits, check if seat category transitioned
+        if (existingMemberState.permanent_id !== finalId) {
+          payload.permanent_id = finalId;
+        }
+        if (!isReserved) {
+          payload.seat_no = null;
+        }
       }
 
       let memberId = "";
-      if (recordFound && permanentId) {
+      if (existingMemberState) {
+        const { data: updatedMember, error: updErr } = await supabase.from('members').update(payload).eq('id', existingMemberState.id).select().single();
+        if (updErr) throw new Error(updErr.message);
+        if (updatedMember) memberId = updatedMember.id;
+      } else if (recordFound && permanentId) {
         const { data: updatedMember, error: updErr } = await supabase.from('members').update(payload).eq('permanent_id', permanentId).select().single();
         if (updErr) throw new Error(updErr.message);
         if (updatedMember) memberId = updatedMember.id;
