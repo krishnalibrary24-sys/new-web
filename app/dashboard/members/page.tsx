@@ -859,77 +859,12 @@ export default function MembersPage() {
                   {selectedMember.full_name.charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start gap-4 flex-wrap">
+                  <div className="flex justify-between items-start gap-4">
                     <div>
                       <h3 className="text-xl font-bold text-white">{selectedMember.full_name}</h3>
                       <p className="text-primary font-semibold text-sm mt-0.5">{selectedMember.permanent_id}</p>
-                      
-                      {/* Dynamic Descriptive Badges */}
-                      <div className="flex gap-1.5 mt-2 flex-wrap">
-                        {/* 1. Status Badge */}
-                        {(() => {
-                          let label = "Active";
-                          let color = "bg-emerald-100 border-emerald-300 text-emerald-900";
-                          if (selectedMember.status === 'LEFT' || selectedMember.left_at) {
-                            label = "Left";
-                            color = "bg-red-100 border-red-300 text-red-900";
-                          } else if (!selectedMember.is_active) {
-                            label = "Inactive";
-                            color = "bg-slate-200 border-slate-300 text-slate-800";
-                          }
-                          return (
-                            <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${color}`}>
-                              {label}
-                            </span>
-                          );
-                        })()}
-
-                        {/* 2. Seat Category Badge */}
-                        {(() => {
-                          const isUnreserved = !!(selectedMember.permanent_id && selectedMember.permanent_id.includes('U'));
-                          return isUnreserved ? (
-                            <span className="px-2 py-0.5 rounded-md border bg-purple-100 border-purple-300 text-purple-900 text-[10px] font-bold">
-                              Unreserved Category
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-md border bg-indigo-100 border-indigo-300 text-indigo-900 text-[10px] font-bold">
-                              Reserved Category (Seat {selectedMember.seat_no || 'Unassigned'})
-                            </span>
-                          );
-                        })()}
-
-                        {/* 3. Dues/Payment Tag */}
-                        {(() => {
-                          let label = "Paid (Clear)";
-                          let color = "bg-emerald-100 border-emerald-300 text-emerald-900";
-                          
-                          if (selectedMember.status === 'LEFT' || selectedMember.left_at) {
-                            if (selectedMember.left_with_dues) {
-                              label = `Left with Dues (₹${selectedMember.loss_amount || selectedMember.outstanding_dues || 0})`;
-                              color = "bg-red-100 border-red-300 text-red-900";
-                            } else {
-                              label = "Left (Clear)";
-                              color = "bg-slate-200 border-slate-300 text-slate-800";
-                            }
-                          } else if (selectedMember.pay_later === true) {
-                            label = `Pay Later (Pending ₹${selectedMember.outstanding_dues || selectedMember.plan_amount || 0})`;
-                            color = "bg-[#fef3c7] border-[#f59e0b]/40 text-[#78350f] animate-pulse";
-                          } else if (selectedMember.payment_due_date) {
-                            label = `Partial Dues (₹${selectedMember.outstanding_dues || 0})`;
-                            color = "bg-orange-100 border-orange-300 text-orange-950 animate-pulse";
-                          } else if ((selectedMember.outstanding_dues || 0) > 0) {
-                            label = `Pending Dues (₹${selectedMember.outstanding_dues})`;
-                            color = "bg-[#fef3c7] border-[#f59e0b]/40 text-[#78350f]";
-                          }
-                          return (
-                            <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${color}`}>
-                              {label}
-                            </span>
-                          );
-                        })()}
-                      </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5">
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
                       {(() => {
                         const status = getMemberStatus(selectedMember);
                         return (
@@ -948,6 +883,71 @@ export default function MembersPage() {
                         Valid till: {new Date(selectedMember.subscription_end_date).toLocaleDateString()}
                       </span>
                     </div>
+                  </div>
+
+                  {/* Dynamic Descriptive Badges */}
+                  <div className="flex gap-1.5 mt-3 flex-wrap">
+                    {/* 1. Status Badge */}
+                    {(() => {
+                      let label = "Active";
+                      let color = "bg-emerald-100 border-emerald-300 text-emerald-900";
+                      if (selectedMember.status === 'LEFT' || selectedMember.left_at) {
+                        label = "Left";
+                        color = "bg-red-100 border-red-300 text-red-900";
+                      } else if (!selectedMember.is_active) {
+                        label = "Inactive";
+                        color = "bg-slate-200 border-slate-300 text-slate-800";
+                      }
+                      return (
+                        <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${color}`}>
+                          {label}
+                        </span>
+                      );
+                    })()}
+
+                    {/* 2. Seat Category Badge */}
+                    {(() => {
+                      const isUnreserved = !!(selectedMember.permanent_id && selectedMember.permanent_id.includes('U'));
+                      return isUnreserved ? (
+                        <span className="px-2 py-0.5 rounded-md border bg-purple-100 border-purple-300 text-purple-900 text-[10px] font-bold">
+                          Unreserved Category
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-md border bg-indigo-100 border-indigo-300 text-indigo-900 text-[10px] font-bold">
+                          Reserved Category (Seat {selectedMember.seat_no || 'Unassigned'})
+                        </span>
+                      );
+                    })()}
+
+                    {/* 3. Dues/Payment Tag */}
+                    {(() => {
+                      let label = "Paid (Clear)";
+                      let color = "bg-emerald-100 border-emerald-300 text-emerald-900";
+                      
+                      if (selectedMember.status === 'LEFT' || selectedMember.left_at) {
+                        if (selectedMember.left_with_dues) {
+                          label = `Left with Dues (₹${selectedMember.loss_amount || selectedMember.outstanding_dues || 0})`;
+                          color = "bg-red-100 border-red-300 text-red-900";
+                        } else {
+                          label = "Left (Clear)";
+                          color = "bg-slate-200 border-slate-300 text-slate-800";
+                        }
+                      } else if (selectedMember.pay_later === true) {
+                        label = `Pay Later (Pending ₹${selectedMember.outstanding_dues || selectedMember.plan_amount || 0})`;
+                        color = "bg-[#fef3c7] border-[#f59e0b]/40 text-[#78350f] animate-pulse";
+                      } else if (selectedMember.payment_due_date) {
+                        label = `Partial Dues (₹${selectedMember.outstanding_dues || 0})`;
+                        color = "bg-orange-100 border-orange-300 text-orange-950 animate-pulse";
+                      } else if ((selectedMember.outstanding_dues || 0) > 0) {
+                        label = `Pending Dues (₹${selectedMember.outstanding_dues})`;
+                        color = "bg-[#fef3c7] border-[#f59e0b]/40 text-[#78350f]";
+                      }
+                      return (
+                        <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${color}`}>
+                          {label}
+                        </span>
+                      );
+                    })()}
                   </div>
                   {isEditingProfile ? (
                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm bg-white/[0.01] p-4 rounded-2xl border border-white/[0.04]">
