@@ -231,7 +231,7 @@ export default function MembersPage() {
     } else if (filterStatus === 'active') {
       matchesFilter = isActivePaid;
     } else if (filterStatus === 'inactive') {
-      matchesFilter = !m.is_active && !isUnreserved && m.status !== 'LEFT' && !m.left_at;
+      matchesFilter = !m.is_active && m.status !== 'LEFT' && !m.left_at;
     } else if (filterStatus === 'unreserved') {
       matchesFilter = isUnreserved;
     } else if (filterStatus === 'pending') {
@@ -294,8 +294,7 @@ export default function MembersPage() {
   }).length;
 
   const inactiveCount = members.filter(m => {
-    const isUnreserved = !!(m.permanent_id && m.permanent_id.includes('U'));
-    return !m.is_active && !isUnreserved && m.status !== 'LEFT' && !m.left_at;
+    return !m.is_active && m.status !== 'LEFT' && !m.left_at;
   }).length;
 
   const unreservedCount = members.filter(m => m.permanent_id && m.permanent_id.includes('U')).length;
@@ -995,6 +994,39 @@ export default function MembersPage() {
                       <InfoField label="Assigned Seat" value={selectedMember.seat_no ? `Seat ${selectedMember.seat_no}` : 'Not Allocated'} />
                       <InfoField label="Shift" value={selectedMember.shift || 'N/A'} />
                       <InfoField label="Joining Date" value={selectedMember.joining_date ? new Date(selectedMember.joining_date).toLocaleDateString() : 'N/A'} />
+                      {(() => {
+                        let label = "";
+                        let colorClass = "text-emerald-400 font-bold";
+                        
+                        if (selectedMember.status === 'LEFT' || selectedMember.left_at) {
+                          if (selectedMember.left_with_dues) {
+                            label = `Left with Dues (₹${selectedMember.loss_amount || selectedMember.outstanding_dues || 0})`;
+                            colorClass = "text-red-400 font-bold animate-pulse";
+                          } else {
+                            label = "Left (Clear)";
+                            colorClass = "text-slate-400 font-bold";
+                          }
+                        } else if (selectedMember.pay_later === true) {
+                          label = `Pay Later (Pending: ₹${selectedMember.outstanding_dues || selectedMember.plan_amount || 0})`;
+                          colorClass = "text-amber-400 font-bold animate-pulse";
+                        } else if (selectedMember.payment_due_date) {
+                          label = `Partial Payment (Pending: ₹${selectedMember.outstanding_dues || 0})`;
+                          colorClass = "text-orange-400 font-bold animate-pulse";
+                        } else if ((selectedMember.outstanding_dues || 0) > 0) {
+                          label = `Pending Dues (₹${selectedMember.outstanding_dues})`;
+                          colorClass = "text-amber-400 font-bold";
+                        } else {
+                          label = "Paid (Clear)";
+                          colorClass = "text-emerald-400 font-bold";
+                        }
+
+                        return (
+                          <div>
+                            <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider mb-0.5">Payment Status</div>
+                            <div className={`${colorClass} text-sm truncate`}>{label}</div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>

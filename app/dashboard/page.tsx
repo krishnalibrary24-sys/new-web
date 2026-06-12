@@ -91,18 +91,17 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           // Active members who have not left
           const activeMembers = members.filter(m => m.is_active && !m.left_at);
 
-          // Compute Received and Pending for active members
+          // Compute Received and Pending for all non-left members (both active and inactive)
           let receivedRevenueVal = 0;
           let pendingDuesVal = 0;
+          let overdueExpectedVal = 0;
 
-          activeMembers.forEach(m => {
+          const nonLeftMembers = members.filter(m => !m.left_at);
+
+          nonLeftMembers.forEach(m => {
             const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < today;
             
-            if (isExpired) {
-              // Expired active member: they paid for their past subscription,
-              // but their renewal is overdue (which goes to upcoming).
-              receivedRevenueVal += (m.plan_amount || 0);
-            } else if (m.pay_later) {
+            if (m.pay_later) {
               // Full pay later: paid 0, pending plan_amount
               receivedRevenueVal += 0;
               pendingDuesVal += (m.plan_amount || 0);
@@ -116,24 +115,14 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
             } else {
               // Paid in full
               receivedRevenueVal += (m.plan_amount || 0);
+              // Expected renewal if expired
+              if (isExpired) {
+                overdueExpectedVal += (m.plan_amount || 0);
+              }
             }
           });
 
-          // Overdue / Defaulter members (inactive and not left)
-          const overdueMembers = members.filter(m => 
-            !m.left_at && 
-            (!m.is_active || (m.subscription_end_date && new Date(m.subscription_end_date) < today))
-          );
-
-          // Expected renewal amount for overdue members
-          const overdueExpectedVal = overdueMembers.reduce((sum, m) => {
-            if (!m.is_active) {
-              return sum + (m.plan_amount || 0);
-            }
-            return sum;
-          }, 0);
-
-          // Upcoming Revenue = Pending Dues + Expected renewal of inactive members
+          // Upcoming Revenue = Pending Dues + Expected renewal of expired/inactive members
           const upcomingRevenueVal = pendingDuesVal + overdueExpectedVal;
 
           const totalRevenueVal = receivedRevenueVal + upcomingRevenueVal;
