@@ -12,6 +12,7 @@ const getMemberStatus = (member: any) => {
   const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
 
+  // 1. Left
   if (member.status === 'LEFT' || member.left_at) {
     return {
       type: 'left',
@@ -20,6 +21,7 @@ const getMemberStatus = (member: any) => {
     };
   }
 
+  // 2. Inactive
   if (!member.is_active) {
     return {
       type: 'inactive',
@@ -31,6 +33,7 @@ const getMemberStatus = (member: any) => {
   const isExpired = member.subscription_end_date && new Date(member.subscription_end_date) < todayZero;
   const isPayLaterOverdue = member.pay_later === true && member.payment_due_date && new Date(member.payment_due_date) < todayZero;
 
+  // 3. Overdue
   if (isExpired || isPayLaterOverdue) {
     return {
       type: 'overdue',
@@ -39,14 +42,35 @@ const getMemberStatus = (member: any) => {
     };
   }
 
+  // 4. Active (Unreserved)
+  const isUnreserved = !!(member.permanent_id && member.permanent_id.includes('U'));
+  if (isUnreserved) {
+    return {
+      type: 'unreserved',
+      label: 'Active (Unreserved)',
+      badgeClass: 'bg-purple-500/10 border border-purple-500/20 text-purple-400 font-bold flex items-center gap-1 text-[11px]'
+    };
+  }
+
+  // 5. Active (Unassigned)
+  if (!member.seat_no) {
+    return {
+      type: 'unassigned',
+      label: 'Active (Unassigned)',
+      badgeClass: 'bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center gap-1 font-bold text-[11px]'
+    };
+  }
+
+  // 6. Active (Pending)
   if (member.pay_later === true) {
     return {
       type: 'pending',
-      label: 'Pending',
+      label: 'Active (Pending)',
       badgeClass: 'bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1 font-bold text-[11px]'
     };
   }
 
+  // 7. Due Soon
   if (member.subscription_end_date) {
     const end = new Date(member.subscription_end_date);
     if (end >= todayZero && end <= in3Days) {
@@ -58,17 +82,10 @@ const getMemberStatus = (member: any) => {
     }
   }
 
-  if (!member.seat_no) {
-    return {
-      type: 'active-no-seat',
-      label: 'Active (No Seat)',
-      badgeClass: 'bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center gap-1 font-bold text-[11px]'
-    };
-  }
-
+  // 8. Active (Paid)
   return {
-    type: 'active',
-    label: 'Active',
+    type: 'active-paid',
+    label: 'Active (Paid)',
     badgeClass: 'badge badge-success flex items-center gap-1 font-bold text-[11px]'
   };
 };
@@ -717,8 +734,9 @@ export default function MembersPage() {
                         {status.type === 'overdue' && <span className="material-symbols-outlined text-[12px]">warning</span>}
                         {status.type === 'due-soon' && <span className="material-symbols-outlined text-[12px]">schedule</span>}
                         {status.type === 'pending' && <span className="material-symbols-outlined text-[12px]">payments</span>}
-                        {status.type === 'active-no-seat' && <span className="material-symbols-outlined text-[12px]">event_seat</span>}
-                        {status.type === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                        {status.type === 'unassigned' && <span className="material-symbols-outlined text-[12px]">event_seat</span>}
+                        {status.type === 'unreserved' && <span className="material-symbols-outlined text-[12px]">bookmark_border</span>}
+                        {status.type === 'active-paid' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
                         {status.type === 'left' && <span className="material-symbols-outlined text-[12px]">directions_run</span>}
                         {status.label}
                       </span>
@@ -790,8 +808,9 @@ export default function MembersPage() {
                                 {status.type === 'overdue' && <span className="material-symbols-outlined text-[10px]">warning</span>}
                                 {status.type === 'due-soon' && <span className="material-symbols-outlined text-[10px]">schedule</span>}
                                 {status.type === 'pending' && <span className="material-symbols-outlined text-[10px]">payments</span>}
-                                {status.type === 'active-no-seat' && <span className="material-symbols-outlined text-[10px]">event_seat</span>}
-                                {status.type === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                                {status.type === 'unassigned' && <span className="material-symbols-outlined text-[10px]">event_seat</span>}
+                                {status.type === 'unreserved' && <span className="material-symbols-outlined text-[10px]">bookmark_border</span>}
+                                {status.type === 'active-paid' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
                                 {status.type === 'left' && <span className="material-symbols-outlined text-[10px]">directions_run</span>}
                                 {status.label}
                               </span>
