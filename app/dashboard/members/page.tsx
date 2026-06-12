@@ -183,7 +183,7 @@ export default function MembersPage() {
 
       setIsMarkingLeft(false);
       setLeftWithDues(false);
-      setLeftLossAmount(plan);
+      setLeftLossAmount(selectedMember.outstanding_dues || 0);
       setLeftDate(new Date().toISOString().split('T')[0]);
       setLeftReason("");
 
@@ -233,7 +233,7 @@ export default function MembersPage() {
     } else if (filterStatus === 'inactive') {
       matchesFilter = !m.is_active && m.status !== 'LEFT' && !m.left_at;
     } else if (filterStatus === 'unreserved') {
-      matchesFilter = isUnreserved;
+      matchesFilter = isUnreserved && m.is_active;
     } else if (filterStatus === 'pending') {
       matchesFilter = isPending;
     } else if (filterStatus === 'overdue') {
@@ -297,7 +297,7 @@ export default function MembersPage() {
     return !m.is_active && m.status !== 'LEFT' && !m.left_at;
   }).length;
 
-  const unreservedCount = members.filter(m => m.permanent_id && m.permanent_id.includes('U')).length;
+  const unreservedCount = members.filter(m => m.is_active && m.permanent_id && m.permanent_id.includes('U')).length;
 
   const pendingCount = members.filter(m => {
     return m.is_active && m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZeroVal);
