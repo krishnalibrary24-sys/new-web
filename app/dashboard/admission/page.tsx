@@ -180,6 +180,9 @@ export default function AdmissionPage() {
         payload.subscription_end_date = null; // Set during payment setup
         payload.pay_later = true; // Default to pay later with immediate due date
         payload.payment_due_date = tomorrowStr; // Due date is tomorrow
+        payload.status = 'INACTIVE';
+        payload.payment_status = 'PENDING';
+        payload.outstanding_dues = basePriceVal;
       }
 
       let memberId = "";

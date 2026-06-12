@@ -351,30 +351,6 @@ export default function MembersPage() {
       }
     }
     
-    await supabase.from('members').update({ 
-      subscription_end_date: newEnd.toISOString(),
-      plan_amount: renewPrice,
-      is_active: true,
-      pay_later: false,
-      payment_due_date: null,
-      left_with_dues: false,
-      loss_amount: 0,
-      left_at: null,
-      left_reason: null,
-      seat_no: seatToAllot,
-      previous_seat_no: prevSeatVal,
-      joining_date: joiningDateStr,
-      discount: renewDiscount
-    }).eq('id', member.id);
-
-    await supabase.from('payments').insert([{
-      member_id: member.id,
-      amount: totalPayable,
-      branch: member.branch,
-      payment_mode: renewPaymentMode,
-      notes: `Subscription Renewal — Joining: ${new Date(joiningDateStr).toLocaleDateString()}, Expiry: ${newEnd.toLocaleDateString()}. Duration: ${durationStr}. Base Price: ₹${renewPrice}/${isDays ? "day" : "mo"}, Discount: ₹${renewDiscount}`
-    }]);
-
     const updatedData = { 
       subscription_end_date: newEnd.toISOString(), 
       plan_amount: renewPrice, 
@@ -388,8 +364,21 @@ export default function MembersPage() {
       seat_no: seatToAllot,
       previous_seat_no: prevSeatVal,
       joining_date: joiningDateStr,
-      discount: renewDiscount
+      discount: renewDiscount,
+      status: 'ACTIVE',
+      payment_status: 'PAID',
+      outstanding_dues: 0
     };
+
+    await supabase.from('members').update(updatedData).eq('id', member.id);
+
+    await supabase.from('payments').insert([{
+      member_id: member.id,
+      amount: totalPayable,
+      branch: member.branch,
+      payment_mode: renewPaymentMode,
+      notes: `Subscription Renewal — Joining: ${new Date(joiningDateStr).toLocaleDateString()}, Expiry: ${newEnd.toLocaleDateString()}. Duration: ${durationStr}. Base Price: ₹${renewPrice}/${isDays ? "day" : "mo"}, Discount: ₹${renewDiscount}`
+    }]);
 
     logActivity(activeBranch, "student_renew", `Renewed subscription for ${member.full_name} (${member.permanent_id}) by ${durationStr}`);
 
@@ -429,7 +418,10 @@ export default function MembersPage() {
         left_with_dues: leftWithDues,
         loss_amount: leftWithDues ? leftLossAmount : 0,
         left_at: new Date(leftDate).toISOString(),
-        left_reason: leftReason || "Member left the library"
+        left_reason: leftReason || "Member left the library",
+        status: 'LEFT',
+        payment_status: leftWithDues ? 'LOSS' : 'PAID',
+        outstanding_dues: 0
       };
 
       const { error } = await supabase
@@ -439,7 +431,11 @@ export default function MembersPage() {
 
       if (error) throw new Error(error.message);
 
-      logActivity(activeBranch, "student_left", `Marked ${member.full_name} (${member.permanent_id}) as LEFT. Dues left: ${leftWithDues ? 'Yes (Loss: ₹' + leftLossAmount + ')' : 'No'}`);
+      logActivity(
+        activeBranch, 
+        "student_left", 
+        `Student ${member.permanent_id} marked as LEFT. Active outstanding dues converted to bad-debt loss of ₹${leftWithDues ? leftLossAmount : 0}. Reason: ${leftReason || "Member left the library"}`
+      );
 
       setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...leftPayload } : m));
       setSelectedMember(null); // Close the profile modal
@@ -520,7 +516,8 @@ export default function MembersPage() {
         const payload = {
           is_active: false,
           previous_seat_no: member.seat_no || member.previous_seat_no || null,
-          seat_no: null
+          seat_no: null,
+          status: 'SUSPENDED'
         };
         const { error } = await supabase.from('members').update(payload).eq('id', member.id);
         if (error) throw error;
@@ -550,7 +547,8 @@ export default function MembersPage() {
         const payload = {
           is_active: true,
           seat_no: seatToAllot,
-          previous_seat_no: prevSeatVal
+          previous_seat_no: prevSeatVal,
+          status: 'ACTIVE'
         };
         const { error } = await supabase.from('members').update(payload).eq('id', member.id);
         if (error) throw error;

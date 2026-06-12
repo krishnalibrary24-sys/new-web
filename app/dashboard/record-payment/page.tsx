@@ -293,7 +293,10 @@ function RecordPaymentInner() {
         discount: discountVal,
         shift: shift,
         subscription_end_date: finalNewEnd.toISOString(),
-        is_active: true
+        is_active: true,
+        status: 'ACTIVE',
+        payment_status: hasDues ? 'PENDING' : 'PAID',
+        outstanding_dues: hasDues ? (payLater ? calculatedTotal : (calculatedTotal - amountVal)) : 0
       };
 
       const { error: memberErr } = await supabase
