@@ -932,15 +932,12 @@ export default function MembersPage() {
                           label = "Left (Clear)";
                           color = "bg-slate-200 border-slate-300 text-slate-800";
                         }
-                      } else if (selectedMember.pay_later === true) {
+                      } else if (selectedMember.pay_later === true && (selectedMember.outstanding_dues || 0) > 0) {
                         label = `Pay Later (Pending ₹${selectedMember.outstanding_dues || selectedMember.plan_amount || 0})`;
                         color = "bg-[#fef3c7] border-[#f59e0b]/40 text-[#78350f] animate-pulse";
-                      } else if (selectedMember.payment_due_date) {
-                        label = `Partial Dues (₹${selectedMember.outstanding_dues || 0})`;
-                        color = "bg-orange-100 border-orange-300 text-orange-950 animate-pulse";
                       } else if ((selectedMember.outstanding_dues || 0) > 0) {
-                        label = `Pending Dues (₹${selectedMember.outstanding_dues})`;
-                        color = "bg-[#fef3c7] border-[#f59e0b]/40 text-[#78350f]";
+                        label = `Partial Dues (₹${selectedMember.outstanding_dues})`;
+                        color = "bg-orange-100 border-orange-300 text-orange-950 animate-pulse";
                       }
                       return (
                         <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${color}`}>
@@ -1071,11 +1068,11 @@ export default function MembersPage() {
                             label = "Left (Clear)";
                             colorClass = "text-slate-600 font-bold";
                           }
-                        } else if (selectedMember.pay_later === true) {
+                        } else if (selectedMember.pay_later === true && (selectedMember.outstanding_dues || 0) > 0) {
                           label = `Pay Later (Pending: ₹${selectedMember.outstanding_dues || selectedMember.plan_amount || 0})`;
                           colorClass = "text-amber-800 font-bold animate-pulse";
-                        } else if (selectedMember.payment_due_date || (selectedMember.outstanding_dues || 0) > 0) {
-                          label = `Partial Payment (Remaining: ₹${selectedMember.outstanding_dues || 0})`;
+                        } else if ((selectedMember.outstanding_dues || 0) > 0) {
+                          label = `Partial Payment (Remaining: ₹${selectedMember.outstanding_dues})`;
                           colorClass = "text-orange-700 font-bold animate-pulse";
                         } else {
                           label = "Paid (Clear)";
