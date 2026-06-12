@@ -1065,7 +1065,7 @@ export default function MembersPage() {
                         
                         if (selectedMember.status === 'LEFT' || selectedMember.left_at) {
                           if (selectedMember.left_with_dues) {
-                            label = `Left with Dues (₹${selectedMember.loss_amount || selectedMember.outstanding_dues || 0})`;
+                            label = `Left with Dues (Remaining: ₹${selectedMember.loss_amount || selectedMember.outstanding_dues || 0})`;
                             colorClass = "text-red-600 font-bold animate-pulse";
                           } else {
                             label = "Left (Clear)";
@@ -1074,21 +1074,18 @@ export default function MembersPage() {
                         } else if (selectedMember.pay_later === true) {
                           label = `Pay Later (Pending: ₹${selectedMember.outstanding_dues || selectedMember.plan_amount || 0})`;
                           colorClass = "text-amber-800 font-bold animate-pulse";
-                        } else if (selectedMember.payment_due_date) {
-                          label = `Partial Payment (Pending: ₹${selectedMember.outstanding_dues || 0})`;
+                        } else if (selectedMember.payment_due_date || (selectedMember.outstanding_dues || 0) > 0) {
+                          label = `Partial Payment (Remaining: ₹${selectedMember.outstanding_dues || 0})`;
                           colorClass = "text-orange-700 font-bold animate-pulse";
-                        } else if ((selectedMember.outstanding_dues || 0) > 0) {
-                          label = `Pending Dues (₹${selectedMember.outstanding_dues})`;
-                          colorClass = "text-amber-800 font-bold";
                         } else {
                           label = "Paid (Clear)";
                           colorClass = "text-emerald-700 font-bold";
                         }
 
                         return (
-                          <div>
+                          <div className="col-span-2">
                             <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider mb-0.5">Payment Status</div>
-                            <div className={`${colorClass} text-sm truncate`}>{label}</div>
+                            <div className={`${colorClass} text-sm`}>{label}</div>
                           </div>
                         );
                       })()}
