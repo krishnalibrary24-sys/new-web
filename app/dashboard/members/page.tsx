@@ -863,6 +863,71 @@ export default function MembersPage() {
                     <div>
                       <h3 className="text-xl font-bold text-white">{selectedMember.full_name}</h3>
                       <p className="text-primary font-semibold text-sm mt-0.5">{selectedMember.permanent_id}</p>
+                      
+                      {/* Dynamic Descriptive Badges */}
+                      <div className="flex gap-1.5 mt-2 flex-wrap">
+                        {/* 1. Status Badge */}
+                        {(() => {
+                          let label = "Active";
+                          let color = "bg-emerald-500/10 border-emerald-500/20 text-emerald-400";
+                          if (selectedMember.status === 'LEFT' || selectedMember.left_at) {
+                            label = "Left";
+                            color = "bg-red-500/10 border-red-500/20 text-red-400";
+                          } else if (!selectedMember.is_active) {
+                            label = "Inactive";
+                            color = "bg-slate-500/10 border-slate-500/20 text-slate-400";
+                          }
+                          return (
+                            <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${color}`}>
+                              {label}
+                            </span>
+                          );
+                        })()}
+
+                        {/* 2. Seat Category Badge */}
+                        {(() => {
+                          const isUnreserved = !!(selectedMember.permanent_id && selectedMember.permanent_id.includes('U'));
+                          return isUnreserved ? (
+                            <span className="px-2 py-0.5 rounded-md border bg-purple-500/10 border-purple-500/20 text-purple-400 text-[10px] font-bold">
+                              Unreserved Category
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md border bg-indigo-500/10 border-indigo-500/20 text-indigo-400 text-[10px] font-bold">
+                              Reserved Category (Seat {selectedMember.seat_no || 'Unassigned'})
+                            </span>
+                          );
+                        })()}
+
+                        {/* 3. Dues/Payment Tag */}
+                        {(() => {
+                          let label = "Paid (Clear)";
+                          let color = "bg-emerald-500/10 border-emerald-500/20 text-emerald-400";
+                          
+                          if (selectedMember.status === 'LEFT' || selectedMember.left_at) {
+                            if (selectedMember.left_with_dues) {
+                              label = `Left with Dues (₹${selectedMember.loss_amount || selectedMember.outstanding_dues || 0})`;
+                              color = "bg-red-500/10 border-red-500/20 text-red-400";
+                            } else {
+                              label = "Left (Clear)";
+                              color = "bg-slate-500/10 border-slate-500/20 text-slate-400";
+                            }
+                          } else if (selectedMember.pay_later === true) {
+                            label = `Pay Later (Pending ₹${selectedMember.outstanding_dues || selectedMember.plan_amount || 0})`;
+                            color = "bg-amber-500/10 border-amber-500/20 text-amber-400 animate-pulse";
+                          } else if (selectedMember.payment_due_date) {
+                            label = `Partial Dues (₹${selectedMember.outstanding_dues || 0})`;
+                            color = "bg-orange-500/10 border-orange-500/20 text-orange-400 animate-pulse";
+                          } else if ((selectedMember.outstanding_dues || 0) > 0) {
+                            label = `Pending Dues (₹${selectedMember.outstanding_dues})`;
+                            color = "bg-amber-500/10 border-amber-500/20 text-amber-400";
+                          }
+                          return (
+                            <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${color}`}>
+                              {label}
+                            </span>
+                          );
+                        })()}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
                       {(() => {
