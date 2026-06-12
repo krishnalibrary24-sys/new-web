@@ -85,6 +85,8 @@ export default function AdmissionPage() {
     
     try {
       let finalId = permanentId;
+      const branchCode = activeBranch === 'namnakala' ? 'N' : 'B';
+      const prefix = isReserved ? `#KL26${branchCode}` : `#KL26${branchCode}U`;
       
       const needsNewPermanentId = !recordFound || (existingMemberState && (existingMemberState.permanent_id.includes('U') !== !isReserved));
       
@@ -188,7 +190,8 @@ export default function AdmissionPage() {
         if (existingMemberState.permanent_id !== finalId) {
           payload.permanent_id = finalId;
         }
-        if (!isReserved) {
+        const categoryChanged = existingMemberState.permanent_id.includes('U') !== !isReserved;
+        if (categoryChanged) {
           payload.seat_no = null;
         }
       }
