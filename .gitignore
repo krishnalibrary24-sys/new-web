@@ -34,5 +34,6 @@ next-env.d.ts
 
 # local credentials & dev helpers
 SECURITY_LOGINS.md
+CREDENTIALS_AND_LOGIN.txt
 fix-db.js
 refactor.py
