@@ -31,3 +31,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local credentials & dev helpers
+SECURITY_LOGINS.md
+fix-db.js
+refactor.py

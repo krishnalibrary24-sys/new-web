@@ -1,7 +1,10 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
+import { defaultTemplates } from "@/lib/whatsapp";
+import { createPortal } from "react-dom";
 
 interface ImageCropperProps {
   imageSrc: string;
@@ -145,15 +148,16 @@ const ImageCropper = ({ imageSrc, type, onClose, onCropComplete }: ImageCropperP
   };
 
   if (!img) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
+    return typeof document !== 'undefined' ? createPortal(
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
         <div className="text-white text-xs font-bold animate-pulse">Loading image preview...</div>
-      </div>
-    );
+      </div>,
+      document.body
+    ) : null;
   }
 
-  return (
-    <div className="fixed inset-0 z-55 flex items-center justify-center p-4">
+  return typeof document !== 'undefined' ? createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div onClick={onClose} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
       <div className="glass-pane-elevated max-w-md w-full relative z-10 overflow-hidden !rounded-2xl border border-white/10 shadow-2xl p-6 flex flex-col items-center">
         <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-2 flex items-center gap-2">
@@ -227,13 +231,38 @@ const ImageCropper = ({ imageSrc, type, onClose, onCropComplete }: ImageCropperP
           </button>
         </div>
       </div>
-    </div>
-  );
+    </div>,
+    document.body
+  ) : null;
 };
+
+
+const TEMPLATE_CONFIG = [
+  { key: 'welcome_msg', label: 'Welcome Message (New Admission)', tags: '{name}, {branch}, {seat}, {shift}, {expiry}, {total_amount}, {paid_amount}, {due_amount}, {due_date_line}, {status}, {invoice_link}' },
+  { key: 'renew_msg', label: 'Subscription Renewed Message', tags: '{name}, {branch}, {seat}, {shift}, {expiry}, {total_amount}, {paid_amount}, {due_amount}, {due_date_line}, {status}, {invoice_link}' },
+  { key: 'dues_receipt_msg', label: 'Dues Settlement Receipt', tags: '{name}, {branch}, {seat}, {shift}, {expiry}, {paid_amount}, {remaining_dues}, {status}, {invoice_link}' },
+  { key: 'seat_assigned_msg', label: 'Seat Allocation Update', tags: '{name}, {branch}, {seat}, {shift}, {expiry}, {payment_section}' },
+  { key: 'due_soon_msg', label: 'Due Soon Reminder (3 days prior)', tags: '{name}, {permanent_id}, {expiry}, {branch}' },
+  { key: 'expired_msg', label: 'Membership Expired Warning', tags: '{name}, {permanent_id}, {expiry}, {branch}' },
+  { key: 'released_msg', label: 'Seat Released Notification (>5 days expired)', tags: '{name}, {permanent_id}, {expiry}, {branch}' },
+  { key: 'pending_dues_msg', label: 'Pending Dues/Overdue Reminder', tags: '{name}, {due_date}, {branch}' },
+  { key: 'invoice_share_msg', label: 'Invoice Share Button Message', tags: '{name}, {receipt_no}, {date}, {permanent_id}, {seat}, {shift}, {subtotal}, {discount}, {total_amount}, {paid_amount}, {due_amount}, {status}, {invoice_link}, {lib_name}' }
+];
 
 export default function SettingsPage() {
   const { activeBranch } = useBranch();
   const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
+  const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const savedRole = localStorage.getItem("krishna_role");
+    if (savedRole !== "admin") {
+      router.push("/dashboard");
+    } else {
+      setIsAdmin(true);
+    }
+  }, [router]);
 
   // Navigation tab state
   const [activeTab, setActiveTab] = useState<'system' | 'gallery' | 'achievers'>('system');
@@ -246,21 +275,7 @@ export default function SettingsPage() {
   const [upiName, setUpiName] = useState("Krishna Library");
   
   // States for WhatsApp / Notification message templates
-  const [welcomeMsg, setWelcomeMsg] = useState(
-    "Dear {name},\n\nWelcome to Krishna Library! Your admission is confirmed.\nBranch: {branch}\nSeat No: {seat}\nShift: {shift}\nValid Till: {expiry}\n\nHappy Learning!\nKrishna Library"
-  );
-  const [dueMsg, setDueMsg] = useState(
-    "Dear {name},\n\nThis is a friendly reminder that your Krishna Library subscription expires in 3 days on {expiry}.\n\nPlease renew to secure your seat (#{seat}).\n\nRegards,\nKrishna Library"
-  );
-  const [invoiceMsg, setInvoiceMsg] = useState(
-    "Dear {name},\n\nYour invoice of {amount} has been generated. Due date: {due_date}.\n\nThank you for choosing Krishna Library."
-  );
-  const [seatMsg, setSeatMsg] = useState(
-    "Dear {name},\n\nYou have been assigned Seat No. {seat_no} for the {shift} shift at our {branch} branch."
-  );
-  const [overdueMsg, setOverdueMsg] = useState(
-    "Dear {name},\n\nYour payment of {amount} is overdue since {due_date}. Please clear your dues immediately to avoid seat cancellation.\n\nRegards,\nKrishna Library"
-  );
+  const [templates, setTemplates] = useState<Record<string, string>>(defaultTemplates);
 
   const [isSaving, setIsSaving] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -271,6 +286,7 @@ export default function SettingsPage() {
   const [newPhotoUrl, setNewPhotoUrl] = useState("");
   const [newPhotoTitle, setNewPhotoTitle] = useState("");
   const [newPhotoBranch, setNewPhotoBranch] = useState("all");
+  const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
 
   // Achievers states
   const [achieversList, setAchieversList] = useState<{ id: string; name: string; achievement: string; photo_url: string; testimonial: string }[]>([]);
@@ -293,18 +309,19 @@ export default function SettingsPage() {
         const { data, error } = await supabase.from('library_settings').select('*');
         if (error) throw error;
         if (data && data.length > 0) {
+          const newTemplates = { ...defaultTemplates };
           data.forEach((item: any) => {
             if (item.id === 'lib_name') setLibName(item.value);
             if (item.id === 'lib_phone') setLibPhone(item.value);
             if (item.id === 'lib_address') setLibAddress(item.value);
             if (item.id === 'upi_id') setUpiId(item.value);
             if (item.id === 'upi_name') setUpiName(item.value);
-            if (item.id === 'welcome_msg') setWelcomeMsg(item.value);
-            if (item.id === 'due_soon_msg') setDueMsg(item.value);
-            if (item.id === 'invoice_msg') setInvoiceMsg(item.value);
-            if (item.id === 'seat_assigned_msg') setSeatMsg(item.value);
-            if (item.id === 'overdue_msg') setOverdueMsg(item.value);
+            
+            if (item.id in newTemplates) {
+              newTemplates[item.id as keyof typeof defaultTemplates] = item.value;
+            }
           });
+          setTemplates(newTemplates);
         }
       } catch (err) {
         console.warn("Failed to load settings from Supabase, loading localStorage", err);
@@ -315,16 +332,7 @@ export default function SettingsPage() {
           const savedAddress = localStorage.getItem("krishna_address");
           const savedUpiId = localStorage.getItem("krishna_upi_id");
           const savedUpiName = localStorage.getItem("krishna_upi_pn");
-          const savedWelcome = localStorage.getItem("krishna_welcome_msg");
-          const savedDue = localStorage.getItem("krishna_due_msg");
-
-          if (savedName) setLibName(savedName);
-          if (savedPhone) setLibPhone(savedPhone);
-          if (savedAddress) setLibAddress(savedAddress);
-          if (savedUpiId) setUpiId(savedUpiId);
-          if (savedUpiName) setUpiName(savedUpiName);
-          if (savedWelcome) setWelcomeMsg(savedWelcome);
-          if (savedDue) setDueMsg(savedDue);
+          // Removed localstorage for templates
         }
       }
 
@@ -365,16 +373,12 @@ export default function SettingsPage() {
 
     try {
       const settingsPayload = [
-        { id: 'lib_name', value: libName, description: 'Name of the library' },
-        { id: 'lib_phone', value: libPhone, description: 'Contact phone number' },
-        { id: 'lib_address', value: libAddress, description: 'Invoice billing address' },
-        { id: 'upi_id', value: upiId, description: 'Merchant UPI ID for scanned invoice collections' },
-        { id: 'upi_name', value: upiName, description: 'Merchant display name for scanned invoice collections' },
-        { id: 'welcome_msg', value: welcomeMsg, description: 'WhatsApp template sent on new admission' },
-        { id: 'due_soon_msg', value: dueMsg, description: 'WhatsApp template sent 3 days before expiry' },
-        { id: 'invoice_msg', value: invoiceMsg, description: 'WhatsApp template sent on invoice generation' },
-        { id: 'seat_assigned_msg', value: seatMsg, description: 'WhatsApp template sent on seat assignment' },
-        { id: 'overdue_msg', value: overdueMsg, description: 'WhatsApp template sent for overdue payments' }
+        { id: 'lib_name', value: libName, description: 'Library Name' },
+        { id: 'lib_phone', value: libPhone, description: 'Library Contact Number' },
+        { id: 'lib_address', value: libAddress, description: 'Library Physical Address' },
+        { id: 'upi_id', value: upiId, description: 'Payment UPI ID' },
+        { id: 'upi_name', value: upiName, description: 'Payment UPI Payee Name' },
+        ...Object.entries(templates).map(([key, val]) => ({ id: key, value: val, description: 'WhatsApp Template' }))
       ];
 
       const { error } = await supabase.from('library_settings').upsert(settingsPayload);
@@ -401,18 +405,30 @@ export default function SettingsPage() {
     }
   };
 
-  // Add gallery photo handler
+  // Add/Edit gallery photo handler
   const handleAddPhoto = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPhotoUrl.trim()) return;
 
     try {
-      const { error } = await supabase.from('gallery_photos').insert([
-        { url: newPhotoUrl.trim(), title: newPhotoTitle.trim() || 'Library view', branch: newPhotoBranch }
-      ]);
-      if (error) throw error;
+      if (editingPhotoId) {
+        const { error } = await supabase.from('gallery_photos').update({
+          url: newPhotoUrl.trim(),
+          title: newPhotoTitle.trim() || 'Library view',
+          branch: newPhotoBranch
+        }).eq('id', editingPhotoId);
+        if (error) throw error;
+        setEditingPhotoId(null);
+      } else {
+        const { error } = await supabase.from('gallery_photos').insert([
+          { url: newPhotoUrl.trim(), title: newPhotoTitle.trim() || 'Library view', branch: newPhotoBranch }
+        ]);
+        if (error) throw error;
+      }
+      
       setNewPhotoUrl("");
       setNewPhotoTitle("");
+      setNewPhotoBranch("all");
       fetchGallery();
     } catch (err) {
       alert("Error adding photo: " + (err as Error).message);
@@ -471,10 +487,10 @@ export default function SettingsPage() {
   const handleExportBackup = async () => {
     setBackupLoading(true);
     try {
-      const { data: members } = await supabase.from('members').select('*');
-      const { data: payments } = await supabase.from('payments').select('*');
-      const { data: leads } = await supabase.from('leads').select('*');
-      const { data: expenses } = await supabase.from('expenses').select('*');
+      const { data: members } = await supabase.from('members').select('*').eq('branch', activeBranch);
+      const { data: payments } = await supabase.from('payments').select('*').eq('branch', activeBranch);
+      const { data: leads } = await supabase.from('leads').select('*').eq('branch', activeBranch);
+      const { data: expenses } = await supabase.from('expenses').select('*').eq('branch', activeBranch);
 
       const backupData = {
         exportedAt: new Date().toISOString(),
@@ -501,6 +517,8 @@ export default function SettingsPage() {
       setBackupLoading(false);
     }
   };
+
+  if (isAdmin === null) return null;
 
   return (
     <div className="space-y-6 animate-fade-in relative">
@@ -643,82 +661,23 @@ export default function SettingsPage() {
               </h3>
               
               <div className="space-y-5">
-                {/* Welcome template */}
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center flex-wrap gap-2">
-                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Welcome Message (New Admission)</label>
-                    <span className="text-[10px] text-slate-400 font-bold font-mono">Tags: &#123;name&#125;, &#123;branch&#125;, &#123;seat&#125;, &#123;shift&#125;, &#123;expiry&#125;</span>
+                {TEMPLATE_CONFIG.map((config) => (
+                  <div key={config.key} className="space-y-1">
+                    <div className="flex justify-between items-center flex-wrap gap-2">
+                      <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">{config.label}</label>
+                      <span className="text-[10px] text-slate-400 font-bold font-mono">Tags: {config.tags}</span>
+                    </div>
+                    <textarea
+                      rows={5}
+                      value={templates[config.key]}
+                      onChange={(e) => setTemplates({...templates, [config.key]: e.target.value})}
+                      className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a] dark:text-white leading-relaxed whitespace-pre-wrap"
+                      required
+                    />
                   </div>
-                  <textarea
-                    rows={3}
-                    value={welcomeMsg}
-                    onChange={(e) => setWelcomeMsg(e.target.value)}
-                    className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a] dark:text-white"
-                    required
-                  />
-                </div>
-
-                {/* Seat assignment template */}
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center flex-wrap gap-2">
-                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Seat Assignment Alert</label>
-                    <span className="text-[10px] text-slate-400 font-bold font-mono">Tags: &#123;name&#125;, &#123;seat_no&#125;, &#123;shift&#125;, &#123;branch&#125;</span>
-                  </div>
-                  <textarea
-                    rows={3}
-                    value={seatMsg}
-                    onChange={(e) => setSeatMsg(e.target.value)}
-                    className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a] dark:text-white"
-                    required
-                  />
-                </div>
-
-                {/* Invoice generation template */}
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center flex-wrap gap-2">
-                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Invoice Bill Receipt Message</label>
-                    <span className="text-[10px] text-slate-400 font-bold font-mono">Tags: &#123;name&#125;, &#123;amount&#125;, &#123;due_date&#125;</span>
-                  </div>
-                  <textarea
-                    rows={3}
-                    value={invoiceMsg}
-                    onChange={(e) => setInvoiceMsg(e.target.value)}
-                    className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a] dark:text-white"
-                    required
-                  />
-                </div>
-
-                {/* Due Soon template */}
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center flex-wrap gap-2">
-                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Due Soon Expiry Reminder (3 Days prior)</label>
-                    <span className="text-[10px] text-slate-400 font-bold font-mono">Tags: &#123;name&#125;, &#123;seat&#125;, &#123;expiry&#125;</span>
-                  </div>
-                  <textarea
-                    rows={3}
-                    value={dueMsg}
-                    onChange={(e) => setDueMsg(e.target.value)}
-                    className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a] dark:text-white"
-                    required
-                  />
-                </div>
-
-                {/* Overdue template */}
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center flex-wrap gap-2">
-                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Overdue Dues Reminder (Chase Up)</label>
-                    <span className="text-[10px] text-slate-400 font-bold font-mono">Tags: &#123;name&#125;, &#123;amount&#125;, &#123;due_date&#125;</span>
-                  </div>
-                  <textarea
-                    rows={3}
-                    value={overdueMsg}
-                    onChange={(e) => setOverdueMsg(e.target.value)}
-                    className="input-premium w-full py-2.5 px-3 text-sm font-mono text-[#0f172a] dark:text-white"
-                    required
-                  />
+                ))}
                 </div>
               </div>
-            </div>
           </div>
 
           <div className="space-y-6">
@@ -779,8 +738,8 @@ export default function SettingsPage() {
           {/* Add photo form */}
           <div className="glass-pane-elevated h-fit">
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-base">add_a_photo</span>
-              Add Photo to Gallery
+              <span className="material-symbols-outlined text-primary text-base">{editingPhotoId ? "edit" : "add_a_photo"}</span>
+              {editingPhotoId ? "Edit Gallery Photo" : "Add Photo to Gallery"}
             </h3>
             <form onSubmit={handleAddPhoto} className="space-y-4">
               <div className="space-y-1">
@@ -853,13 +812,29 @@ export default function SettingsPage() {
                 </select>
               </div>
 
-              <button
-                type="submit"
-                className="btn-primary w-full py-2.5 text-xs rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
-              >
-                <span className="material-symbols-outlined text-sm">publish</span>
-                Publish to Live Gallery
-              </button>
+              <div className="flex gap-3 pt-2">
+                {editingPhotoId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingPhotoId(null);
+                      setNewPhotoUrl("");
+                      setNewPhotoTitle("");
+                      setNewPhotoBranch("all");
+                    }}
+                    className="btn-ghost flex-1 py-2.5 text-xs rounded-xl font-bold flex items-center justify-center gap-2"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="btn-primary flex-1 py-2.5 text-xs rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <span className="material-symbols-outlined text-sm">{editingPhotoId ? "save" : "publish"}</span>
+                  {editingPhotoId ? "Save Changes" : "Publish to Live Gallery"}
+                </button>
+              </div>
             </form>
           </div>
 
@@ -883,15 +858,30 @@ export default function SettingsPage() {
                       <span className="inline-block px-1.5 py-0.5 text-[9px] font-bold uppercase bg-white/20 text-white rounded w-fit">
                         {img.branch}
                       </span>
-                      <div className="flex justify-between items-center gap-2">
+                      <div className="flex justify-between items-center gap-2 mt-2">
                         <span className="text-[10px] text-white font-bold truncate flex-1">{img.title}</span>
-                        <button
-                          onClick={() => handleDeletePhoto(img.id)}
-                          className="w-7 h-7 rounded-full bg-red-600/95 text-white flex items-center justify-center hover:bg-red-700 transition-all shrink-0"
-                          title="Delete photo"
-                        >
-                          <span className="material-symbols-outlined text-sm">delete</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingPhotoId(img.id);
+                              setNewPhotoUrl(img.url);
+                              setNewPhotoTitle(img.title);
+                              setNewPhotoBranch(img.branch);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="w-7 h-7 rounded-full bg-blue-600/95 text-white flex items-center justify-center hover:bg-blue-700 transition-all shrink-0"
+                            title="Edit photo"
+                          >
+                            <span className="material-symbols-outlined text-[12px]">edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeletePhoto(img.id)}
+                            className="w-7 h-7 rounded-full bg-red-600/95 text-white flex items-center justify-center hover:bg-red-700 transition-all shrink-0"
+                            title="Delete photo"
+                          >
+                            <span className="material-symbols-outlined text-[12px]">delete</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1059,8 +1049,8 @@ export default function SettingsPage() {
       )}
 
       {/* Gallery Photo Selector Modal */}
-      {showGallerySelector && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {showGallerySelector && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div
             onClick={() => setShowGallerySelector(false)}
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
@@ -1103,7 +1093,8 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       {/* Image Cropper Modal */}
       {showCropper && (

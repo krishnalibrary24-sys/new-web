@@ -115,6 +115,9 @@ export default function Home() {
         {/* ═══ FOUNDER'S NOTE ═══ */}
         <FounderMessageSection />
 
+        {/* ═══ 10. GALLERY ═══ */}
+        <GalleryDemo />
+
         {/* ═══ 3. ACHIEVERS ═══ */}
         <section id="achievers" className="py-20 md:py-28 bg-transparent relative overflow-hidden">
           <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-v-primary/[0.02] rounded-full blur-[100px] translate-y-1/2 -translate-x-1/3 pointer-events-none" />
@@ -314,9 +317,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        {/* ═══ 10. GALLERY ═══ */}
-        <GalleryDemo />
 
         {/* ═══ 11. FAQ ═══ */}
         <FaqSection />

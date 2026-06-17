@@ -12,6 +12,7 @@ interface Lead {
   interest: string;
   branch: string | null;
   notes: string | null;
+  admin_notes: string | null;
   created_at: string;
 }
 
@@ -43,12 +44,18 @@ export default function EnquiriesPage() {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name-asc' | 'name-desc'>('newest');
 
+  // Notes state
+  const [noteModalLead, setNoteModalLead] = useState<Lead | null>(null);
+  const [noteText, setNoteText] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+
   useEffect(() => {
     async function fetchLeads() {
       setLoading(true);
       const { data, error } = await supabase
         .from('leads')
         .select('*')
+        .eq('branch', activeBranch)
         .order('created_at', { ascending: false });
       
       if (!error && data) {
@@ -59,7 +66,7 @@ export default function EnquiriesPage() {
       setLoading(false);
     }
     fetchLeads();
-  }, []);
+  }, [activeBranch]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newLead, setNewLead] = useState({ name: '', phone: '', interest: 'Full Day', branch: 'bengali-chowk', address: '' });
@@ -101,6 +108,16 @@ export default function EnquiriesPage() {
       }
       setLeads(leads.filter(l => l.id !== id));
     }
+  };
+
+  const handleSaveNote = async () => {
+    if (!noteModalLead) return;
+    setSavingNote(true);
+    await supabase.from('leads').update({ admin_notes: noteText }).eq('id', noteModalLead.id);
+    setLeads(leads.map(l => l.id === noteModalLead.id ? { ...l, admin_notes: noteText } : l));
+    logActivity(activeBranch, "enquiry_note", `Added note for ${noteModalLead.full_name}: "${noteText.substring(0, 50)}..."`);
+    setSavingNote(false);
+    setNoteModalLead(null);
   };
 
   const getInterestColor = (interest: string) => {
@@ -157,8 +174,9 @@ export default function EnquiriesPage() {
           </div>
         </div>
         
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm table-premium">
+        {/* Desktop Table */}
+        <div className="hidden md:block overflow-x-auto scrollbar-thin">
+          <table className="w-full text-left text-sm table-premium min-w-[900px]">
             <thead>
               <tr>
                 <th>Name</th>
@@ -227,13 +245,22 @@ export default function EnquiriesPage() {
                       {new Date(lead.created_at).toLocaleDateString()}
                     </td>
                     <td className="text-right">
-                      <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-2 justify-end items-center">
+                        <button
+                          onClick={() => { setNoteModalLead(lead); setNoteText(lead.admin_notes || ''); }}
+                          className={`p-1.5 rounded-lg hover:bg-amber-500/10 transition-all relative ${lead.admin_notes ? 'text-amber-400' : 'text-on-surface-variant hover:text-amber-400'}`}
+                          title={lead.admin_notes || "Add Note"}
+                        >
+                          <span className="material-symbols-outlined text-base">sticky_note_2</span>
+                          {lead.admin_notes && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400" />}
+                        </button>
                         <a 
                           href={`/dashboard/admission?name=${encodeURIComponent(lead.full_name)}&mobile=${encodeURIComponent(lead.phone)}&shift=${encodeURIComponent(lead.interest === 'Half Day' ? 'Morning' : (lead.interest === 'Night Shift' ? 'Evening' : lead.interest))}&address=${encodeURIComponent(parseNotes(lead.notes).address)}`}
-                          className="p-1.5 rounded-lg hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-all"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-all text-xs font-bold"
                           title="Convert to Admission"
                         >
-                          <span className="material-symbols-outlined text-base">person_add</span>
+                          <span className="material-symbols-outlined text-[14px]">person_add</span>
+                          Admit
                         </a>
                         <a 
                           href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${lead.full_name}, thank you for your enquiry at Krishna Library! How can we assist you today?`)}`} 
@@ -258,6 +285,97 @@ export default function EnquiriesPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Cards */}
+        <div className="md:hidden p-4 space-y-3">
+          {loading ? (
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white/[0.03] rounded-2xl p-4 border border-white/[0.06]">
+                <div className="skeleton h-5 w-32 mb-2" />
+                <div className="skeleton h-4 w-24 mb-2" />
+                <div className="skeleton h-4 w-40" />
+              </div>
+            ))
+          ) : filteredLeads.length === 0 ? (
+            <div className="empty-state !py-12 text-center">
+              <span className="material-symbols-outlined text-4xl text-on-surface-variant/30 mb-3 block">inbox</span>
+              <div className="text-white font-bold text-lg mb-1">No Enquiries Yet</div>
+              <div className="text-on-surface-variant text-sm">Leads from the website enquiry form will appear here.</div>
+            </div>
+          ) : (
+            filteredLeads.map((lead) => (
+              <div key={lead.id} className="bg-white/[0.03] rounded-2xl p-4 border border-white/[0.06] space-y-3">
+                {/* Name & Interest */}
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 shrink-0 rounded-full bg-primary/10 border border-primary/15 flex items-center justify-center text-primary font-bold text-xs">
+                      {lead.full_name.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-white font-bold text-sm truncate">{lead.full_name}</div>
+                      <div className="text-[11px] text-on-surface-variant">{lead.phone}</div>
+                    </div>
+                  </div>
+                  <span className={`badge shrink-0 ${getInterestColor(lead.interest)}`}>{lead.interest}</span>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[14px]">location_on</span>
+                    <span className="truncate">{parseNotes(lead.notes).address}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+                    {new Date(lead.created_at).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`badge text-[9px] ${lead.branch === 'namnakala' ? 'badge-info' : 'bg-purple-500/15 text-purple-400 border border-purple-500/20'}`}>
+                      {lead.branch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk'}
+                    </span>
+                  </div>
+                  {lead.admin_notes && (
+                    <div className="flex items-center gap-1.5 text-amber-400 text-[11px] col-span-2">
+                      <span className="material-symbols-outlined text-[14px]">sticky_note_2</span>
+                      <span className="truncate">{lead.admin_notes}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-1">
+                  <a 
+                    href={`/dashboard/admission?name=${encodeURIComponent(lead.full_name)}&mobile=${encodeURIComponent(lead.phone)}&shift=${encodeURIComponent(lead.interest === 'Half Day' ? 'Morning' : (lead.interest === 'Night Shift' ? 'Evening' : lead.interest))}&address=${encodeURIComponent(parseNotes(lead.notes).address)}`}
+                    className="flex-1 flex justify-center items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-all text-xs font-bold"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">person_add</span>
+                    Admit
+                  </a>
+                  <button
+                    onClick={() => { setNoteModalLead(lead); setNoteText(lead.admin_notes || ''); }}
+                    className="p-2 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all"
+                    title="Add Note"
+                  >
+                    <span className="material-symbols-outlined text-base">sticky_note_2</span>
+                  </button>
+                  <a 
+                    href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${lead.full_name}, thank you for your enquiry at Krishna Library! How can we assist you today?`)}`} 
+                    target="_blank" rel="noreferrer"
+                    className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-base">chat</span>
+                  </a>
+                  <button 
+                    onClick={() => handleDeleteLead(lead.id)}
+                    className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-base">delete</span>
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Add Enquiry Modal */}
@@ -274,7 +392,7 @@ export default function EnquiriesPage() {
                   value={newLead.name} 
                   onChange={e => setNewLead({...newLead, name: e.target.value})}
                   className="input-premium"
-                  placeholder="e.g. John Doe"
+                  placeholder="Enter your full name"
                 />
               </div>
               <div>
@@ -285,7 +403,7 @@ export default function EnquiriesPage() {
                   value={newLead.phone} 
                   onChange={e => setNewLead({...newLead, phone: e.target.value})}
                   className="input-premium"
-                  placeholder="+91..."
+                  placeholder="Enter your phone no."
                 />
               </div>
               <div>
@@ -328,6 +446,42 @@ export default function EnquiriesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Notes Modal */}
+      {noteModalLead && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="glass-pane-elevated rounded-3xl w-full max-w-md p-6 animate-scale-in border border-white/10 shadow-2xl">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <span className="material-symbols-outlined text-amber-400">sticky_note_2</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white font-manrope">Notes</h2>
+                <p className="text-xs text-on-surface-variant">{noteModalLead.full_name} · {noteModalLead.phone}</p>
+              </div>
+            </div>
+            <textarea
+              value={noteText}
+              onChange={e => setNoteText(e.target.value)}
+              placeholder="Write notes about this enquiry... e.g. Student wants morning shift, will join next week"
+              className="input-premium min-h-[120px] resize-none"
+              rows={5}
+            />
+            <div className="flex gap-3 pt-4">
+              <button type="button" onClick={() => setNoteModalLead(null)} className="flex-1 btn-ghost py-3 rounded-xl font-bold text-sm">Cancel</button>
+              <button 
+                onClick={handleSaveNote} 
+                disabled={savingNote} 
+                className="flex-1 btn-primary py-3 rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-sm">save</span>
+                {savingNote ? 'Saving...' : 'Save Note'}
+              </button>
+            </div>
           </div>
         </div>,
         document.body

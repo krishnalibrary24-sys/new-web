@@ -5,6 +5,7 @@ import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
 import { logActivity } from "@/lib/activity";
+import { getTemplate, parseTemplate } from "@/lib/whatsapp";
 import { getLibrarySetting } from "@/lib/settings";
 
 export default function SeatingPage() {
@@ -17,16 +18,31 @@ export default function SeatingPage() {
   const [seatMap, setSeatMap] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [unassignedMembers, setUnassignedMembers] = useState<any[]>([]);
+  const [allActiveMembersCount, setAllActiveMembersCount] = useState(0);
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const [modalSearch, setModalSearch] = useState("");
+  
+  // Seat Search Feature States
+  const [globalSearch, setGlobalSearch] = useState("");
+  const [blinkingSeat, setBlinkingSeat] = useState<string | null>(null);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+
+  // WhatsApp Notification State
+  const [whatsappModal, setWhatsappModal] = useState<{
+    show: boolean;
+    phone: string;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+  } | null>(null);
 
   const occupiedCount = Object.keys(seatMap).length;
   const availableCount = seats - occupiedCount;
 
   // Real-time seat map statistics
   const assignedTotalMembers = Object.values(seatMap).reduce((sum, occupants) => sum + occupants.length, 0);
-  const totalMembers = assignedTotalMembers + unassignedMembers.length;
+  const totalMembers = allActiveMembersCount;
   const morningShiftMembers = Object.values(seatMap).reduce((sum, occupants) => 
     sum + occupants.filter(m => m.shift === 'Morning').length, 0
   );
@@ -37,78 +53,178 @@ export default function SeatingPage() {
     sum + occupants.filter(m => m.shift === 'Full Day').length, 0
   );
 
-  useEffect(() => {
-    const fetchSeats = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('members')
-        .select('id, seat_no, shift, is_active, full_name, permanent_id, mobile')
-        .eq('branch', activeBranch)
-        .eq('is_active', true);
-      
-      if (data) {
-        const map: Record<string, any[]> = {};
-        const unassigned: any[] = [];
-        data.forEach(m => {
-          if (m.seat_no) {
-            if (!map[m.seat_no]) map[m.seat_no] = [];
-            map[m.seat_no].push(m);
-          } else {
-            // Exclude unreserved members from the seat map queue
-            const isUnreserved = m.permanent_id && m.permanent_id.includes('U');
-            if (!isUnreserved) {
-              unassigned.push(m);
-            }
-          }
-        });
-        setSeatMap(map);
-        setUnassignedMembers(unassigned);
-      }
-      setLoading(false);
-    };
+  // Flatten assigned members for search
+  const assignedMembersList = Object.entries(seatMap).flatMap(([seat_no, occupants]) => 
+    occupants.map(occ => ({ ...occ, seat_no }))
+  );
+  
+  const searchResults = globalSearch.trim().length > 0 
+    ? assignedMembersList.filter(m => 
+        m.full_name.toLowerCase().includes(globalSearch.toLowerCase()) || 
+        (m.permanent_id && m.permanent_id.toLowerCase().includes(globalSearch.toLowerCase()))
+      )
+    : [];
 
+  const handleSearchResultClick = (seat_no: string) => {
+    setGlobalSearch("");
+    setShowSearchDropdown(false);
+    setBlinkingSeat(seat_no);
+    
+    // Auto-scroll to the seat so it's visible
+    setTimeout(() => {
+      const element = document.getElementById(`seat-btn-${seat_no}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 50);
+
+    // Stop blinking after 1.2 seconds (matches the 2x 0.5s animation)
+    setTimeout(() => {
+      setBlinkingSeat(null);
+    }, 1200);
+  };
+
+  const fetchSeats = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('members')
+      .select('id, seat_no, shift, is_active, full_name, permanent_id, mobile')
+      .eq('branch', activeBranch)
+      .eq('is_active', true);
+    
+    if (data) {
+      setAllActiveMembersCount(data.length);
+      const map: Record<string, any[]> = {};
+      const unassigned: any[] = [];
+      data.forEach(m => {
+        if (m.seat_no) {
+          if (!map[m.seat_no]) map[m.seat_no] = [];
+          map[m.seat_no].push(m);
+        } else {
+          // Exclude unreserved members from the seat map queue
+          const isUnreserved = m.permanent_id && m.permanent_id.includes('U');
+          if (!isUnreserved) {
+            unassigned.push(m);
+          }
+        }
+      });
+      setSeatMap(map);
+      setUnassignedMembers(unassigned);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
     fetchSeats();
   }, [activeBranch]);
 
   const handleAssignSeat = async (memberId: string) => {
     if (!selectedSeat) return;
     setIsAssigning(true);
-    await supabase.from('members').update({ seat_no: selectedSeat }).eq('id', memberId);
     
     const member = unassignedMembers.find(m => m.id === memberId);
     if (member) {
       logActivity(activeBranch, "seating", `Allocated Seat #${selectedSeat} to ${member.full_name} (${member.permanent_id})`);
-      // 1. Remove from unassigned list
-      setUnassignedMembers(prev => prev.filter(m => m.id !== memberId));
       
-      // 2. Add to seatMap (ensuring no duplicate entries)
-      setSeatMap(prev => {
-        const current = prev[selectedSeat] || [];
-        const filteredCurrent = current.filter(m => m.id !== memberId);
-        return { ...prev, [selectedSeat]: [...filteredCurrent, { ...member, seat_no: selectedSeat }] };
-      });
+      // Update seat number in database and clear previous seat
+      await supabase.from('members').update({ seat_no: selectedSeat, previous_seat_no: null }).eq('id', memberId);
+      
+      // Reload the seats from the database to keep UI state perfectly synced
+      await fetchSeats();
 
-      // 3. Dispatch Seat Confirmation WhatsApp Message
-      const branchLabel = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
-      const mobileClean = member.mobile ? member.mobile.replace(/[^0-9]/g, '') : '';
-      
-      const seatTemplate = await getLibrarySetting(
-        "seat_assigned_msg",
-        "Dear {name},\n\nYou have been assigned Seat No. {seat_no} for the {shift} shift at our {branch} branch."
-      );
-      
-      const seatMsg = seatTemplate
-        .replace(/{name}/g, member.full_name)
-        .replace(/{seat_no}/g, selectedSeat || '')
-        .replace(/{shift}/g, member.shift)
-        .replace(/{branch}/g, branchLabel);
+      // 3. Fetch latest invoice, full member record, and payment count in parallel
+      const [{ data: latestInv }, { data: fullMember }, { count: paymentCount }] = await Promise.all([
+        supabase
+          .from('invoices')
+          .select('*')
+          .eq('member_id', memberId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('members')
+          .select('*')
+          .eq('id', memberId)
+          .maybeSingle(),
+        supabase
+          .from('payments')
+          .select('*', { count: 'exact', head: true })
+          .eq('member_id', memberId)
+      ]);
 
-      if (mobileClean) {
-        window.open(`https://wa.me/${mobileClean}?text=${encodeURIComponent(seatMsg)}`, '_blank');
+      const memberToUse = fullMember || member;
+      const branchLabel = activeBranch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
+      const mobileClean = memberToUse.mobile ? memberToUse.mobile.replace(/[^0-9]/g, '') : '';
+      const seatText = selectedSeat || 'Unassigned';
+      const expiryDate = memberToUse.subscription_end_date ? new Date(memberToUse.subscription_end_date).toLocaleDateString('en-IN') : 'N/A';
+      
+      let paymentSection = "";
+      if (latestInv) {
+        const statusText = latestInv.status === 'paid' ? '✅ FULLY PAID' : latestInv.status === 'partially_paid' ? '⚠️ PARTIALLY PAID (Dues Pending)' : '❌ UNPAID';
+        let dueDateLine = "";
+        if (latestInv.due_amount > 0 && latestInv.due_date) {
+          dueDateLine = `📅 *Payment Due Date:* ${new Date(latestInv.due_date).toLocaleDateString('en-IN')}\n`;
+        }
+        paymentSection = 
+          `💳 *Payment Details:*\n` +
+          `💰 *Total Billed:* ₹${latestInv.total_amount}\n` +
+          `💵 *Amount Paid:* ₹${latestInv.paid_amount}\n` +
+          `⚠️ *Outstanding Dues:* ₹${latestInv.due_amount}\n` +
+          dueDateLine +
+          `📈 *Payment Status:* ${statusText}\n\n`;
+      } else {
+        paymentSection = `💳 *Payment Details:* Pending Payment Setup\n\n`;
       }
 
-      // 4. Redirect to Invoices section
-      router.push('/dashboard/invoices');
+      const isFirstPayment = (paymentCount || 0) <= 1;
+
+      const statusText = latestInv
+        ? (latestInv.status === 'paid' ? '✅ FULLY PAID' : latestInv.status === 'partially_paid' ? '⚠️ PARTIALLY PAID (Dues Pending)' : '❌ UNPAID')
+        : '';
+      let dueDateLine = "";
+      if (latestInv && latestInv.due_amount > 0 && latestInv.due_date) {
+        dueDateLine = `📅 *Payment Due Date:* ${new Date(latestInv.due_date).toLocaleDateString('en-IN')}\n`;
+      }
+
+      const templateVars: Record<string, string> = {
+        name: memberToUse.full_name || '',
+        branch: branchLabel,
+        seat: selectedSeat.toString(),
+        shift: memberToUse.shift || '',
+        expiry: expiryDate,
+        payment_section: paymentSection,
+        total_amount: String(latestInv?.total_amount ?? 0),
+        paid_amount: String(latestInv?.paid_amount ?? 0),
+        due_amount: String(latestInv?.due_amount ?? 0),
+        remaining_dues: String(latestInv?.due_amount ?? 0),
+        due_date_line: dueDateLine,
+        status: statusText,
+        invoice_link: latestInv?.id ? `${window.location.origin}/invoice?id=${latestInv.id}` : 'Link Unavailable'
+      };
+
+      let templateStr = "";
+      if (isFirstPayment) {
+        templateStr = await getTemplate('welcome_msg');
+      } else {
+        templateStr = await getTemplate('seat_assigned_msg');
+      }
+      
+      const consolidatedMsg = parseTemplate(templateStr, templateVars);
+
+      setWhatsappModal({
+        show: true,
+        phone: mobileClean,
+        message: consolidatedMsg,
+        onConfirm: () => {
+          if (mobileClean) {
+            window.open(`https://wa.me/${mobileClean}?text=${encodeURIComponent(consolidatedMsg)}`, '_blank');
+          }
+          setWhatsappModal(null);
+        },
+        onCancel: () => {
+          setWhatsappModal(null);
+        }
+      });
     }
     setIsAssigning(false);
     setSelectedSeat(null);
@@ -116,52 +232,79 @@ export default function SeatingPage() {
 
   const handleUnassignSeat = async (memberId: string, seatNo: string) => {
     setIsAssigning(true);
-    await supabase.from('members').update({ seat_no: null }).eq('id', memberId);
     
+    // Find member to log details
     const currentOccupants = seatMap[seatNo] || [];
     const member = currentOccupants.find(m => m.id === memberId);
     
     if (member) {
       logActivity(activeBranch, "seating", `Unassigned Seat #${seatNo} from ${member.full_name} (${member.permanent_id})`);
-      // 1. Add to unassigned list (filtering beforehand to avoid double entries)
-      setUnassignedMembers(prev => {
-        const filtered = prev.filter(m => m.id !== memberId);
-        return [...filtered, { ...member, seat_no: null }];
-      });
     }
 
-    // 2. Remove from seatMap
-    setSeatMap(prev => {
-      const current = prev[seatNo] || [];
-      const updated = current.filter(m => m.id !== memberId);
-      if (updated.length === 0) {
-        const newMap = { ...prev };
-        delete newMap[seatNo];
-        return newMap;
-      }
-      return { ...prev, [seatNo]: updated };
-    });
+    // Update database - save vacated seat in previous_seat_no
+    await supabase.from('members').update({ seat_no: null, previous_seat_no: seatNo }).eq('id', memberId);
+    
+    // Fetch fresh database records to update UI state
+    await fetchSeats();
     
     setIsAssigning(false);
   };
 
   const getSeatStyle = (seatId: string) => {
     const occupants = seatMap[seatId] || [];
-    if (occupants.length === 0) return { bg: 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20', dot: '' };
-    if (occupants.length === 2) {
+    if (occupants.length === 0) {
       return { 
-        bg: 'border-purple-500/30 hover:scale-105', 
+        bg: 'bg-red-500/[0.07] hover:bg-red-500/[0.14] border-red-300/60', 
+        dot: '', 
+        textColor: 'text-red-700/80 font-bold' 
+      };
+    }
+    if (occupants.length === 2) {
+      const shift1 = occupants[0]?.shift;
+      const shift2 = occupants[1]?.shift;
+      
+      const getShiftColor = (s: string) => {
+        if (s === 'Morning') return 'rgba(245, 158, 11, 0.45)'; // Distinct Amber
+        if (s === 'Evening') return 'rgba(168, 85, 247, 0.45)'; // Distinct Purple
+        return 'rgba(16, 185, 129, 0.45)'; // Distinct Emerald/Full Day
+      };
+      
+      return { 
+        bg: 'border-purple-400 hover:scale-105', 
         dot: 'multishift', 
+        textColor: 'text-purple-950 font-black',
         style: {
-          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.35) 50%, rgba(168, 85, 247, 0.35) 50%)'
+          background: `linear-gradient(135deg, ${getShiftColor(shift1)} 50%, ${getShiftColor(shift2)} 50%)`
         }
       };
     }
     const shift = occupants[0].shift;
-    if (shift === 'Full Day') return { bg: 'bg-emerald-500/20 border-emerald-500/20', dot: 'bg-emerald-400' };
-    if (shift === 'Morning') return { bg: 'bg-amber-500/20 border-amber-500/20', dot: 'bg-amber-400' };
-    if (shift === 'Evening') return { bg: 'bg-purple-500/20 border-purple-500/20', dot: 'bg-purple-400' };
-    return { bg: 'bg-white/[0.04] border-white/[0.08]', dot: '' };
+    if (shift === 'Full Day') {
+      return { 
+        bg: 'bg-emerald-500/40 hover:bg-emerald-500/50 border-emerald-500/50', 
+        dot: 'bg-emerald-600 shadow-[0_0_3px_rgba(16,185,129,0.6)]', 
+        textColor: 'text-emerald-950 font-black' 
+      };
+    }
+    if (shift === 'Morning') {
+      return { 
+        bg: 'bg-amber-500/45 hover:bg-amber-500/55 border-amber-500/60', 
+        dot: 'bg-amber-600 shadow-[0_0_3px_rgba(245,158,11,0.6)]', 
+        textColor: 'text-amber-950 font-black' 
+      };
+    }
+    if (shift === 'Evening') {
+      return { 
+        bg: 'bg-purple-500/40 hover:bg-purple-500/50 border-purple-500/50', 
+        dot: 'bg-purple-600 shadow-[0_0_3px_rgba(168,85,247,0.6)]', 
+        textColor: 'text-purple-950 font-black' 
+      };
+    }
+    return { 
+      bg: 'bg-white/[0.04] border-white/[0.08]', 
+      dot: '', 
+      textColor: 'text-slate-500' 
+    };
   };
   
   return (
@@ -260,18 +403,76 @@ export default function SeatingPage() {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-4 text-xs font-medium text-on-surface-variant bg-white/[0.02] border border-white/[0.06] p-3 px-4 rounded-xl">
-        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500/30 rounded border border-red-500/20" />Available</div>
-        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500/30 rounded border border-emerald-500/20" />Full Day</div>
-        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-amber-500/30 rounded border border-amber-500/20" />Morning</div>
-        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-purple-500/30 rounded border border-purple-500/20" />Evening</div>
-        <div className="flex items-center gap-2">
-          <div 
-            className="w-3 h-3 rounded border border-purple-500/20" 
-            style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.35) 50%, rgba(168, 85, 247, 0.35) 50%)' }} 
-          />
-          Shared / Multishift
+      {/* Custom Styles for Seat Blinking */}
+      <style>{`
+        @keyframes seatBlink {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
+          50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.6); transform: scale(1.15); background-color: #fca5a5 !important; border-color: #ef4444 !important; }
+        }
+        .seat-blink-active {
+          animation: seatBlink 0.5s ease-in-out 2;
+          z-index: 40;
+          position: relative;
+        }
+      `}</style>
+
+      {/* Legend & Search Bar */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-700 bg-white border border-slate-200 p-3 px-4 rounded-xl shadow-sm">
+          <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 bg-red-500/[0.07] rounded border border-red-300/60" />Available</div>
+          <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 bg-emerald-500/40 rounded border border-emerald-500/50" />Full Day</div>
+          <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 bg-amber-500/45 rounded border border-amber-500/60" />Morning</div>
+          <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 bg-purple-500/40 rounded border border-purple-500/50" />Evening</div>
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-3.5 h-3.5 rounded border border-purple-400 shadow-sm" 
+              style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.45) 50%, rgba(168, 85, 247, 0.45) 50%)' }} 
+            />
+            Shared / Multishift
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative w-full md:w-80 z-20">
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+            <input 
+              type="text" 
+              placeholder="Search student to find seat..." 
+              value={globalSearch}
+              onChange={(e) => {
+                setGlobalSearch(e.target.value);
+                setShowSearchDropdown(true);
+              }}
+              onFocus={() => setShowSearchDropdown(true)}
+              onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)}
+              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary shadow-sm"
+            />
+          </div>
+          
+          {/* Dropdown with mouse scroll */}
+          {showSearchDropdown && searchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 overflow-y-auto z-50 p-2 overscroll-contain">
+              {searchResults.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => handleSearchResultClick(m.seat_no)}
+                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 flex flex-col transition-colors border-b border-slate-50 last:border-0"
+                >
+                  <span className="text-sm font-bold text-slate-800">{m.full_name}</span>
+                  <div className="flex justify-between items-center mt-0.5">
+                    <span className="text-[10px] text-slate-500 font-mono">{m.permanent_id}</span>
+                    <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-black">Seat {m.seat_no}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {showSearchDropdown && globalSearch.length > 0 && searchResults.length === 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl p-4 text-center z-50">
+              <span className="text-xs font-semibold text-slate-500">No assigned student found</span>
+            </div>
+          )}
         </div>
       </div>
       
@@ -295,18 +496,27 @@ export default function SeatingPage() {
             return (
               <button
                 key={i}
+                id={`seat-btn-${seatId}`}
                 onClick={() => setSelectedSeat(seatId)}
                 style={style.style}
                 className={`aspect-square ${style.bg} rounded-lg border flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 ${
-                  isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105' : ''
-                }`}
+                  isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black' : ''
+                } ${blinkingSeat === seatId ? 'seat-blink-active' : ''}`}
                 title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
               >
-                <span className="text-[10px] font-bold text-white/50">{seatId}</span>
+                <span className={`text-[10px] font-bold ${style.textColor || 'text-white/50'}`}>{seatId}</span>
                 {style.dot === 'multishift' ? (
                   <div className="flex gap-0.5 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_4px_#f59e0b]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_4px_#a855f7]" />
+                    {occupants.map((occ, idx) => {
+                      const getDotColor = (s: string) => {
+                        if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
+                        if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
+                        return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
+                      };
+                      return (
+                        <span key={idx} className={`w-1.5 h-1.5 rounded-full ${getDotColor(occ.shift)}`} />
+                      );
+                    })}
                   </div>
                 ) : (
                   style.dot && <span className={`w-1.5 h-1.5 rounded-full ${style.dot} mt-0.5`} />
@@ -339,7 +549,7 @@ export default function SeatingPage() {
             </div>
             
             {/* Body */}
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-white">
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-white" data-lenis-prevent="true">
               {seatMap[selectedSeat] && seatMap[selectedSeat].length > 0 ? (
                 <div className="space-y-6">
                   <div>
@@ -393,7 +603,7 @@ export default function SeatingPage() {
                         />
                       </div>
 
-                      <div className="space-y-2 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                      <div className="space-y-2 max-h-[220px] overflow-y-auto custom-scrollbar pr-1" data-lenis-prevent="true">
                         {(() => {
                           const compatible = unassignedMembers.filter(m => m.shift === (seatMap[selectedSeat][0].shift === 'Morning' ? 'Evening' : 'Morning'));
                           const filtered = compatible.filter(m => m.full_name.toLowerCase().includes(modalSearch.toLowerCase()) || m.permanent_id.toLowerCase().includes(modalSearch.toLowerCase()));
@@ -450,7 +660,7 @@ export default function SeatingPage() {
                       </div>
 
                       {/* List */}
-                      <div className="space-y-2 overflow-y-auto custom-scrollbar pr-1 flex-1 min-h-[250px]">
+                      <div className="space-y-2 overflow-y-auto custom-scrollbar pr-1 max-h-[300px]" data-lenis-prevent="true">
                         {(() => {
                           const filtered = unassignedMembers.filter(m => m.full_name.toLowerCase().includes(modalSearch.toLowerCase()) || m.permanent_id.toLowerCase().includes(modalSearch.toLowerCase()));
                           
@@ -494,6 +704,56 @@ export default function SeatingPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* WhatsApp Notification Confirmation Modal */}
+      {whatsappModal && whatsappModal.show && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center p-4 dashboard-light-theme text-slate-800">
+          <div className="glass-pane-elevated rounded-3xl w-full max-w-lg overflow-hidden animate-scale-in border border-emerald-500/20 shadow-2xl bg-white">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-emerald-50">
+              <h2 className="text-base font-black text-emerald-600 font-manrope flex items-center gap-2">
+                <span className="material-symbols-outlined font-black">chat</span>
+                WhatsApp SMS Confirmation
+              </h2>
+              <button 
+                onClick={whatsappModal.onCancel}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-all"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Content Preview */}
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-slate-500 font-medium">
+                Do you want to send the following consolidated admission, seating, & payment details on WhatsApp?
+              </p>
+              
+              <div className="bg-[#f8fafc] border border-slate-200 rounded-xl p-4 text-xs font-mono text-slate-800 whitespace-pre-wrap max-h-60 overflow-y-auto" data-lenis-prevent="true">
+                {whatsappModal.message}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button 
+                onClick={whatsappModal.onCancel}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 transition-all"
+              >
+                Skip / Close
+              </button>
+              <button 
+                onClick={whatsappModal.onConfirm}
+                className="btn-primary !bg-emerald-600 hover:!bg-emerald-700 !text-white px-5 py-2.5 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md shadow-emerald-500/10 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm font-black">send</span>
+                Send on WhatsApp
+              </button>
             </div>
           </div>
         </div>,

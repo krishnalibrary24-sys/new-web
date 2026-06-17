@@ -3,6 +3,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
+import { getMemberStatus } from "@/lib/utils";
+import { logActivity } from "@/lib/activity";
+import { getTemplate, parseTemplate } from "@/lib/whatsapp";
 
 export default function DuesPage() {
   const { activeBranch } = useBranch();
@@ -22,43 +25,46 @@ export default function DuesPage() {
   const [searchDueSoon, setSearchDueSoon] = useState('');
   const [searchDefaulters, setSearchDefaulters] = useState('');
   const [searchPending, setSearchPending] = useState('');
+  const [duesTab, setDuesTab] = useState<'due-soon' | 'overdue' | 'pending'>('due-soon');
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const now = new Date();
-    const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
+  useEffect(() => {
+    let active = true;
+    
+    async function fetchData() {
+      setLoading(true);
+      const { data } = await supabase
+        .from('members')
+        .select('*')
+        .eq('branch', activeBranch)
+        .order('subscription_end_date', { ascending: true });
 
-    const { data } = await supabase
-      .from('members')
-      .select('*')
-      .eq('branch', activeBranch)
-      .order('subscription_end_date', { ascending: true });
+      if (!active) return;
 
-    if (data) {
-      setDueSoon(data.filter(m => {
-        if (!m.is_active || !m.subscription_end_date || m.left_at) return false;
-        const end = new Date(m.subscription_end_date);
-        return end >= todayZero && end <= in3Days;
-      }));
-      setDefaulters(data.filter(m => 
-        !m.left_at && (
-          !m.is_active || 
-          (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero) ||
-          (m.payment_due_date && new Date(m.payment_due_date) < todayZero)
-        )
-      ));
-      setPending(data.filter(m => 
-        !m.left_at &&
-        m.is_active &&
-        (m.pay_later === true || m.payment_due_date) &&
-        (!m.payment_due_date || new Date(m.payment_due_date) >= todayZero)
-      ));
+      if (data) {
+        setDueSoon(data.filter(m => {
+          const status = getMemberStatus(m);
+          return status.type === 'due-soon';
+        }));
+        setDefaulters(data.filter(m => {
+          const status = getMemberStatus(m);
+          return status.type === 'overdue';
+        }));
+        setPending(data.filter(m => {
+          const status = getMemberStatus(m);
+          return status.type === 'pending';
+        }));
+      }
+      setLoading(false);
     }
-    setLoading(false);
-  }, [activeBranch]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+    if (activeBranch) {
+      fetchData();
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [activeBranch]);
 
   const getDaysOverdue = (dateStr: string) => {
     if (!dateStr) return 0;
@@ -70,19 +76,39 @@ export default function DuesPage() {
     return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   };
 
-  const sendWhatsApp = (member: any, type: 'reminder' | 'overdue' | 'pending') => {
+  const sendWhatsApp = async (member: any, type: 'reminder' | 'overdue' | 'pending') => {
     const mobile = member.mobile.replace(/[^0-9]/g, '');
     const endDate = member.subscription_end_date ? new Date(member.subscription_end_date).toLocaleDateString() : 'N/A';
     const dueDate = member.payment_due_date ? new Date(member.payment_due_date).toLocaleDateString() : 'N/A';
     
-    let msg = "";
+    let templateStr = "";
+    let actionLabel = "";
     if (type === 'reminder') {
-      msg = `Dear ${member.full_name},\n\nThis is a friendly reminder from Krishna Library that your membership (${member.permanent_id}) is expiring on ${endDate}.\n\nPlease renew your subscription to continue enjoying uninterrupted access to your seat.\n\nRegards,\nKrishna Library — ${branchName}`;
+      templateStr = await getTemplate('due_soon_msg');
+      actionLabel = "expiring soon reminder";
     } else if (type === 'overdue') {
-      msg = `Dear ${member.full_name},\n\nYour Krishna Library membership (${member.permanent_id}) expired on ${endDate}. Your seat has been temporarily released.\n\nPlease visit the library at the earliest to renew your subscription.\n\nRegards,\nKrishna Library — ${branchName}`;
+      const daysOverdue = getDaysOverdue(member.subscription_end_date);
+      if (daysOverdue > 5) {
+        templateStr = await getTemplate('released_msg');
+      } else {
+        templateStr = await getTemplate('expired_msg');
+      }
+      actionLabel = "membership expired warning";
     } else if (type === 'pending') {
-      msg = `Dear ${member.full_name},\n\nThis is a gentle reminder regarding your pending payment for Krishna Library. As scheduled, the due date was ${dueDate}.\n\nPlease clear your pending dues at the earliest.\n\nRegards,\nKrishna Library — ${branchName}`;
+      templateStr = await getTemplate('pending_dues_msg');
+      actionLabel = "pending payment reminder";
     }
+
+    const templateVars = {
+      name: member.full_name,
+      permanent_id: member.permanent_id || '',
+      expiry: endDate,
+      due_date: dueDate,
+      branch: branchName
+    };
+    const msg = parseTemplate(templateStr, templateVars);
+
+    logActivity(activeBranch, "payment_chase", `Sent WhatsApp ${actionLabel} to student ${member.full_name} (${member.permanent_id})`);
     window.open(`https://wa.me/${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
@@ -143,9 +169,55 @@ export default function DuesPage() {
         </div>
       </div>
 
+      {/* ─── Mobile Tab Switcher (visible below xl) ─── */}
+      <div className="xl:hidden flex gap-1 p-1 bg-white/[0.04] rounded-2xl border border-white/[0.06] mb-4">
+        <button
+          onClick={() => setDuesTab('due-soon')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            duesTab === 'due-soon'
+              ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20 shadow-sm'
+              : 'text-on-surface-variant hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span className="material-symbols-outlined text-sm">schedule</span>
+          Due Soon
+          {dueSoon.length > 0 && (
+            <span className="w-5 h-5 rounded-full bg-orange-500/20 text-orange-400 text-[10px] font-black flex items-center justify-center">{dueSoon.length}</span>
+          )}
+        </button>
+        <button
+          onClick={() => setDuesTab('overdue')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            duesTab === 'overdue'
+              ? 'bg-red-500/15 text-red-400 border border-red-500/20 shadow-sm'
+              : 'text-on-surface-variant hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span className="material-symbols-outlined text-sm">warning</span>
+          Overdue
+          {defaulters.length > 0 && (
+            <span className="w-5 h-5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-black flex items-center justify-center">{defaulters.length}</span>
+          )}
+        </button>
+        <button
+          onClick={() => setDuesTab('pending')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            duesTab === 'pending'
+              ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20 shadow-sm'
+              : 'text-on-surface-variant hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span className="material-symbols-outlined text-sm">payments</span>
+          Pending
+          {pending.length > 0 && (
+            <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-black flex items-center justify-center">{pending.length}</span>
+          )}
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* ─── Due Soon Panel ─── */}
-        <div className="glass-pane-elevated !p-0 overflow-hidden !border-tertiary/15">
+        <div className={`glass-pane-elevated !p-0 overflow-hidden !border-tertiary/15 ${duesTab !== 'due-soon' ? 'hidden xl:block' : ''}`}>
           <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between gap-3 bg-tertiary/[0.03]">
             <div className="flex items-center gap-3">
               <div className="stat-icon stat-icon-warning w-9 h-9">
@@ -177,7 +249,7 @@ export default function DuesPage() {
               />
             </div>
           </div>
-          <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto" data-lenis-prevent>
+          <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto" data-lenis-prevent="true">
             {dueSoon.length === 0 ? (
               <div className="empty-state !py-12 text-center">
                 <span className="material-symbols-outlined text-4xl text-emerald-400/40 mb-3 block">check_circle</span>
@@ -202,7 +274,7 @@ export default function DuesPage() {
         </div>
 
         {/* ─── Defaulters Panel ─── */}
-        <div className="glass-pane-elevated !p-0 overflow-hidden !border-red-500/15">
+        <div className={`glass-pane-elevated !p-0 overflow-hidden !border-red-500/15 ${duesTab !== 'overdue' ? 'hidden xl:block' : ''}`}>
           <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between gap-3 bg-red-500/[0.03]">
             <div className="flex items-center gap-3">
               <div className="stat-icon stat-icon-danger w-9 h-9">
@@ -234,7 +306,7 @@ export default function DuesPage() {
               />
             </div>
           </div>
-          <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto" data-lenis-prevent>
+          <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto" data-lenis-prevent="true">
             {defaulters.length === 0 ? (
               <div className="empty-state !py-12 text-center">
                 <span className="material-symbols-outlined text-4xl text-emerald-400/40 mb-3 block">verified</span>
@@ -243,18 +315,28 @@ export default function DuesPage() {
             ) : sortedDefaulters.map(m => {
               const todayVal = new Date();
               const todayZeroVal = new Date(todayVal.getFullYear(), todayVal.getMonth(), todayVal.getDate());
-              const isPayLaterOverdue = m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZeroVal;
-              const overdueDays = isPayLaterOverdue 
+              const isDuesOverdue = m.payment_due_date && new Date(m.payment_due_date) < todayZeroVal;
+              const overdueDays = isDuesOverdue 
                 ? getDaysOverdue(m.payment_due_date)
                 : (m.subscription_end_date ? getDaysOverdue(m.subscription_end_date) : 0);
               
-              const badgeLabel = isPayLaterOverdue
-                ? `Payment Overdue (${overdueDays}d)`
+              const badgeLabel = isDuesOverdue
+                ? `₹${m.outstanding_dues || 0} Overdue (${overdueDays}d)`
                 : (m.subscription_end_date ? `${overdueDays}d overdue` : 'Overdue');
               
-              const dateTxt = isPayLaterOverdue
+              const dateTxt = isDuesOverdue
                 ? `Due was: ${new Date(m.payment_due_date).toLocaleDateString()}`
                 : (m.subscription_end_date ? `Expired: ${new Date(m.subscription_end_date).toLocaleDateString()}` : 'Expired');
+
+              let seatWarning = null;
+              if (m.subscription_end_date) {
+                const subDays = getDaysOverdue(m.subscription_end_date);
+                if (subDays >= 5) {
+                   seatWarning = <span className="text-red-400 font-bold ml-1">· Seat Released</span>;
+                } else if (subDays >= 0) {
+                   seatWarning = <span className="text-amber-400 font-semibold ml-1">· Releases in {5 - subDays}d</span>;
+                }
+              }
 
               return (
                 <DueMemberCard
@@ -264,10 +346,11 @@ export default function DuesPage() {
                   badgeText={badgeLabel}
                   badgeClass="bg-red-500/15 text-red-400 border border-red-500/20"
                   dateLabel={dateTxt}
-                  onMessage={() => sendWhatsApp(m, isPayLaterOverdue ? 'pending' : 'overdue')}
+                  seatWarning={seatWarning}
+                  onMessage={() => sendWhatsApp(m, isDuesOverdue ? 'pending' : 'overdue')}
                   onRenew={() => router.push(`/dashboard/record-payment?memberId=${m.id}`)}
                   messageLabel="Chase Up"
-                  renewLabel={isPayLaterOverdue ? "Collect Payment" : "Re-activate"}
+                  renewLabel={isDuesOverdue ? "Collect Payment" : "Re-activate"}
                   isLoading={actionId === m.id}
                 />
               );
@@ -276,7 +359,7 @@ export default function DuesPage() {
         </div>
 
         {/* ─── Pending Dues Panel ─── */}
-        <div className="glass-pane-elevated !p-0 overflow-hidden !border-amber-500/15">
+        <div className={`glass-pane-elevated !p-0 overflow-hidden !border-amber-500/15 ${duesTab !== 'pending' ? 'hidden xl:block' : ''}`}>
           <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between gap-3 bg-amber-500/[0.03]">
             <div className="flex items-center gap-3">
               <div className="stat-icon stat-icon-warning w-9 h-9 bg-amber-500/10 text-amber-500">
@@ -284,7 +367,7 @@ export default function DuesPage() {
               </div>
               <div>
                 <h2 className="text-base font-bold text-white font-manrope">Pending Dues</h2>
-                <p className="text-xs text-on-surface-variant">{pending.length} pay-later member(s)</p>
+                <p className="text-xs text-on-surface-variant">{pending.length} member(s) with dues</p>
               </div>
             </div>
             <select 
@@ -308,7 +391,7 @@ export default function DuesPage() {
               />
             </div>
           </div>
-          <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto" data-lenis-prevent>
+          <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto" data-lenis-prevent="true">
             {pending.length === 0 ? (
               <div className="empty-state !py-12 text-center">
                 <span className="material-symbols-outlined text-4xl text-emerald-400/40 mb-3 block">check_circle</span>
@@ -319,7 +402,7 @@ export default function DuesPage() {
                 key={m.id}
                 member={m}
                 type="pending"
-                badgeText="Pending"
+                badgeText={m.outstanding_dues > 0 ? `₹${m.outstanding_dues} Due` : "Pending"}
                 badgeClass="bg-amber-500/15 text-amber-400 border border-amber-500/20"
                 dateLabel={m.payment_due_date ? `Due: ${new Date(m.payment_due_date).toLocaleDateString()}` : 'No due date'}
                 onMessage={() => sendWhatsApp(m, 'pending')}
@@ -336,9 +419,9 @@ export default function DuesPage() {
   );
 }
 
-function DueMemberCard({ member, type, badgeText, badgeClass, dateLabel, onMessage, onRenew, messageLabel, renewLabel, isLoading }: {
+function DueMemberCard({ member, type, badgeText, badgeClass, dateLabel, seatWarning, onMessage, onRenew, messageLabel, renewLabel, isLoading }: {
   member: any; type: 'warning' | 'danger' | 'pending'; badgeText: string; badgeClass: string;
-  dateLabel: string; onMessage: () => void; onRenew: () => void;
+  dateLabel: string; seatWarning?: React.ReactNode; onMessage: () => void; onRenew: () => void;
   messageLabel: string; renewLabel: string; isLoading: boolean;
 }) {
   const borderColor = type === 'warning' ? 'border-tertiary/10 hover:border-tertiary/25' : type === 'danger' ? 'border-red-500/10 hover:border-red-500/25' : 'border-amber-500/10 hover:border-amber-500/25';
@@ -350,7 +433,9 @@ function DueMemberCard({ member, type, badgeText, badgeClass, dateLabel, onMessa
         <div>
           <div className="text-white font-semibold text-sm">{member.full_name}</div>
           <div className="text-xs text-primary font-medium mt-0.5">{member.permanent_id}</div>
-          <div className="text-xs text-on-surface-variant mt-0.5">{member.mobile} · Seat {member.seat_no || 'N/A'}</div>
+          <div className="text-xs text-on-surface-variant mt-0.5">
+            {member.mobile} · Seat {member.seat_no || member.previous_seat_no || 'N/A'} {seatWarning}
+          </div>
         </div>
         <div className="text-right">
           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}`}>{badgeText}</span>

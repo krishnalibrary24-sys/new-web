@@ -144,8 +144,8 @@ export default function ReservationForm() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
-                className="mt-2 bg-v-surface border-v-outline-variant/30 text-v-on-background focus:ring-v-primary"
+                placeholder="Enter your full name"
+                className="mt-2 bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-primary shadow-sm"
               />
             </div>
             
@@ -159,8 +159,8 @@ export default function ReservationForm() {
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 98765 43210"
-                className="mt-2 bg-v-surface border-v-outline-variant/30 text-v-on-background focus:ring-v-primary"
+                placeholder="Enter your phone no."
+                className="mt-2 bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-primary shadow-sm"
               />
             </div>
 
@@ -173,8 +173,8 @@ export default function ReservationForm() {
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="john@example.com"
-                className="mt-2 bg-v-surface border-v-outline-variant/30 text-v-on-background focus:ring-v-primary"
+                placeholder="Enter your email id"
+                className="mt-2 bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-primary shadow-sm"
               />
             </div>
 
@@ -183,10 +183,10 @@ export default function ReservationForm() {
                 Select Branch<span className="text-rose-500">*</span>
               </Label>
               <Select value={branch} onValueChange={setBranch}>
-                <SelectTrigger id="branch" className="mt-2 bg-v-surface border-v-outline-variant/30 text-v-on-background">
+                <SelectTrigger id="branch" className="mt-2 bg-white border border-slate-300 text-slate-900 focus:ring-2 focus:ring-primary shadow-sm">
                   <SelectValue placeholder="Select Branch" />
                 </SelectTrigger>
-                <SelectContent className="bg-v-surface border-v-outline-variant/30 text-v-on-background">
+                <SelectContent className="bg-white border border-slate-300 text-slate-900">
                   <SelectItem value="bengali-chowk">Bangali Chowk</SelectItem>
                   <SelectItem value="namnakala">Namnakala</SelectItem>
                 </SelectContent>
@@ -203,7 +203,7 @@ export default function ReservationForm() {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Enter your local area or full address"
-                className="mt-2 bg-v-surface border-v-outline-variant/30 text-v-on-background focus:ring-v-primary"
+                className="mt-2 bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-primary shadow-sm"
               />
             </div>
 

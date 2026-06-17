@@ -152,11 +152,6 @@ export default function VisitorNav() {
             {/* Playful BB8 Theme Toggle */}
             <ThemeSwitch />
 
-            <Link href="/login" className="kl-staff-btn hidden md:flex">
-              <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>shield_person</span>
-              Staff Login
-            </Link>
-
             <a href="#contact" onClick={e => scrollTo("contact", e)} className="kl-enroll-btn">
               <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>person_add</span>
               Enroll Now
@@ -199,9 +194,6 @@ export default function VisitorNav() {
               );
             })}
             <div className="kl-mobile-ctas">
-              <Link href="/login" onClick={() => setMenuOpen(false)} className="kl-mobile-staff">
-                Staff Login
-              </Link>
               <a href="#contact" onClick={e => scrollTo("contact", e)} className="kl-mobile-enroll">
                 Enroll Now
               </a>

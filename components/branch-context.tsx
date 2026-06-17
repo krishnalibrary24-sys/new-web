@@ -27,10 +27,14 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleSetBranch = (val: string) => {
-    setActiveBranch(val);
     const role = localStorage.getItem("krishna_role");
     if (role === 'admin') {
+      setActiveBranch(val);
       localStorage.setItem('krishna_admin_branch', val);
+    } else {
+      // Security enforcement: Non-admins cannot switch branches
+      if (role === 'bengali-chowk') setActiveBranch('bengali-chowk');
+      else if (role === 'namnakala') setActiveBranch('namnakala');
     }
   };
 

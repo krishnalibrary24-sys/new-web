@@ -1,6 +1,5 @@
 "use client";
 import React, { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -11,39 +10,36 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    
-    setTimeout(() => {
-      const validCredentials = [
-        { id: "ADMIN-01", pass: "admin123", role: "admin" },
-        { id: "BENGALI-01", pass: "bengali123", role: "bengali-chowk" },
-        { id: "NAMNA-01", pass: "namna123", role: "namnakala" }
-      ];
 
-      const user = validCredentials.find(c => c.id === staffId && c.pass === password);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staff_id: staffId, password }),
+      });
 
-      if (user) {
-        localStorage.setItem("krishna_role", user.role);
-        localStorage.setItem("krishna_staff_id", user.id);
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        localStorage.setItem("krishna_role", data.role);
+        localStorage.setItem("krishna_staff_id", data.staff_id);
         router.push("/dashboard");
       } else {
-        setError("Invalid Staff ID or Password.");
+        setError(data.error || "Invalid Staff ID or Password.");
         setLoading(false);
       }
-    }, 1200);
+    } catch (err) {
+      setError("Network error. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-v-surface">
-
-      {/* Back Link */}
-      <Link href="/" className="absolute top-6 left-6 flex items-center gap-2 text-v-on-surface-variant hover:text-v-primary transition-colors group z-20">
-        <span className="material-symbols-outlined text-lg transition-transform group-hover:-translate-x-1">arrow_back</span>
-        <span className="font-v-label-md text-v-label-md">Back to Library</span>
-      </Link>
 
       {/* Login Card */}
       <div className="bg-v-surface-container-lowest p-8 md:p-10 rounded-2xl w-full max-w-[420px] relative z-10 shadow-lg border border-v-outline-variant/20">
@@ -75,7 +71,7 @@ export default function LoginPage() {
                 value={staffId}
                 onChange={(e) => setStaffId(e.target.value)}
                 className="w-full bg-v-surface-bright border border-v-outline-variant/50 hover:border-v-primary/50 focus:border-v-primary rounded-xl px-4 py-3 pl-11 text-v-on-background placeholder-v-outline-variant focus:outline-none focus:ring-1 focus:ring-v-primary transition-all font-v-body-sm text-v-body-sm"
-                placeholder="e.g. ADMIN-01"
+                placeholder="Enter your Staff ID"
               />
             </div>
           </div>
@@ -125,28 +121,6 @@ export default function LoginPage() {
           <p className="font-v-body-sm text-v-body-sm text-v-on-surface-variant">
             Need help? Contact the system administrator.
           </p>
-        </div>
-
-        {/* Test Credentials */}
-        <div className="mt-6 bg-v-surface-container-low rounded-xl p-4 border border-v-outline-variant/20">
-          <h3 className="text-v-on-surface-variant font-v-label-md text-v-label-md mb-3 uppercase tracking-widest text-center">Demo Credentials</h3>
-          <div className="grid grid-cols-1 gap-2">
-            {[
-              { role: 'Admin', id: 'ADMIN-01', pass: 'admin123' },
-              { role: 'Bengali', id: 'BENGALI-01', pass: 'bengali123' },
-              { role: 'Namnakala', id: 'NAMNA-01', pass: 'namna123' },
-            ].map(cred => (
-              <button
-                key={cred.id}
-                type="button"
-                onClick={() => { setStaffId(cred.id); setPassword(cred.pass); }}
-                className="flex justify-between items-center px-4 py-2 rounded-lg hover:bg-v-surface-container-high transition-all text-left border border-transparent hover:border-v-outline-variant/30 group"
-              >
-                <span className="text-v-on-surface-variant font-v-label-md text-[10px] group-hover:text-v-on-background transition-colors uppercase tracking-wider">{cred.role}</span>
-                <span className="text-v-on-surface-variant font-mono text-[11px] font-bold group-hover:text-v-primary transition-colors tracking-widest">{cred.id}</span>
-              </button>
-            ))}
-          </div>
         </div>
       </div>
     </div>

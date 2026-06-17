@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from 'next/navigation';
+import { logActivity } from "@/lib/activity";
 
 export default function AdmissionPage() {
   const { activeBranch } = useBranch();
@@ -30,9 +31,26 @@ export default function AdmissionPage() {
   const [showRecordPopup, setShowRecordPopup] = useState(false);
 
   useEffect(() => {
+    if (editId) return; // Do not overwrite if editing an existing record
+    const urlName = searchParams.get('name');
+    const urlMobile = searchParams.get('mobile');
+    const urlShift = searchParams.get('shift');
+    const urlAddress = searchParams.get('address');
+    
+    if (urlName) setFullName(urlName);
+    if (urlMobile) {
+      // Clean up mobile to just digits if it comes with +91 or spaces
+      const cleanMobile = urlMobile.replace(/[^0-9]/g, '').slice(-10);
+      setMobile(cleanMobile);
+    }
+    if (urlShift) setShift(urlShift);
+    if (urlAddress && urlAddress !== 'N/A' && urlAddress !== 'None') setAddress(urlAddress);
+  }, [searchParams, editId]);
+
+  useEffect(() => {
     const fetchMemberToEdit = async () => {
       if (!editId) return;
-      const { data } = await supabase.from('members').select('*').eq('id', editId).maybeSingle();
+      const { data } = await supabase.from('members').select('*').eq('id', editId).eq('branch', activeBranch).maybeSingle();
       if (data) {
         setMobile(data.mobile || "");
         setFullName(data.full_name || "");
@@ -48,13 +66,20 @@ export default function AdmissionPage() {
       }
     };
     fetchMemberToEdit();
-  }, [editId]);
+  }, [editId, activeBranch]);
 
   useEffect(() => {
     if (editId) return;
     
     const checkExistingMember = async (phone: string) => {
-      const { data } = await supabase.from('members').select('*').eq('mobile', phone).maybeSingle();
+      const { data } = await supabase
+        .from('members')
+        .select('*')
+        .eq('mobile', phone)
+        .eq('branch', activeBranch)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
       if (data) {
         setFullName(data.full_name || "");
         setFatherName(data.father_name || "");
@@ -77,7 +102,24 @@ export default function AdmissionPage() {
     } else {
       setRecordFound(false);
     }
-  }, [mobile, editId]);
+  }, [mobile, editId, activeBranch]);
+
+  const handleClearForm = () => {
+    setMobile("");
+    setFullName("");
+    setFatherName("");
+    setDob("");
+    setGender("");
+    setAddress("");
+    setShift("Full Day");
+    setIsReserved(true);
+    setRecordFound(false);
+    setPermanentId("");
+    setExistingMemberState(null);
+    setShowRecordPopup(false);
+    setErrorMsg(null);
+    setSuccess(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,6 +176,7 @@ export default function AdmissionPage() {
           .from('members')
           .select('seat_no, previous_seat_no')
           .eq('permanent_id', permanentId)
+          .eq('branch', activeBranch)
           .maybeSingle();
 
         if (currentMember) {
@@ -200,15 +243,24 @@ export default function AdmissionPage() {
       if (existingMemberState) {
         const { data: updatedMember, error: updErr } = await supabase.from('members').update(payload).eq('id', existingMemberState.id).select().single();
         if (updErr) throw new Error(updErr.message);
-        if (updatedMember) memberId = updatedMember.id;
+        if (updatedMember) {
+          memberId = updatedMember.id;
+          logActivity(activeBranch, "admission_update", `Updated profile details for existing member: ${fullName} (${existingMemberState.permanent_id})`);
+        }
       } else if (recordFound && permanentId) {
-        const { data: updatedMember, error: updErr } = await supabase.from('members').update(payload).eq('permanent_id', permanentId).select().single();
+        const { data: updatedMember, error: updErr } = await supabase.from('members').update(payload).eq('permanent_id', permanentId).eq('branch', activeBranch).select().single();
         if (updErr) throw new Error(updErr.message);
-        if (updatedMember) memberId = updatedMember.id;
+        if (updatedMember) {
+          memberId = updatedMember.id;
+          logActivity(activeBranch, "admission_reactivate", `Re-activated and updated profile for member: ${fullName} (${permanentId})`);
+        }
       } else {
         const { data: insertedMember, error: insErr } = await supabase.from('members').insert([payload]).select().single();
         if (insErr) throw new Error(insErr.message);
-        if (insertedMember) memberId = insertedMember.id;
+        if (insertedMember) {
+          memberId = insertedMember.id;
+          logActivity(activeBranch, "admission_create", `Registered new student: ${fullName} (${finalId})`);
+        }
       }
 
       setSuccess(true);
@@ -218,38 +270,6 @@ export default function AdmissionPage() {
       setMobile(""); setFullName(""); setFatherName(""); setDob(""); setGender(""); setAddress("");
 
       if (!existingMemberState) {
-        // Dispatch Welcome WhatsApp message only for new admissions
-        const mobileClean = mobile.replace(/[^0-9]/g, '');
-        let welcomeTemplate = 
-          "🌟 *Welcome to Krishna Library!* 🌟\n" +
-          "Dear *{name}*,\n\n" +
-          "Your admission is successfully confirmed! 🎉 We are thrilled to have you join our learning community.\n\n" +
-          "📋 *Admission Details:*\n" +
-          "📍 *Branch:* {branch}\n" +
-          "🪑 *Seat:* {seat}\n" +
-          "🕒 *Shift:* {shift}\n" +
-          "📅 *Valid Till:* {expiry}\n\n" +
-          "📖 *\"Success is the sum of small efforts, repeated day in and day out.\"* 💪✨ Stay focused, keep pushing, and achieve your dreams!\n\n" +
-          "If you have any questions, feel free to visit the reception.\n\n" +
-          "Happy Learning! 🚀\n" +
-          "*Krishna Library Team* 📚";
-        
-        if (typeof window !== 'undefined') {
-          const savedWelcome = localStorage.getItem("krishna_welcome_msg");
-          if (savedWelcome) welcomeTemplate = savedWelcome;
-        }
-        
-        const branchLabel = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
-        
-        const msg = welcomeTemplate
-          .replace(/{name}/g, fullName)
-          .replace(/{branch}/g, branchLabel)
-          .replace(/{seat}/g, isReserved ? (seatToAllot || 'Pending Assignment') : 'Unreserved (No seat allotted)')
-          .replace(/{shift}/g, shift)
-          .replace(/{expiry}/g, 'Pending Payment Setup');
-
-        window.open(`https://wa.me/${mobileClean}?text=${encodeURIComponent(msg)}`, '_blank');
-
         if (memberId) {
           router.push(`/dashboard/record-payment?memberId=${memberId}`);
         }
@@ -273,7 +293,18 @@ export default function AdmissionPage() {
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Admission Portal</h1>
+          <h1 className="page-title flex items-center gap-4">
+            Admission Portal
+            <button 
+              onClick={handleClearForm}
+              type="button"
+              className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md bg-slate-500/10 text-slate-400 hover:bg-slate-500/20 transition-all border border-slate-500/10 cursor-pointer"
+              title="Clear all fields"
+            >
+              <span className="material-symbols-outlined text-[14px]">refresh</span>
+              Clear Form
+            </button>
+          </h1>
           <p className="page-subtitle">Register new members for {branchName} Branch</p>
         </div>
         {recordFound && (

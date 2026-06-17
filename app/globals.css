@@ -665,27 +665,33 @@ html.lenis, html.lenis body {
 /* ── Marquee & Review Card Styles ── */
 .bg-wash { background-color: #F5F7FF; }
 
-/* Marquee track — always scrolling, never pauses */
-.marquee-container { display: flex; overflow: hidden; user-select: none; gap: 2rem; }
+/* Marquee track — Pauses on hover or touch */
+.marquee-container { display: flex; overflow: hidden; user-select: none; gap: 2rem; touch-action: pan-y; }
 .marquee-content { flex-shrink: 0; display: flex; justify-content: space-around; min-width: 100%; gap: 2rem; animation: scroll 40s linear infinite; }
 @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(calc(-100% - 2rem)); } }
 
-/* Hover effect: hovered card zooms, siblings blur
-   Uses the group pattern on .marquee-container */
+.marquee-container:hover .marquee-content,
+.marquee-container:active .marquee-content {
+  animation-play-state: paused;
+}
+
+/* Hover/Touch effect: targeted card zooms, siblings blur */
 .review-card {
   transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), filter 0.3s ease, box-shadow 0.3s ease;
   will-change: transform, filter;
+  cursor: pointer;
 }
-.marquee-container:has(.review-card:hover) .review-card {
-  filter: blur(2.5px);
-  opacity: 0.55;
-  transform: scale(0.97);
+.marquee-container:has(.review-card:hover, .review-card:active) .review-card {
+  filter: blur(3px);
+  opacity: 0.5;
+  transform: scale(0.95);
 }
-.marquee-container:has(.review-card:hover) .review-card:hover {
+.marquee-container:has(.review-card:hover, .review-card:active) .review-card:hover,
+.marquee-container:has(.review-card:hover, .review-card:active) .review-card:active {
   filter: blur(0px);
   opacity: 1;
-  transform: scale(1.045);
-  box-shadow: 0 20px 48px rgba(0,49,120,0.13), 0 4px 12px rgba(0,0,0,0.06);
+  transform: scale(1.08);
+  box-shadow: 0 24px 54px rgba(0,49,120,0.18), 0 8px 16px rgba(0,0,0,0.08);
   z-index: 10;
   position: relative;
 }
@@ -1080,7 +1086,8 @@ html.lenis, html.lenis body {
 .dashboard-light-theme .bg-\[\#003178\],
 .dashboard-light-theme .bg-\[\#003178\] *,
 .dashboard-light-theme .bg-\[\#1e40af\],
-.dashboard-light-theme .bg-\[\#1e40af\] * {
+.dashboard-light-theme .bg-\[\#1e40af\] *,
+.dashboard-light-theme .text-white-force {
   color: #ffffff !important;
 }
 
@@ -1459,5 +1466,34 @@ html.lenis, html.lenis body {
 .dashboard-light-theme .student-list-item-hint {
   color: #64748b !important;
 }
+
+/* ─── Light Theme Visibility & Contrast Overrides for Warning/Pending Badges ─── */
+.dashboard-light-theme .bg-amber-500\/10 {
+  background-color: #fffbeb !important; /* Soft warm amber-50 background */
+}
+.dashboard-light-theme .border-amber-500\/20 {
+  border-color: #fde68a !important; /* Readable border amber-200 */
+}
+.dashboard-light-theme .text-amber-400 {
+  color: #92400e !important; /* Dark amber-800 for high visibility */
+}
+.dashboard-light-theme .text-amber-300 {
+  color: #78350f !important; /* Very dark amber-900 for value highlights */
+}
+.dashboard-light-theme .bg-amber-500\/20 {
+  background-color: #fcd34d !important; /* Solid amber-300 background for sub-badges */
+}
+
+/* Orange/Due Soon contrast fixes */
+.dashboard-light-theme .bg-orange-500\/10 {
+  background-color: #fff7ed !important; /* Soft warm orange-50 background */
+}
+.dashboard-light-theme .border-orange-500\/20 {
+  border-color: #fed7aa !important; /* orange-200 border */
+}
+.dashboard-light-theme .text-orange-400 {
+  color: #c2410c !important; /* Dark orange-700 */
+}
+
 
 

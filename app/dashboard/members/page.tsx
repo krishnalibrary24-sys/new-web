@@ -6,89 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
 import { logActivity } from "@/lib/activity";
 import { getLibrarySetting } from "@/lib/settings";
-
-const getMemberStatus = (member: any) => {
-  const today = new Date();
-  const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
-
-  // 1. Left
-  if (member.status === 'LEFT' || member.left_at) {
-    return {
-      type: 'left',
-      label: 'Left',
-      badgeClass: 'bg-red-500/10 border border-red-500/20 text-red-400 font-bold flex items-center gap-1 text-[11px]'
-    };
-  }
-
-  // 2. Inactive
-  if (!member.is_active) {
-    return {
-      type: 'inactive',
-      label: 'Inactive',
-      badgeClass: 'bg-slate-500/10 border border-slate-500/20 text-slate-400 font-bold flex items-center gap-1 text-[11px]'
-    };
-  }
-
-  const isExpired = member.subscription_end_date && new Date(member.subscription_end_date) < todayZero;
-  const isPayLaterOverdue = member.pay_later === true && member.payment_due_date && new Date(member.payment_due_date) < todayZero;
-
-  // 3. Overdue
-  if (isExpired || isPayLaterOverdue) {
-    return {
-      type: 'overdue',
-      label: 'Overdue',
-      badgeClass: 'badge badge-danger animate-pulse flex items-center gap-1 font-bold text-[11px]'
-    };
-  }
-
-  // 4. Active (Unreserved)
-  const isUnreserved = !!(member.permanent_id && member.permanent_id.includes('U'));
-  if (isUnreserved) {
-    return {
-      type: 'unreserved',
-      label: 'Active (Unreserved)',
-      badgeClass: 'bg-purple-500/10 border border-purple-500/20 text-purple-400 font-bold flex items-center gap-1 text-[11px]'
-    };
-  }
-
-  // 5. Active (Unassigned)
-  if (!member.seat_no) {
-    return {
-      type: 'unassigned',
-      label: 'Active (Unassigned)',
-      badgeClass: 'bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center gap-1 font-bold text-[11px]'
-    };
-  }
-
-  // 6. Active (Pending)
-  if (member.pay_later === true) {
-    return {
-      type: 'pending',
-      label: 'Active (Pending)',
-      badgeClass: 'bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1 font-bold text-[11px]'
-    };
-  }
-
-  // 7. Due Soon
-  if (member.subscription_end_date) {
-    const end = new Date(member.subscription_end_date);
-    if (end >= todayZero && end <= in3Days) {
-      return {
-        type: 'due-soon',
-        label: 'Due Soon',
-        badgeClass: 'bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center gap-1 font-bold text-[11px]'
-      };
-    }
-  }
-
-  // 8. Active (Paid)
-  return {
-    type: 'active-paid',
-    label: 'Active (Paid)',
-    badgeClass: 'badge badge-success flex items-center gap-1 font-bold text-[11px]'
-  };
-};
+import { getMemberStatus } from "@/lib/utils";
 
 export default function MembersPage() {
   const { activeBranch } = useBranch();
@@ -130,7 +48,7 @@ export default function MembersPage() {
   // Mark as Left states
   const [isMarkingLeft, setIsMarkingLeft] = useState<boolean>(false);
   const [leftWithDues, setLeftWithDues] = useState<boolean>(false);
-  const [leftLossAmount, setLeftLossAmount] = useState<number>(0);
+  const [leftLossAmount, setLeftLossAmount] = useState<number | "">(0);
   const [leftDate, setLeftDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [leftReason, setLeftReason] = useState<string>("");
 
@@ -149,6 +67,8 @@ export default function MembersPage() {
   const [editSeatNo, setEditSeatNo] = useState("");
   const [editJoiningDate, setEditJoiningDate] = useState("");
   const [editSubscriptionEndDate, setEditSubscriptionEndDate] = useState("");
+
+  const [memberPayments, setMemberPayments] = useState<any[]>([]);
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
@@ -200,6 +120,15 @@ export default function MembersPage() {
       setEditJoiningDate(selectedMember.joining_date ? selectedMember.joining_date.split('T')[0] : "");
       setEditSubscriptionEndDate(selectedMember.subscription_end_date ? selectedMember.subscription_end_date.split('T')[0] : "");
     }
+
+    if (selectedMember) {
+      supabase.from('payments').select('*').eq('member_id', selectedMember.id).order('paid_at', { ascending: false }).then(({ data }) => {
+        if (data) setMemberPayments(data);
+        else setMemberPayments([]);
+      });
+    } else {
+      setMemberPayments([]);
+    }
   }, [selectedMember]);
 
   const filteredMembers = members.filter(m => {
@@ -207,41 +136,24 @@ export default function MembersPage() {
       m.permanent_id.toLowerCase().includes(search.toLowerCase()) ||
       m.mobile.includes(search);
       
-    const today = new Date();
-    const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
-
-    const isUnreserved = !!(m.permanent_id && m.permanent_id.includes('U'));
-    const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < todayZero;
-    const isPayLaterOverdue = m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZero;
-    const isOverdue = m.is_active && (isExpired || isPayLaterOverdue);
-    
-    const isPending = m.is_active && m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZero);
-    
-    const isDueSoon = m.is_active && !isOverdue && !isPending && m.subscription_end_date && (() => {
-      const end = new Date(m.subscription_end_date);
-      return end >= todayZero && end <= in3Days;
-    })();
-    
-    const isActivePaid = m.is_active && !isOverdue && !isPending && !isUnreserved;
-
+    const statusInfo = getMemberStatus(m);
     let matchesFilter = false;
     if (filterStatus === 'all') {
       matchesFilter = true;
     } else if (filterStatus === 'active') {
-      matchesFilter = isActivePaid;
+      matchesFilter = statusInfo.type === 'active-paid' || statusInfo.type === 'unassigned';
     } else if (filterStatus === 'inactive') {
-      matchesFilter = !m.is_active && m.status !== 'LEFT' && !m.left_at;
+      matchesFilter = statusInfo.type === 'inactive';
     } else if (filterStatus === 'unreserved') {
-      matchesFilter = isUnreserved && m.is_active;
+      matchesFilter = statusInfo.type === 'unreserved';
     } else if (filterStatus === 'pending') {
-      matchesFilter = isPending;
+      matchesFilter = statusInfo.type === 'pending';
     } else if (filterStatus === 'overdue') {
-      matchesFilter = isOverdue;
+      matchesFilter = statusInfo.type === 'overdue';
     } else if (filterStatus === 'due-soon') {
-      matchesFilter = isDueSoon;
+      matchesFilter = statusInfo.type === 'due-soon';
     } else if (filterStatus === 'left') {
-      matchesFilter = m.status === 'LEFT' || !!m.left_at;
+      matchesFilter = statusInfo.type === 'left';
     }
     return matchesSearch && matchesFilter;
   }).sort((a, b) => {
@@ -280,46 +192,17 @@ export default function MembersPage() {
     return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(); // newest
   });
 
-  const todayVal = new Date();
-  const todayZeroVal = new Date(todayVal.getFullYear(), todayVal.getMonth(), todayVal.getDate());
-  const in3DaysVal = new Date(todayZeroVal.getTime() + 3 * 24 * 60 * 60 * 1000);
-
   const activeCount = members.filter(m => {
-    const isUnreserved = !!(m.permanent_id && m.permanent_id.includes('U'));
-    const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < todayZeroVal;
-    const isPayLaterOverdue = m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZeroVal;
-    const isOverdue = m.is_active && (isExpired || isPayLaterOverdue);
-    const isPending = m.is_active && m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZeroVal);
-    return m.is_active && !isOverdue && !isPending && !isUnreserved;
+    const type = getMemberStatus(m).type;
+    return type === 'active-paid' || type === 'unassigned';
   }).length;
 
-  const inactiveCount = members.filter(m => {
-    return !m.is_active && m.status !== 'LEFT' && !m.left_at;
-  }).length;
-
-  const unreservedCount = members.filter(m => m.is_active && m.permanent_id && m.permanent_id.includes('U')).length;
-
-  const pendingCount = members.filter(m => {
-    return m.is_active && m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZeroVal);
-  }).length;
-
-  const overdueCount = members.filter(m => {
-    const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < todayZeroVal;
-    const isPayLaterOverdue = m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZeroVal;
-    return m.is_active && (isExpired || isPayLaterOverdue);
-  }).length;
-
-  const dueSoonCount = members.filter(m => {
-    const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < todayZeroVal;
-    const isPayLaterOverdue = m.pay_later === true && m.payment_due_date && new Date(m.payment_due_date) < todayZeroVal;
-    const isOverdue = m.is_active && (isExpired || isPayLaterOverdue);
-    const isPending = m.is_active && m.pay_later === true && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZeroVal);
-    if (!m.is_active || isOverdue || isPending || !m.subscription_end_date) return false;
-    const end = new Date(m.subscription_end_date);
-    return end >= todayZeroVal && end <= in3DaysVal;
-  }).length;
-
-  const leftCount = members.filter(m => m.status === 'LEFT' || !!m.left_at).length;
+  const inactiveCount = members.filter(m => getMemberStatus(m).type === 'inactive').length;
+  const unreservedCount = members.filter(m => getMemberStatus(m).type === 'unreserved').length;
+  const pendingCount = members.filter(m => getMemberStatus(m).type === 'pending').length;
+  const overdueCount = members.filter(m => getMemberStatus(m).type === 'overdue').length;
+  const dueSoonCount = members.filter(m => getMemberStatus(m).type === 'due-soon').length;
+  const leftCount = members.filter(m => getMemberStatus(m).type === 'left').length;
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to permanently delete this member? This cannot be undone.")) return;
@@ -345,18 +228,21 @@ export default function MembersPage() {
     const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const baseDate = (currentEnd && currentEnd > todayZero) ? currentEnd : todayZero;
     
-    const joiningDateStr = baseDate.toISOString().split('T')[0];
+    const yyyy = baseDate.getFullYear();
+    const mm = String(baseDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(baseDate.getDate()).padStart(2, '0');
+    const joiningDateStr = `${yyyy}-${mm}-${dd}`;
 
     let totalPayable = 0;
     let durationStr = "";
     if (isDays) {
       totalPayable = Math.max(0, (renewPrice * durationDaysVal) - renewDiscount);
       durationStr = `${durationDaysVal} day(s)`;
-      baseDate.setDate(baseDate.getDate() + durationDaysVal);
+      baseDate.setDate(baseDate.getDate() + durationDaysVal - 1);
     } else {
       totalPayable = Math.max(0, (renewPrice * months) - renewDiscount);
       durationStr = `${months} month(s)`;
-      baseDate.setDate(baseDate.getDate() + (months * 30));
+      baseDate.setDate(baseDate.getDate() + (months * 30) - 1);
     }
     const newEnd = baseDate;
 
@@ -400,8 +286,23 @@ export default function MembersPage() {
 
     await supabase.from('members').update(updatedData).eq('id', member.id);
 
+    // Create Invoice for the renewal
+    const { data: newInv } = await supabase
+      .from('invoices')
+      .insert([{
+        member_id: member.id,
+        total_amount: totalPayable,
+        paid_amount: totalPayable,
+        due_amount: 0,
+        status: 'paid',
+        due_date: null
+      }])
+      .select()
+      .single();
+
     await supabase.from('payments').insert([{
       member_id: member.id,
+      invoice_id: newInv ? newInv.id : null,
       amount: totalPayable,
       branch: member.branch,
       payment_mode: renewPaymentMode,
@@ -415,7 +316,7 @@ export default function MembersPage() {
     setIsRenewingInline(false);
     setIsActionLoading(false);
     
-    window.open(`/invoice?id=${member.id}`, '_blank');
+    window.open(`/invoice?id=${newInv ? newInv.id : member.id}`, '_blank');
 
     const mobile = member.mobile.replace(/[^0-9]/g, '');
     const welcomeTemplate = await getLibrarySetting(
@@ -444,7 +345,7 @@ export default function MembersPage() {
         previous_seat_no: member.seat_no || member.previous_seat_no || null,
         seat_no: null, // Release the seat!
         left_with_dues: leftWithDues,
-        loss_amount: leftWithDues ? leftLossAmount : 0,
+        loss_amount: leftWithDues ? (Number(leftLossAmount) || 0) : 0,
         left_at: new Date(leftDate).toISOString(),
         left_reason: leftReason || "Member left the library",
         status: 'LEFT',
@@ -528,7 +429,7 @@ export default function MembersPage() {
       logActivity(activeBranch, "student_update", `Updated profile/subscription for ${editFullName} (${selectedMember.permanent_id})`);
 
       setMembers(prev => prev.map(m => m.id === selectedMember.id ? { ...m, ...updatedFields } : m));
-      setSelectedMember(prev => ({ ...prev, ...updatedFields }));
+      setSelectedMember((prev: any) => ({ ...prev, ...updatedFields }));
       setIsEditingProfile(false);
     } catch (err: any) {
       alert(err.message || "Failed to update profile.");
@@ -716,28 +617,28 @@ export default function MembersPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredMembers.map((member) => (
               <div key={member.id} onClick={() => setSelectedMember(member)} className="glass-pane-elevated !p-5 cursor-pointer group hover:border-primary/30 transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(0,0,0,0.3)]">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-100 border border-blue-200 flex items-center justify-center text-[#003178] font-black text-lg shadow-[inset_0_2px_4px_rgba(0,49,120,0.1)]">
+                <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
+                  <div className="flex items-center gap-3 min-w-[140px] max-w-full">
+                    <div className="w-12 h-12 shrink-0 rounded-2xl bg-blue-100 border border-blue-200 flex items-center justify-center text-[#003178] font-black text-lg shadow-[inset_0_2px_4px_rgba(0,49,120,0.1)]">
                       {member.full_name.charAt(0)}
                     </div>
-                    <div>
-                      <div className="text-white font-bold text-sm tracking-wide group-hover:text-primary transition-colors">{member.full_name}</div>
-                      <span className="badge badge-info text-[9px] mt-1 tracking-widest">{member.permanent_id}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white font-bold text-sm tracking-wide group-hover:text-primary transition-colors truncate pr-2">{member.full_name}</div>
+                      <span className="badge badge-info text-[9px] mt-1 tracking-widest inline-block whitespace-nowrap">{member.permanent_id}</span>
                     </div>
                   </div>
                   {(() => {
                     const status = getMemberStatus(member);
                     return (
-                      <span className={status.badgeClass}>
-                        {status.type === 'overdue' && <span className="material-symbols-outlined text-[12px]">warning</span>}
-                        {status.type === 'due-soon' && <span className="material-symbols-outlined text-[12px]">schedule</span>}
-                        {status.type === 'pending' && <span className="material-symbols-outlined text-[12px]">payments</span>}
-                        {status.type === 'unassigned' && <span className="material-symbols-outlined text-[12px]">event_seat</span>}
-                        {status.type === 'unreserved' && <span className="material-symbols-outlined text-[12px]">bookmark_border</span>}
-                        {status.type === 'active-paid' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
-                        {status.type === 'left' && <span className="material-symbols-outlined text-[12px]">directions_run</span>}
-                        {status.label}
+                      <span className={`${status.badgeClass} shrink-0 max-w-full truncate inline-flex items-center gap-1`}>
+                        {status.type === 'overdue' && <span className="material-symbols-outlined text-[12px] shrink-0">warning</span>}
+                        {status.type === 'due-soon' && <span className="material-symbols-outlined text-[12px] shrink-0">schedule</span>}
+                        {status.type === 'pending' && <span className="material-symbols-outlined text-[12px] shrink-0">payments</span>}
+                        {status.type === 'unassigned' && <span className="material-symbols-outlined text-[12px] shrink-0">event_seat</span>}
+                        {status.type === 'unreserved' && <span className="material-symbols-outlined text-[12px] shrink-0">bookmark_border</span>}
+                        {status.type === 'active-paid' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />}
+                        {status.type === 'left' && <span className="material-symbols-outlined text-[12px] shrink-0">directions_run</span>}
+                        <span className="truncate">{status.label}</span>
                       </span>
                     );
                   })()}
@@ -769,7 +670,7 @@ export default function MembersPage() {
           </div>
         ) : (
           <div className="glass-pane-elevated !p-0 overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" data-lenis-prevent="true">
               <table className="w-full text-left text-sm whitespace-nowrap table-premium">
                 <thead>
                   <tr className="border-b border-[#e2e8f0]">
@@ -1072,7 +973,7 @@ export default function MembersPage() {
                           label = `Pay Later (Pending: ₹${selectedMember.outstanding_dues || selectedMember.plan_amount || 0})`;
                           colorClass = "text-amber-800 font-bold animate-pulse";
                         } else if ((selectedMember.outstanding_dues || 0) > 0) {
-                          label = `Partial Payment (Remaining: ₹${selectedMember.outstanding_dues})`;
+                          label = `Partial Payment (Pending: ₹${selectedMember.outstanding_dues})`;
                           colorClass = "text-orange-700 font-bold animate-pulse";
                         } else {
                           label = "Paid (Clear)";
@@ -1092,24 +993,42 @@ export default function MembersPage() {
               </div>
 
               {/* Transaction Ledger */}
-              <h4 className="text-xs font-bold text-on-surface-variant mb-3 uppercase tracking-widest">Last Payment</h4>
-              <div className="bg-white/[0.03] border border-white/[0.04] rounded-xl overflow-hidden">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-white/[0.03] text-on-surface-variant text-xs uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-on-surface-variant mb-3 uppercase tracking-widest">Payment History</h4>
+              <div className="bg-white/[0.03] border border-white/[0.04] rounded-xl overflow-hidden max-h-48 overflow-y-auto" data-lenis-prevent="true">
+                <table className="w-full text-left text-sm relative">
+                  <thead className="bg-slate-900 sticky top-0 text-on-surface-variant text-xs uppercase tracking-wider">
                     <tr>
                       <th className="px-4 py-2.5">Date</th>
                       <th className="px-4 py-2.5">Amount</th>
-                      <th className="px-4 py-2.5">Plan</th>
-                      <th className="px-4 py-2.5">Status</th>
+                      <th className="px-4 py-2.5">Mode</th>
+                      <th className="px-4 py-2.5 w-1/2">Notes / Plan Details</th>
                     </tr>
                   </thead>
-                  <tbody className="text-white">
-                    <tr>
-                      <td className="px-4 py-3 border-t border-white/[0.04]">{selectedMember.created_at.split('T')[0]}</td>
-                      <td className="px-4 py-3 border-t border-white/[0.04] font-bold">₹{selectedMember.plan_amount}</td>
-                      <td className="px-4 py-3 border-t border-white/[0.04]">{selectedMember.shift}</td>
-                      <td className="px-4 py-3 border-t border-white/[0.04]"><span className="badge badge-success">Paid</span></td>
-                    </tr>
+                  <tbody className="text-white divide-y divide-white/[0.04]">
+                    {memberPayments.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="text-center py-4 text-on-surface-variant italic">
+                          No payment records found.
+                        </td>
+                      </tr>
+                    ) : (
+                      memberPayments.map(p => (
+                        <tr key={p.id} className="hover:bg-white/[0.02]">
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {new Date(p.paid_at || p.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'})}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-emerald-400">
+                            ₹{p.amount?.toLocaleString('en-IN')}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="badge badge-info">{p.payment_mode || "Cash"}</span>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-on-surface-variant max-w-[200px] truncate" title={p.notes}>
+                            {p.notes || "—"}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1117,8 +1036,8 @@ export default function MembersPage() {
               {/* Dynamic Renewal Options Expandable Card */}
               {/* Dynamic Renewal Options Expandable Card */}
               {isRenewingInline && (
-                <div className="mt-5 p-5 rounded-2xl bg-white/[0.02] border border-[#fdac29]/20 space-y-4 animate-fade-in-fast">
-                  <div className="flex items-center gap-2 text-[#fdac29] text-xs font-bold uppercase tracking-wider">
+                <div className="mt-5 p-5 rounded-2xl bg-white/[0.02] border border-amber-200 space-y-4 animate-fade-in-fast">
+                  <div className="flex items-center gap-2 text-amber-700 text-xs font-bold uppercase tracking-wider">
                     <span className="material-symbols-outlined text-base">payments</span>
                     Renewal Payment Customization
                   </div>
@@ -1334,7 +1253,10 @@ export default function MembersPage() {
                           type="number"
                           min="0"
                           value={leftLossAmount}
-                          onChange={(e) => setLeftLossAmount(Math.max(0, Number(e.target.value)))}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setLeftLossAmount(val === "" ? "" : Math.max(0, Number(val)));
+                          }}
                           className="input-premium !py-2 !text-sm w-full"
                         />
                       </div>

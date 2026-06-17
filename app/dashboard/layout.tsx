@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BranchProvider, useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
+import { logActivity } from "@/lib/activity";
 
 function DashboardInner({ children, role }: { children: React.ReactNode, role: string }) {
   const pathname = usePathname();
@@ -11,22 +12,73 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
   const isAdmin = role === "admin";
   const { activeBranch, setActiveBranch } = useBranch();
   const [duesCount, setDuesCount] = useState<number>(0);
+  const [enquiriesCount, setEnquiriesCount] = useState<number>(0);
 
   useEffect(() => {
     const fetchDuesCount = async () => {
       const { data } = await supabase
-        .from('invoices')
-        .select('*, member:members(branch)')
-        .gt('due_amount', 0);
+        .from('members')
+        .select('*')
+        .eq('branch', activeBranch);
       
       if (data) {
-        const filtered = data.filter(inv => inv.member && inv.member.branch === activeBranch);
-        setDuesCount(filtered.length);
+        let validDuesCount = 0;
+        const today = new Date();
+        const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
+        const fiveDaysAgo = new Date(todayZero.getTime() - 5 * 24 * 60 * 60 * 1000);
+
+        for (const m of data) {
+          if (m.status === 'LEFT' || m.left_at) continue;
+
+          // Auto-Release Seat Logic
+          if (m.seat_no && m.subscription_end_date) {
+            const end = new Date(m.subscription_end_date);
+            if (end < fiveDaysAgo) {
+              // Release the seat async in background
+              supabase.from('members')
+                .update({ previous_seat_no: m.seat_no, seat_no: null })
+                .eq('id', m.id)
+                .then(() => {
+                  logActivity(activeBranch, "seating", `Auto-released Seat #${m.seat_no} for ${m.full_name} (${m.permanent_id}) due to >5 days overdue.`);
+                });
+            }
+          }
+          
+          const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < todayZero;
+          const isDuesOverdue = m.outstanding_dues > 0 && m.payment_due_date && new Date(m.payment_due_date) < todayZero;
+          
+          if (isExpired || isDuesOverdue) {
+            validDuesCount++;
+            continue;
+          }
+          
+          const isNewSetupPending = !m.subscription_end_date;
+          const isDuesPending = (m.outstanding_dues > 0 || m.pay_later === true) && (!m.payment_due_date || new Date(m.payment_due_date) >= todayZero);
+          if (isNewSetupPending || isDuesPending) {
+            validDuesCount++;
+            continue;
+          }
+          
+          if (m.subscription_end_date) {
+            const end = new Date(m.subscription_end_date);
+            if (end >= todayZero && end <= in3Days) {
+              validDuesCount++;
+            }
+          }
+        }
+        setDuesCount(validDuesCount);
       }
+    };
+    
+    const fetchEnquiriesCount = async () => {
+      const { count } = await supabase.from('leads').select('*', { count: 'exact', head: true }).eq('branch', activeBranch);
+      setEnquiriesCount(count || 0);
     };
     
     if (activeBranch) {
       fetchDuesCount();
+      fetchEnquiriesCount();
     }
   }, [activeBranch]);
 
@@ -54,15 +106,18 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
     { name: "Invoices", icon: "receipt_long", path: "/dashboard/invoices" },
     { name: "Enquiries", icon: "contact_mail", path: "/dashboard/enquiries" },
     { name: "Expenses", icon: "trending_up", path: "/dashboard/expenses" },
-    { name: "Activities", icon: "history", path: "/dashboard/activities" },
-    ...(isAdmin ? [{ name: "Loss Payments", icon: "money_off", path: "/dashboard/loss-payment" }] : []),
-    { name: "Settings", icon: "settings", path: "/dashboard/settings" },
+    ...(isAdmin ? [
+      { name: "Activities", icon: "history", path: "/dashboard/activities" },
+      { name: "Loss Payments", icon: "money_off", path: "/dashboard/loss-payment" },
+      { name: "Erase Database", icon: "delete_sweep", path: "/dashboard/erase-database" },
+      { name: "Settings", icon: "settings", path: "/dashboard/settings" }
+    ] : []),
   ];
 
   const handleLogout = () => {
     localStorage.removeItem("krishna_role");
     localStorage.removeItem("krishna_staff_id");
-    router.push("/login");
+    router.push("/login-kl-staff2244");
   };
 
   const getRoleBadge = () => {
@@ -131,6 +186,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
               <Link 
                 key={link.path} 
                 href={link.path}
+                prefetch={true}
                 className={`sidebar-link ${isActive ? 'active' : 'text-[#475569] hover:bg-[#003178]/5 hover:text-[#003178]'}`}
               >
                 <span className="material-symbols-outlined text-lg" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>{link.icon}</span>
@@ -143,17 +199,24 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
           {navLinks.slice(5).map((link) => {
             const isActive = pathname === link.path;
             const isDues = link.name === "Dues";
+            const isEnquiries = link.name === "Enquiries";
             return (
               <Link 
                 key={link.path} 
                 href={link.path}
+                prefetch={true}
                 className={`sidebar-link ${isActive ? 'active' : 'text-[#475569] hover:bg-[#003178]/5 hover:text-[#003178]'}`}
               >
                 <span className="material-symbols-outlined text-lg" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>{link.icon}</span>
                 <span className="flex-1">{link.name}</span>
                 {isDues && duesCount > 0 && (
-                  <span className="bg-[#fdac29]/15 text-[#fdac29] text-[9px] font-black px-2 py-0.5 rounded-full border border-[#fdac29]/20 ml-auto animate-pulse">
-                    {duesCount}
+                  <span className="bg-red-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 min-w-[18px] text-center rounded-full ml-auto shadow-[0_2px_4px_rgba(239,68,68,0.25)]">
+                    {duesCount > 9 ? "9+" : duesCount}
+                  </span>
+                )}
+                {isEnquiries && enquiriesCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 min-w-[18px] text-center rounded-full ml-auto shadow-[0_2px_4px_rgba(239,68,68,0.25)]">
+                    {enquiriesCount > 9 ? "9+" : enquiriesCount}
                   </span>
                 )}
               </Link>
@@ -198,7 +261,6 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
         </div>
       </main>
  
-      {/* ═══ Mobile Bottom Nav ═══ */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-[#e2e8f0] z-50 px-1 py-1.5 flex justify-around pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
         {navLinks.slice(0, 5).map((link) => {
           const isActive = pathname === link.path;
@@ -206,7 +268,8 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
             <Link 
               key={link.path} 
               href={link.path}
-              className={`flex flex-col items-center py-1.5 px-2 rounded-xl transition-all ${
+              prefetch={true}
+              className={`flex flex-col items-center py-1.5 px-2 rounded-xl transition-all relative ${
                 isActive ? "text-[#003178]" : "text-[#64748b]"
               }`}
             >
@@ -229,7 +292,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     const savedRole = localStorage.getItem("krishna_role");
     if (!savedRole) {
-      router.push("/login");
+      router.push("/login-kl-staff2244");
     } else {
       setRole(savedRole);
     }

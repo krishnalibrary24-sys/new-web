@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from 'next/navigation';
 
 interface ActivityLog {
   id: string;
@@ -15,10 +16,23 @@ interface ActivityLog {
 export default function ActivitiesPage() {
   const { activeBranch } = useBranch();
   const branchName = activeBranch === 'namnakala' ? 'Namnakala' : 'Bangali Chowk';
+  const router = useRouter();
 
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const role = localStorage.getItem("krishna_role");
+    if (role !== "admin") {
+      router.push("/dashboard");
+    } else {
+      setIsAdmin(true);
+    }
+    setCheckingAuth(false);
+  }, [router]);
 
   // Search & Filter state
   const [search, setSearch] = useState("");
@@ -31,6 +45,14 @@ export default function ActivitiesPage() {
     setLoading(true);
     setErrorMsg(null);
     try {
+      // Auto-cleanup: delete activity logs older than 30 days from backend
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      await supabase
+        .from('activity_logs')
+        .delete()
+        .lt('created_at', thirtyDaysAgo.toISOString());
+
       const { data, error } = await supabase
         .from('activity_logs')
         .select('*')
@@ -59,6 +81,37 @@ export default function ActivitiesPage() {
     }
   }, [activeBranch]);
 
+  const handleDeleteLog = async (id: string) => {
+    if (!confirm("Are you sure you want to permanently delete this activity log from the server?")) return;
+    try {
+      const { error } = await supabase.from('activity_logs').delete().eq('id', id);
+      if (error) throw error;
+      setLogs(prev => prev.filter(l => l.id !== id));
+    } catch (err: any) {
+      alert("Error deleting log: " + err.message);
+    }
+  };
+
+  const handleClearAllLogs = async () => {
+    if (!confirm("WARNING: This will permanently delete ALL activity logs for this branch from the backend server!\n\nAre you sure you want to proceed?")) return;
+    const confirmText = prompt("Type 'CLEAR ALL' to confirm deletion of all activity logs:");
+    if (confirmText !== "CLEAR ALL") {
+      alert("Confirmation failed. History was not cleared.");
+      return;
+    }
+    try {
+      setLoading(true);
+      const { error } = await supabase.from('activity_logs').delete().eq('branch', activeBranch);
+      if (error) throw error;
+      setLogs([]);
+      alert("All activities successfully erased.");
+    } catch (err: any) {
+      alert("Error clearing history: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
@@ -78,24 +131,24 @@ export default function ActivitiesPage() {
   const getActionBadge = (actionType: string) => {
     const type = actionType.toLowerCase();
     if (type.includes("admission")) {
-      return { label: "Admission", class: "bg-blue-500/10 text-blue-600 border border-blue-500/20" };
+      return { label: "Admission", class: "!bg-blue-500/15 !text-blue-700 border border-blue-500/25" };
     }
     if (type.includes("payment")) {
-      return { label: "Payment", class: "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" };
+      return { label: "Payment", class: "!bg-emerald-500/22 !text-emerald-700 border border-emerald-500/30" };
     }
     if (type.includes("seating")) {
-      return { label: "Seating", class: "bg-amber-500/10 text-amber-600 border border-amber-500/20" };
+      return { label: "Seating", class: "!bg-amber-500/25 !text-amber-800 border border-amber-500/30" };
     }
     if (type.includes("expense")) {
-      return { label: "Expense", class: "bg-rose-500/10 text-rose-600 border border-rose-500/20" };
+      return { label: "Expense", class: "!bg-rose-500/15 !text-rose-700 border border-rose-500/25" };
     }
     if (type.includes("enquiry")) {
-      return { label: "Enquiry", class: "bg-cyan-500/10 text-cyan-600 border border-cyan-500/20" };
+      return { label: "Enquiry", class: "!bg-cyan-500/15 !text-cyan-700 border border-cyan-500/25" };
     }
     if (type.includes("suspend") || type.includes("activate") || type.includes("left") || type.includes("renew")) {
-      return { label: "Membership", class: "bg-purple-500/10 text-purple-600 border border-purple-500/20" };
+      return { label: "Membership", class: "!bg-purple-500/15 !text-purple-700 border border-purple-500/25" };
     }
-    return { label: actionType, class: "bg-slate-500/10 text-slate-600 border border-slate-500/20" };
+    return { label: actionType, class: "!bg-slate-500/10 !text-slate-600 border border-slate-500/20" };
   };
 
   // Filter logs locally based on criteria
@@ -163,6 +216,17 @@ export default function ActivitiesPage() {
     return matchesSearch && matchesAction && matchesDate;
   });
 
+  if (checkingAuth) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <span className="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span>
+        <span className="text-sm text-slate-500 font-medium">Checking authorization...</span>
+      </div>
+    );
+  }
+
+  if (!isAdmin) return null;
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -171,14 +235,24 @@ export default function ActivitiesPage() {
           <h1 className="page-title">Activities Log</h1>
           <p className="page-subtitle">Track staff operations and database changes in {branchName}</p>
         </div>
-        <button 
-          onClick={fetchLogs}
-          disabled={loading}
-          className="btn-secondary !py-2 !px-3 flex items-center gap-2 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-all font-semibold shadow-sm text-xs rounded-xl self-start sm:self-auto"
-        >
-          <span className={`material-symbols-outlined text-sm ${loading ? 'animate-spin' : ''}`}>refresh</span>
-          Refresh
-        </button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          <button 
+            onClick={fetchLogs}
+            disabled={loading}
+            className="btn-secondary !py-2 !px-3 flex items-center gap-2 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-all font-semibold shadow-sm text-xs rounded-xl"
+          >
+            <span className={`material-symbols-outlined text-sm ${loading ? 'animate-spin' : ''}`}>refresh</span>
+            Refresh
+          </button>
+          <button 
+            onClick={handleClearAllLogs}
+            disabled={loading || logs.length === 0}
+            className="btn-secondary !py-2 !px-3 flex items-center gap-2 border-red-200 text-red-600 bg-white hover:bg-red-50 hover:border-red-300 transition-all font-semibold shadow-sm text-xs rounded-xl"
+          >
+            <span className="material-symbols-outlined text-sm">delete_sweep</span>
+            Clear History
+          </button>
+        </div>
       </div>
 
       {/* Schema Missing Warning */}
@@ -361,6 +435,15 @@ CREATE POLICY "anon_all_activity_logs" ON public.activity_logs FOR ALL TO anon, 
                           </span>
                         </div>
                       </div>
+
+                      {/* Delete button (visible on hover) */}
+                      <button 
+                        onClick={() => handleDeleteLog(log.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg self-center"
+                        title="Delete log permanently"
+                      >
+                        <span className="material-symbols-outlined text-base">delete</span>
+                      </button>
                     </div>
                   );
                 })}

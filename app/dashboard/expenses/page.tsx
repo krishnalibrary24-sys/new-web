@@ -14,6 +14,7 @@ export default function ExpensesPage() {
   // Form State
   const [isAdding, setIsAdding] = useState(false);
   const [category, setCategory] = useState('Rent');
+  const [customCategory, setCustomCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
@@ -44,17 +45,19 @@ export default function ExpensesPage() {
     if (!amount) return;
     
     setSubmitting(true);
+    const finalCategory = category === 'Other' ? (customCategory.trim() || 'Other') : category;
     await supabase.from('expenses').insert([{
       branch: activeBranch,
-      category,
+      category: finalCategory,
       amount: parseInt(amount),
       description,
       expense_date: expenseDate
     }]);
     
-    logActivity(activeBranch, "expense_added", `Recorded new expense: Category: ${category}, Amount: ₹${amount}, Details: ${description}`);
+    logActivity(activeBranch, "expense_added", `Recorded new expense: Category: ${finalCategory}, Amount: ₹${amount}, Details: ${description}`);
     
     setCategory('Rent');
+    setCustomCategory('');
     setAmount('');
     setDescription('');
     setExpenseDate(new Date().toISOString().split('T')[0]);
@@ -116,7 +119,7 @@ export default function ExpensesPage() {
               <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">Category</label>
               <select 
                 value={category} 
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) => { setCategory(e.target.value); if (e.target.value !== 'Other') setCustomCategory(''); }}
                 className="w-full input-premium appearance-none [&>option]:bg-white [&>option]:text-slate-800"
               >
                 <option>Rent</option>
@@ -127,6 +130,17 @@ export default function ExpensesPage() {
                 <option>Marketing</option>
                 <option>Other</option>
               </select>
+              {category === 'Other' && (
+                <input
+                  type="text"
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  placeholder="Type custom category name..."
+                  className="w-full input-premium mt-2"
+                  autoFocus
+                  required
+                />
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">Amount (₹)</label>
