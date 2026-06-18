@@ -75,6 +75,24 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
   });
   const [loading, setLoading] = useState(true);
 
+  // Month selector state
+  const todayDate = new Date();
+  const currentMonthValue = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}`;
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthValue);
+
+  const getMonthOptions = () => {
+    const options = [{ label: "All Time", value: "all" }];
+    const today = new Date();
+    // 12 months in past to 3 months in future
+    for (let i = -12; i <= 3; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      options.push({ label, value });
+    }
+    return options;
+  };
+
   // Raw members & payments for detailed click inspection
   const [rawMembers, setRawMembers] = useState<any[]>([]);
   const [rawPayments, setRawPayments] = useState<any[]>([]);
@@ -119,21 +137,36 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           const today = new Date();
           today.setHours(0,0,0,0);
 
+          // Determine month date range
+          const isFiltered = selectedMonth !== "all";
+          let startDate: Date | null = null;
+          let endDate: Date | null = null;
+          if (isFiltered) {
+            const [y, m] = selectedMonth.split('-').map(Number);
+            startDate = new Date(y, m - 1, 1);
+            endDate = new Date(y, m, 0, 23, 59, 59, 999);
+          }
+
           // Active members who have not left
           const activeMembers = members.filter(m => m.is_active && !m.left_at);
 
-          // Calculate Total Received from ALL payments in the branch
+          // Calculate Total Received
           let receivedRevenueVal = 0;
           let cashRevenueVal = 0;
           let onlineRevenueVal = 0;
           
           (payments || []).forEach(p => {
              const amt = Number(p.amount || 0);
-             receivedRevenueVal += amt;
-             if (p.payment_mode === 'Cash') {
-               cashRevenueVal += amt;
-             } else {
-               onlineRevenueVal += amt;
+             const paidDate = p.paid_at ? new Date(p.paid_at) : null;
+             const matchesMonth = !isFiltered || (paidDate && paidDate >= startDate! && paidDate <= endDate!);
+             
+             if (matchesMonth) {
+               receivedRevenueVal += amt;
+               if (p.payment_mode === 'Cash') {
+                 cashRevenueVal += amt;
+               } else {
+                 onlineRevenueVal += amt;
+               }
              }
           });
 
@@ -144,8 +177,6 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           const nonLeftMembers = members.filter(m => !m.left_at);
 
           nonLeftMembers.forEach(m => {
-            const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < today;
-            
             let memberDues = 0;
             if (m.pay_later) {
               memberDues = Number(m.outstanding_dues || m.plan_amount || 0);
@@ -153,22 +184,52 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
               memberDues = Number(m.outstanding_dues || 0);
             }
 
-            pendingDuesVal += memberDues;
+            // Check if the due date falls in the selected month
+            let isDueInMonth = false;
+            if (!isFiltered) {
+              isDueInMonth = true;
+            } else {
+              if (m.payment_due_date) {
+                const dueDate = new Date(m.payment_due_date);
+                isDueInMonth = dueDate >= startDate! && dueDate <= endDate!;
+              } else {
+                const createdDate = m.created_at ? new Date(m.created_at) : null;
+                isDueInMonth = !!(createdDate && createdDate >= startDate! && createdDate <= endDate!);
+              }
+            }
+
+            if (isDueInMonth) {
+              pendingDuesVal += memberDues;
+            }
 
             // Expected renewal if expired (only if no outstanding partial dues)
-            if (isExpired && !m.pay_later && memberDues === 0) {
-              overdueExpectedVal += (m.plan_amount || 0);
+            if (m.subscription_end_date) {
+              const endDateObj = new Date(m.subscription_end_date);
+              const isExpired = endDateObj < today;
+              const matchesMonth = !isFiltered || (endDateObj >= startDate! && endDateObj <= endDate!);
+              
+              if (matchesMonth) {
+                if (m.pay_later) {
+                  // Already counted under pendingDuesVal
+                } else if (isExpired && memberDues === 0) {
+                  overdueExpectedVal += (m.plan_amount || 0);
+                }
+              }
             }
           });
 
           // Upcoming Revenue = Pending Dues + Expected renewal of expired/inactive members
           const upcomingRevenueVal = pendingDuesVal + overdueExpectedVal;
-
           const totalRevenueVal = receivedRevenueVal + upcomingRevenueVal;
 
           // Loss Payments and Left Members count
           // Only show/count members marked as left with dues AND outstanding loss amount > 0
-          const lossMembers = members.filter(m => m.left_with_dues && m.left_at && (m.loss_amount || 0) > 0);
+          const lossMembers = members.filter(m => {
+            if (!m.left_with_dues || !m.left_at || !(m.loss_amount || 0)) return false;
+            if (!isFiltered) return true;
+            const leftDate = new Date(m.left_at);
+            return leftDate >= startDate! && leftDate <= endDate!;
+          });
           const lossRevenueVal = lossMembers.reduce((sum, m) => sum + (m.loss_amount || 0), 0);
           const leftMembersCount = lossMembers.length;
 
@@ -211,12 +272,21 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
     return () => {
       active = false;
     };
-  }, [activeBranch]);
+  }, [activeBranch, selectedMonth]);
 
   const getInspectData = () => {
     if (!inspectCategory) return [];
     const today = new Date();
     today.setHours(0,0,0,0);
+
+    const isFiltered = selectedMonth !== "all";
+    let startDate: Date | null = null;
+    let endDate: Date | null = null;
+    if (isFiltered) {
+      const [y, m] = selectedMonth.split('-').map(Number);
+      startDate = new Date(y, m - 1, 1);
+      endDate = new Date(y, m, 0, 23, 59, 59, 999);
+    }
 
     const getLatestDate = (m: any) => {
         const mPayments = rawPayments.filter(p => p.member_id === m.id);
@@ -236,34 +306,68 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
     if (inspectCategory === "Total Revenue") {
       filtered = rawMembers.map(m => {
         const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < today;
-        const mPayments = rawPayments.filter(p => p.member_id === m.id);
-        const lifetimePaid = mPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        const mPayments = rawPayments.filter(p => {
+          if (p.member_id !== m.id) return false;
+          if (!isFiltered) return true;
+          const paidDate = p.paid_at ? new Date(p.paid_at) : null;
+          return !!(paidDate && paidDate >= startDate! && paidDate <= endDate!);
+        });
+        const paidThisMonth = mPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
         
         let pending = 0;
-
-        if (m.left_at) {
-          pending = 0;
-        } else if (m.pay_later) {
-          pending = m.outstanding_dues || m.plan_amount || 0;
-        } else {
-          pending = m.outstanding_dues || 0;
+        let isDueInMonth = false;
+        if (!isFiltered) {
+          isDueInMonth = true;
+          if (m.pay_later) {
+            pending = m.outstanding_dues || m.plan_amount || 0;
+          } else {
+            pending = m.outstanding_dues || 0;
+          }
           if (isExpired && pending === 0) {
             pending = m.plan_amount || 0;
+          }
+        } else {
+          // Check if due date falls in this month
+          if (m.payment_due_date) {
+            const dueDate = new Date(m.payment_due_date);
+            isDueInMonth = dueDate >= startDate! && dueDate <= endDate!;
+          } else {
+            const createdDate = m.created_at ? new Date(m.created_at) : null;
+            isDueInMonth = !!(createdDate && createdDate >= startDate! && createdDate <= endDate!);
+          }
+          if (isDueInMonth) {
+            if (m.pay_later) {
+              pending = m.outstanding_dues || m.plan_amount || 0;
+            } else {
+              pending = m.outstanding_dues || 0;
+            }
+          }
+          if (m.subscription_end_date) {
+            const endDateObj = new Date(m.subscription_end_date);
+            const isExpiringInMonth = endDateObj >= startDate! && endDateObj <= endDate!;
+            if (isExpiringInMonth && !m.pay_later && pending === 0 && endDateObj < today) {
+              pending = m.plan_amount || 0;
+            }
           }
         }
 
         return {
           ...m,
           inspectLabel: m.left_at 
-            ? `Lifetime Paid: ₹${lifetimePaid} | Left Member` 
-            : `Lifetime Paid: ₹${lifetimePaid} | Pending Dues: ₹${pending}`,
+            ? `Paid: ₹${paidThisMonth} | Left Member` 
+            : `Paid: ₹${paidThisMonth} | Upcoming/Dues: ₹${pending}`,
           inspectSub: m.left_at ? `Left Member · Shift: ${m.shift}` : m.shift,
-          inspectSortVal: lifetimePaid + pending
+          inspectSortVal: paidThisMonth + pending
         };
-      }).filter(m => !m.left_at || (m.left_at && (m.inspectSortVal || 0) > 0));
+      }).filter(m => m.inspectSortVal > 0);
     } else if (inspectCategory === "Received") {
       filtered = rawMembers.map(m => {
-        const mPayments = rawPayments.filter(p => p.member_id === m.id);
+        const mPayments = rawPayments.filter(p => {
+          if (p.member_id !== m.id) return false;
+          if (!isFiltered) return true;
+          const paidDate = p.paid_at ? new Date(p.paid_at) : null;
+          return !!(paidDate && paidDate >= startDate! && paidDate <= endDate!);
+        });
         const paid = mPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
         return { ...m, paid };
       }).filter(m => m.paid > 0).map(m => ({
@@ -276,20 +380,41 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
       }));
     } else if (inspectCategory === "Upcoming") {
       filtered = rawMembers.filter(m => !m.left_at).map(m => {
-        const isExpired = m.subscription_end_date && new Date(m.subscription_end_date) < today;
         let upcoming = 0;
         let reason = "";
 
-        if (m.pay_later) {
-          upcoming = Number(m.outstanding_dues || m.plan_amount || 0);
-          reason = "Pay Later (Deferred)";
+        let isDueInMonth = false;
+        if (!isFiltered) {
+          isDueInMonth = true;
         } else {
-          upcoming = Number(m.outstanding_dues || 0);
-          if (upcoming > 0) {
-            reason = `Partial Payment Dues (Due: ${m.payment_due_date ? new Date(m.payment_due_date).toLocaleDateString() : 'N/A'})`;
-          } else if (isExpired) {
+          if (m.payment_due_date) {
+            const dueDate = new Date(m.payment_due_date);
+            isDueInMonth = dueDate >= startDate! && dueDate <= endDate!;
+          } else {
+            const createdDate = m.created_at ? new Date(m.created_at) : null;
+            isDueInMonth = !!(createdDate && createdDate >= startDate! && createdDate <= endDate!);
+          }
+        }
+
+        if (isDueInMonth) {
+          if (m.pay_later) {
+            upcoming = Number(m.outstanding_dues || m.plan_amount || 0);
+            reason = "Pay Later (Deferred)";
+          } else {
+            upcoming = Number(m.outstanding_dues || 0);
+            if (upcoming > 0) {
+              reason = `Partial Payment Dues (Due: ${m.payment_due_date ? new Date(m.payment_due_date).toLocaleDateString() : 'N/A'})`;
+            }
+          }
+        }
+
+        if (m.subscription_end_date) {
+          const endDateObj = new Date(m.subscription_end_date);
+          const isExpired = endDateObj < today;
+          const matchesMonth = !isFiltered || (endDateObj >= startDate! && endDateObj <= endDate!);
+          if (matchesMonth && isExpired && !m.pay_later && upcoming === 0) {
             upcoming = m.plan_amount || 0;
-            reason = `Subscription Expired on ${new Date(m.subscription_end_date).toLocaleDateString()}`;
+            reason = `Subscription Expired on ${endDateObj.toLocaleDateString()}`;
           }
         }
 
@@ -301,7 +426,12 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
         inspectSortVal: m.upcoming
       }));
     } else if (inspectCategory === "Loss Payment" || inspectCategory === "Left Members") {
-      filtered = rawMembers.filter(m => m.left_with_dues && m.left_at && (m.loss_amount || 0) > 0).map(m => ({
+      filtered = rawMembers.filter(m => {
+        if (!m.left_with_dues || !m.left_at || !(m.loss_amount || 0)) return false;
+        if (!isFiltered) return true;
+        const leftDate = new Date(m.left_at);
+        return leftDate >= startDate! && leftDate <= endDate!;
+      }).map(m => ({
         ...m,
         inspectLabel: `Loss Amount: ₹${m.loss_amount}`,
         inspectSub: `Left: ${new Date(m.left_at).toLocaleDateString()} · Reason: ${m.left_reason || 'N/A'}`,
@@ -323,7 +453,12 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
       }));
     } else if (inspectCategory === "Cash Revenue") {
       filtered = rawMembers.map(m => {
-        const mPayments = rawPayments.filter(p => p.member_id === m.id);
+        const mPayments = rawPayments.filter(p => {
+          if (p.member_id !== m.id) return false;
+          if (!isFiltered) return true;
+          const paidDate = p.paid_at ? new Date(p.paid_at) : null;
+          return !!(paidDate && paidDate >= startDate! && paidDate <= endDate!);
+        });
         const paidCash = mPayments.filter(p => p.payment_mode === 'Cash').reduce((sum, p) => sum + Number(p.amount || 0), 0);
         return { ...m, paidCash };
       }).filter(m => m.paidCash > 0).map(m => ({
@@ -336,7 +471,12 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
       }));
     } else if (inspectCategory === "Online Revenue") {
       filtered = rawMembers.map(m => {
-        const mPayments = rawPayments.filter(p => p.member_id === m.id);
+        const mPayments = rawPayments.filter(p => {
+          if (p.member_id !== m.id) return false;
+          if (!isFiltered) return true;
+          const paidDate = p.paid_at ? new Date(p.paid_at) : null;
+          return !!(paidDate && paidDate >= startDate! && paidDate <= endDate!);
+        });
         const paidOnline = mPayments.filter(p => p.payment_mode !== 'Cash').reduce((sum, p) => sum + Number(p.amount || 0), 0);
         return { ...m, paidOnline };
       }).filter(m => m.paidOnline > 0).map(m => ({
@@ -380,6 +520,30 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
 
   return (
     <div className="space-y-6 animate-fade-in-fast">
+      {/* ─── Month Filter Dropdown ─── */}
+      <div className="glass-pane-elevated flex justify-between items-center gap-4 flex-wrap border-white/[0.06] bg-white/[0.02] !py-3.5 !px-5">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+            <span className="material-symbols-outlined text-lg">calendar_month</span>
+          </div>
+          <div>
+            <div className="text-white font-bold text-sm font-manrope">Billing Period Filter</div>
+            <div className="text-[10px] text-on-surface-variant">Filter collections and expected renewals month-wise</div>
+          </div>
+        </div>
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="bg-[#0f172a]/80 border border-white/10 text-white font-semibold text-xs rounded-xl py-2.5 px-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer min-w-[170px]"
+        >
+          {getMonthOptions().map((opt) => (
+            <option key={opt.value} value={opt.value} className="bg-slate-900 text-white">
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* ─── Stat Cards ─── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         <StatCard
