@@ -75,10 +75,21 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
   });
   const [loading, setLoading] = useState(true);
 
-  // Month selector state
+  // Month and custom selector states
   const todayDate = new Date();
   const currentMonthValue = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}`;
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthValue);
+
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    const today = new Date();
+    // Default to 1st of current month
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    return firstDay.toISOString().split('T')[0];
+  });
+  const [customEndDate, setCustomEndDate] = useState<string>(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
 
   const getMonthOptions = () => {
     const options = [{ label: "All Time", value: "all" }];
@@ -90,6 +101,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
       const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       options.push({ label, value });
     }
+    options.push({ label: "Custom Range", value: "custom" });
     return options;
   };
 
@@ -137,14 +149,29 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           const today = new Date();
           today.setHours(0,0,0,0);
 
-          // Determine month date range
-          const isFiltered = selectedMonth !== "all";
+          // Determine date ranges
           let startDate: Date | null = null;
           let endDate: Date | null = null;
-          if (isFiltered) {
+          let lossStartDate: Date | null = null;
+          let lossEndDate: Date | null = null;
+
+          const isFiltered = selectedMonth !== "all";
+          
+          if (selectedMonth === "custom") {
+            startDate = new Date(customStartDate);
+            endDate = new Date(customEndDate);
+            endDate.setHours(23, 59, 59, 999);
+            
+            const targetYear = endDate.getFullYear();
+            lossStartDate = new Date(targetYear, 0, 1);
+            lossEndDate = new Date(targetYear, 11, 31, 23, 59, 59, 999);
+          } else if (selectedMonth !== "all") {
             const [y, m] = selectedMonth.split('-').map(Number);
             startDate = new Date(y, m - 1, 1);
             endDate = new Date(y, m, 0, 23, 59, 59, 999);
+            
+            lossStartDate = new Date(y, 0, 1);
+            lossEndDate = new Date(y, 11, 31, 23, 59, 59, 999);
           }
 
           // Active members who have not left
@@ -184,31 +211,37 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
               memberDues = Number(m.outstanding_dues || 0);
             }
 
-            // Check if the due date falls in the selected month
-            let isDueInMonth = false;
+            // Check if the due date falls before the end of selected month/period (carry forward)
+            let isDueBeforeEnd = false;
             if (!isFiltered) {
-              isDueInMonth = true;
+              isDueBeforeEnd = true;
             } else {
               if (m.payment_due_date) {
                 const dueDate = new Date(m.payment_due_date);
-                isDueInMonth = dueDate >= startDate! && dueDate <= endDate!;
+                isDueBeforeEnd = dueDate <= endDate!;
               } else {
                 const createdDate = m.created_at ? new Date(m.created_at) : null;
-                isDueInMonth = !!(createdDate && createdDate >= startDate! && createdDate <= endDate!);
+                isDueBeforeEnd = !!(createdDate && createdDate <= endDate!);
               }
             }
 
-            if (isDueInMonth) {
+            if (isDueBeforeEnd) {
               pendingDuesVal += memberDues;
             }
 
-            // Expected renewal if expired (only if no outstanding partial dues)
+            // Expected renewal if expired
             if (m.subscription_end_date) {
               const endDateObj = new Date(m.subscription_end_date);
               const isExpired = endDateObj < today;
-              const matchesMonth = !isFiltered || (endDateObj >= startDate! && endDateObj <= endDate!);
               
-              if (matchesMonth) {
+              let matchesRenewalRange = false;
+              if (!isFiltered) {
+                matchesRenewalRange = isExpired;
+              } else {
+                matchesRenewalRange = endDateObj >= startDate! && endDateObj <= endDate!;
+              }
+              
+              if (matchesRenewalRange) {
                 if (m.pay_later) {
                   // Already counted under pendingDuesVal
                 } else if (isExpired && memberDues === 0) {
@@ -223,12 +256,12 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           const totalRevenueVal = receivedRevenueVal + upcomingRevenueVal;
 
           // Loss Payments and Left Members count
-          // Only show/count members marked as left with dues AND outstanding loss amount > 0
+          // Only show/count members marked as left with dues AND outstanding loss amount > 0 within the year of endDate
           const lossMembers = members.filter(m => {
             if (!m.left_with_dues || !m.left_at || !(m.loss_amount || 0)) return false;
             if (!isFiltered) return true;
             const leftDate = new Date(m.left_at);
-            return leftDate >= startDate! && leftDate <= endDate!;
+            return leftDate >= lossStartDate! && leftDate <= lossEndDate!;
           });
           const lossRevenueVal = lossMembers.reduce((sum, m) => sum + (m.loss_amount || 0), 0);
           const leftMembersCount = lossMembers.length;
@@ -272,7 +305,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
     return () => {
       active = false;
     };
-  }, [activeBranch, selectedMonth]);
+  }, [activeBranch, selectedMonth, customStartDate, customEndDate]);
 
   const getInspectData = () => {
     if (!inspectCategory) return [];
@@ -282,10 +315,24 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
     const isFiltered = selectedMonth !== "all";
     let startDate: Date | null = null;
     let endDate: Date | null = null;
-    if (isFiltered) {
+    let lossStartDate: Date | null = null;
+    let lossEndDate: Date | null = null;
+
+    if (selectedMonth === "custom") {
+      startDate = new Date(customStartDate);
+      endDate = new Date(customEndDate);
+      endDate.setHours(23, 59, 59, 999);
+      
+      const targetYear = endDate.getFullYear();
+      lossStartDate = new Date(targetYear, 0, 1);
+      lossEndDate = new Date(targetYear, 11, 31, 23, 59, 59, 999);
+    } else if (isFiltered) {
       const [y, m] = selectedMonth.split('-').map(Number);
       startDate = new Date(y, m - 1, 1);
       endDate = new Date(y, m, 0, 23, 59, 59, 999);
+      
+      lossStartDate = new Date(y, 0, 1);
+      lossEndDate = new Date(y, 11, 31, 23, 59, 59, 999);
     }
 
     const getLatestDate = (m: any) => {
@@ -315,9 +362,9 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
         const paidThisMonth = mPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
         
         let pending = 0;
-        let isDueInMonth = false;
+        let isDueBeforeEnd = false;
         if (!isFiltered) {
-          isDueInMonth = true;
+          isDueBeforeEnd = true;
           if (m.pay_later) {
             pending = m.outstanding_dues || m.plan_amount || 0;
           } else {
@@ -327,15 +374,15 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
             pending = m.plan_amount || 0;
           }
         } else {
-          // Check if due date falls in this month
+          // Check if due date falls before the end of selected month/period (carry forward)
           if (m.payment_due_date) {
             const dueDate = new Date(m.payment_due_date);
-            isDueInMonth = dueDate >= startDate! && dueDate <= endDate!;
+            isDueBeforeEnd = dueDate <= endDate!;
           } else {
             const createdDate = m.created_at ? new Date(m.created_at) : null;
-            isDueInMonth = !!(createdDate && createdDate >= startDate! && createdDate <= endDate!);
+            isDueBeforeEnd = !!(createdDate && createdDate <= endDate!);
           }
-          if (isDueInMonth) {
+          if (isDueBeforeEnd) {
             if (m.pay_later) {
               pending = m.outstanding_dues || m.plan_amount || 0;
             } else {
@@ -344,8 +391,8 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           }
           if (m.subscription_end_date) {
             const endDateObj = new Date(m.subscription_end_date);
-            const isExpiringInMonth = endDateObj >= startDate! && endDateObj <= endDate!;
-            if (isExpiringInMonth && !m.pay_later && pending === 0 && endDateObj < today) {
+            const matchesRenewalRange = endDateObj >= startDate! && endDateObj <= endDate!;
+            if (matchesRenewalRange && !m.pay_later && pending === 0 && endDateObj < today) {
               pending = m.plan_amount || 0;
             }
           }
@@ -383,20 +430,20 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
         let upcoming = 0;
         let reason = "";
 
-        let isDueInMonth = false;
+        let isDueBeforeEnd = false;
         if (!isFiltered) {
-          isDueInMonth = true;
+          isDueBeforeEnd = true;
         } else {
           if (m.payment_due_date) {
             const dueDate = new Date(m.payment_due_date);
-            isDueInMonth = dueDate >= startDate! && dueDate <= endDate!;
+            isDueBeforeEnd = dueDate <= endDate!;
           } else {
             const createdDate = m.created_at ? new Date(m.created_at) : null;
-            isDueInMonth = !!(createdDate && createdDate >= startDate! && createdDate <= endDate!);
+            isDueBeforeEnd = !!(createdDate && createdDate <= endDate!);
           }
         }
 
-        if (isDueInMonth) {
+        if (isDueBeforeEnd) {
           if (m.pay_later) {
             upcoming = Number(m.outstanding_dues || m.plan_amount || 0);
             reason = "Pay Later (Deferred)";
@@ -411,8 +458,8 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
         if (m.subscription_end_date) {
           const endDateObj = new Date(m.subscription_end_date);
           const isExpired = endDateObj < today;
-          const matchesMonth = !isFiltered || (endDateObj >= startDate! && endDateObj <= endDate!);
-          if (matchesMonth && isExpired && !m.pay_later && upcoming === 0) {
+          const matchesRenewalRange = !isFiltered || (endDateObj >= startDate! && endDateObj <= endDate!);
+          if (matchesRenewalRange && isExpired && !m.pay_later && upcoming === 0) {
             upcoming = m.plan_amount || 0;
             reason = `Subscription Expired on ${endDateObj.toLocaleDateString()}`;
           }
@@ -430,7 +477,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
         if (!m.left_with_dues || !m.left_at || !(m.loss_amount || 0)) return false;
         if (!isFiltered) return true;
         const leftDate = new Date(m.left_at);
-        return leftDate >= startDate! && leftDate <= endDate!;
+        return leftDate >= lossStartDate! && leftDate <= lossEndDate!;
       }).map(m => ({
         ...m,
         inspectLabel: `Loss Amount: ₹${m.loss_amount}`,
@@ -531,17 +578,42 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
             <div className="text-[10px] text-on-surface-variant">Filter collections and expected renewals month-wise</div>
           </div>
         </div>
-        <select
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          className="bg-[#0f172a]/80 border border-white/10 text-white font-semibold text-xs rounded-xl py-2.5 px-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer min-w-[170px]"
-        >
+        <div className="flex items-center gap-3 flex-wrap">
+          {selectedMonth === "custom" && (
+            <div className="flex items-center gap-2 bg-[#0f172a]/60 border border-white/5 rounded-xl p-1.5 px-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-on-surface-variant uppercase font-bold">From</span>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="bg-transparent border-none text-white font-semibold text-xs focus:outline-none focus:ring-0 cursor-pointer [color-scheme:dark]"
+                />
+              </div>
+              <div className="w-[1px] h-4 bg-white/10" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-on-surface-variant uppercase font-bold">To</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="bg-transparent border-none text-white font-semibold text-xs focus:outline-none focus:ring-0 cursor-pointer [color-scheme:dark]"
+                />
+              </div>
+            </div>
+          )}
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="bg-[#0f172a]/80 border border-white/10 text-white font-semibold text-xs rounded-xl py-2.5 px-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer min-w-[170px]"
+          >
           {getMonthOptions().map((opt) => (
             <option key={opt.value} value={opt.value} className="bg-slate-900 text-white">
               {opt.label}
             </option>
           ))}
-        </select>
+          </select>
+        </div>
       </div>
 
       {/* ─── Stat Cards ─── */}
