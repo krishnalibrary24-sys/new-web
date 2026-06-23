@@ -32,15 +32,19 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
           if (m.status === 'LEFT' || m.left_at) continue;
 
           // Auto-Release Seat Logic
-          if (m.seat_no && m.subscription_end_date) {
-            const end = new Date(m.subscription_end_date);
-            if (end < fiveDaysAgo) {
+          if (m.seat_no) {
+            const isSubExpired = m.subscription_end_date && new Date(m.subscription_end_date) < fiveDaysAgo;
+            const isDuesOverdue = m.outstanding_dues > 0 && m.payment_due_date && new Date(m.payment_due_date) < fiveDaysAgo;
+
+            if (isSubExpired || isDuesOverdue) {
+              const oldSeat = m.seat_no;
               // Release the seat async in background
               supabase.from('members')
-                .update({ previous_seat_no: m.seat_no, seat_no: null })
+                .update({ previous_seat_no: oldSeat, seat_no: null })
                 .eq('id', m.id)
                 .then(() => {
-                  logActivity(activeBranch, "seating", `Auto-released Seat #${m.seat_no} for ${m.full_name} (${m.permanent_id}) due to >5 days overdue.`);
+                  const reason = isSubExpired ? 'subscription expired >5 days' : 'dues outstanding >5 days';
+                  logActivity(activeBranch, "seating", `Auto-released Seat #${oldSeat} for ${m.full_name} (${m.permanent_id}) due to ${reason}.`);
                 });
             }
           }
@@ -129,7 +133,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
   const badge = getRoleBadge();
 
   return (
-    <div className="h-screen w-full bg-[#f4f6fa] flex flex-col md:flex-row text-[#1e293b] font-body-md overflow-hidden relative dashboard-light-theme">
+    <div className="h-[100dvh] w-full bg-[#f4f6fa] flex flex-col md:flex-row text-[#1e293b] font-body-md overflow-hidden relative dashboard-light-theme">
       {/* Ambient Background - Soft Blue/Light Gradients */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-500/[0.03] rounded-full blur-[150px]" />
@@ -137,7 +141,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
       </div>
 
       {/* ═══ Desktop Sidebar ═══ */}
-      <aside className="hidden md:flex w-[260px] flex-col bg-white border-r border-[#e2e8f0] h-screen sticky top-0 z-20 shadow-[1px_0_10px_rgba(0,0,0,0.01)]">
+      <aside className="hidden md:flex w-[260px] flex-col bg-white border-r border-[#e2e8f0] h-full sticky top-0 z-20 shadow-[1px_0_10px_rgba(0,0,0,0.01)]">
         {/* Logo */}
         <div className="px-6 py-5 border-b border-[#f1f5f9]">
           <Link href="/" className="flex items-center gap-3 group">
@@ -237,7 +241,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
       </aside>
 
       {/* ═══ Main Content ═══ */}
-      <main className="flex-1 h-screen overflow-y-auto pb-20 md:pb-0 relative z-10" data-lenis-prevent>
+      <main className="flex-1 overflow-y-auto pb-24 md:pb-8 relative z-10" data-lenis-prevent>
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-[#e2e8f0] sticky top-0 z-50 shadow-sm">
           <div className="flex items-center gap-3">
@@ -261,22 +265,40 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
         </div>
       </main>
  
-      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-[#e2e8f0] z-50 px-1 py-1.5 flex justify-around pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
-        {navLinks.slice(0, 5).map((link) => {
+      <nav 
+        className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-[#e2e8f0] z-50 px-2 py-1.5 flex overflow-x-auto gap-2 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.03)] [&::-webkit-scrollbar]:hidden" 
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {navLinks.map((link) => {
           const isActive = pathname === link.path;
+          const isDues = link.name === "Dues";
+          const isEnquiries = link.name === "Enquiries";
+          
           return (
             <Link 
               key={link.path} 
               href={link.path}
               prefetch={true}
-              className={`flex flex-col items-center py-1.5 px-2 rounded-xl transition-all relative ${
-                isActive ? "text-[#003178]" : "text-[#64748b]"
+              className={`flex-shrink-0 flex flex-col items-center justify-center py-1.5 px-3 min-w-[64px] rounded-xl transition-all relative ${
+                isActive ? "text-[#003178] bg-[#003178]/5" : "text-[#64748b]"
               }`}
             >
-              <span className="material-symbols-outlined text-lg" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>
+              <span className="material-symbols-outlined text-[22px] mb-0.5" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>
                 {link.icon}
               </span>
-              <span className="text-[9px] font-bold mt-0.5 tracking-wide">{link.name}</span>
+              <span className="text-[9px] font-bold tracking-wide whitespace-nowrap">{link.name}</span>
+              
+              {/* Notifications */}
+              {isDues && duesCount > 0 && (
+                <span className="absolute top-1 right-2 bg-red-500 text-white text-[8px] font-extrabold px-1 min-w-[14px] text-center rounded-full shadow-sm border border-white">
+                  {duesCount > 9 ? "9+" : duesCount}
+                </span>
+              )}
+              {isEnquiries && enquiriesCount > 0 && (
+                <span className="absolute top-1 right-2 bg-red-500 text-white text-[8px] font-extrabold px-1 min-w-[14px] text-center rounded-full shadow-sm border border-white">
+                  {enquiriesCount > 9 ? "9+" : enquiriesCount}
+                </span>
+              )}
             </Link>
           );
         })}

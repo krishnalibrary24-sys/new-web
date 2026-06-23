@@ -51,6 +51,87 @@ export default function LossPaymentPage() {
   const totalLoss = leftMembers.reduce((sum, m) => sum + (m.loss_amount || 0), 0);
   const totalCount = leftMembers.length;
 
+  const handleExportPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
+      
+      const doc = new jsPDF();
+      
+      // Header Banner Style
+      doc.setFillColor(185, 28, 28); // Dark Red color for Loss Payment
+      doc.rect(0, 0, 210, 35, 'F');
+      
+      // Title
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.text("KRISHNA LIBRARY", 14, 18);
+      
+      // Subtitle
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(254, 226, 226);
+      doc.text(`${branchLabel} Branch  |  Loss Payments Ledger`, 14, 25);
+      
+      // Generation Info (Date & Time)
+      const nowStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+      doc.text(`Generated: ${nowStr}`, 130, 25);
+      
+      // Add current metadata count under header
+      doc.setTextColor(51, 65, 85); // Slate 700
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text(`Defaulters List (${filteredMembers.length} records)  |  Total Loss: INR ${totalLoss.toLocaleString('en-IN')}`, 14, 45);
+      
+      // Table Generation
+      const tableHeaders = [["ID", "Name", "Father's Name", "Mobile", "Left Date", "Lost Amount", "Notes / Reason"]];
+      const tableRows = filteredMembers.map(m => [
+        m.permanent_id || "N/A",
+        m.full_name || "N/A",
+        m.father_name || "—",
+        m.mobile || "N/A",
+        m.left_at ? new Date(m.left_at).toLocaleDateString('en-GB') : "—",
+        `INR ${(m.loss_amount || 0).toLocaleString('en-IN')}`,
+        m.left_reason || "No notes recorded."
+      ]);
+      
+      autoTable(doc, {
+        head: tableHeaders,
+        body: tableRows,
+        startY: 52,
+        theme: 'striped',
+        headStyles: { fillColor: [185, 28, 28], textColor: [255, 255, 255], fontSize: 9, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8, textColor: [51, 65, 85] },
+        alternateRowStyles: { fillColor: [254, 242, 242] }, // Light red tint
+        margin: { left: 14, right: 14 },
+        didDrawPage: (data) => {
+          // Footer
+          const pageCount = (doc as any).internal.getNumberOfPages();
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184); // Slate 400
+          doc.text(
+            `Page ${data.pageNumber} of ${pageCount}`,
+            14,
+            doc.internal.pageSize.height - 10
+          );
+          doc.text(
+            "Confidential - Krishna Library Management System",
+            doc.internal.pageSize.width - 90,
+            doc.internal.pageSize.height - 10
+          );
+        }
+      });
+      
+      const fileName = `Loss_Payments_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error("PDF export failed:", error);
+      alert("Failed to export PDF. Please check console for details.");
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
@@ -64,15 +145,24 @@ export default function LossPaymentPage() {
             Track members who left without clearing outstanding library fees · {branchLabel}
           </p>
         </div>
-        <div className="relative w-full sm:w-64">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60 text-sm">search</span>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, ID, phone..."
-            className="input-premium !py-2.5 !pl-9 !pr-4 !text-sm !rounded-xl w-full"
-          />
+        <div className="flex gap-3 w-full sm:w-auto items-center">
+          <div className="relative w-full sm:w-64">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60 text-sm">search</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, ID, phone..."
+              className="input-premium !py-2.5 !pl-9 !pr-4 !text-sm !rounded-xl w-full"
+            />
+          </div>
+          <button 
+            onClick={handleExportPDF}
+            className="btn-ghost px-4 py-2.5 text-sm flex items-center gap-2 shrink-0 text-red-500 border border-red-500/20 hover:bg-red-500/5 transition-all"
+          >
+            <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+            Export PDF
+          </button>
         </div>
       </div>
 

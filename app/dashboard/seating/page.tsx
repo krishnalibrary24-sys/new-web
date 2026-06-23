@@ -5,8 +5,9 @@ import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
 import { logActivity } from "@/lib/activity";
-import { getTemplate, parseTemplate } from "@/lib/whatsapp";
+import { getTemplate, parseTemplate, formatWhatsAppNumber } from "@/lib/whatsapp";
 import { getLibrarySetting } from "@/lib/settings";
+import { checkAndReleaseSeats } from "@/lib/utils";
 
 export default function SeatingPage() {
   const { activeBranch } = useBranch();
@@ -88,15 +89,16 @@ export default function SeatingPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from('members')
-      .select('id, seat_no, shift, is_active, full_name, permanent_id, mobile')
+      .select('id, seat_no, shift, is_active, full_name, permanent_id, mobile, subscription_end_date, outstanding_dues, payment_due_date')
       .eq('branch', activeBranch)
       .eq('is_active', true);
     
     if (data) {
-      setAllActiveMembersCount(data.length);
+      const { updatedMembers } = await checkAndReleaseSeats(data, activeBranch);
+      setAllActiveMembersCount(updatedMembers.length);
       const map: Record<string, any[]> = {};
       const unassigned: any[] = [];
-      data.forEach(m => {
+      updatedMembers.forEach(m => {
         if (m.seat_no) {
           if (!map[m.seat_no]) map[m.seat_no] = [];
           map[m.seat_no].push(m);
@@ -154,7 +156,7 @@ export default function SeatingPage() {
 
       const memberToUse = fullMember || member;
       const branchLabel = activeBranch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
-      const mobileClean = memberToUse.mobile ? memberToUse.mobile.replace(/[^0-9]/g, '') : '';
+      const mobileClean = formatWhatsAppNumber(memberToUse.mobile);
       const seatText = selectedSeat || 'Unassigned';
       const expiryDate = memberToUse.subscription_end_date ? new Date(memberToUse.subscription_end_date).toLocaleDateString('en-IN') : 'N/A';
       
@@ -486,45 +488,273 @@ export default function SeatingPage() {
             </div>
           </div>
         )}
-        <div className="grid grid-cols-10 md:grid-cols-12 lg:grid-cols-15 gap-2 min-w-[600px]">
-          {[...Array(seats)].map((_, i) => {
-            const seatId = (i + 1).toString();
-            const style = getSeatStyle(seatId);
-            const occupants = seatMap[seatId] || [];
-            const isSelected = selectedSeat === seatId;
-            
-            return (
-              <button
-                key={i}
-                id={`seat-btn-${seatId}`}
-                onClick={() => setSelectedSeat(seatId)}
-                style={style.style}
-                className={`aspect-square ${style.bg} rounded-lg border flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 ${
-                  isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black' : ''
-                } ${blinkingSeat === seatId ? 'seat-blink-active' : ''}`}
-                title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
-              >
-                <span className={`text-[10px] font-bold ${style.textColor || 'text-white/50'}`}>{seatId}</span>
-                {style.dot === 'multishift' ? (
-                  <div className="flex gap-0.5 mt-0.5">
-                    {occupants.map((occ, idx) => {
-                      const getDotColor = (s: string) => {
-                        if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
-                        if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
-                        return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
-                      };
-                      return (
-                        <span key={idx} className={`w-1.5 h-1.5 rounded-full ${getDotColor(occ.shift)}`} />
-                      );
-                    })}
-                  </div>
-                ) : (
-                  style.dot && <span className={`w-1.5 h-1.5 rounded-full ${style.dot} mt-0.5`} />
-                )}
-              </button>
-            );
-          })}
-        </div>
+        {activeBranch === 'namnakala' ? (
+          <div className="overflow-x-auto p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+            <div 
+              className="grid gap-2 min-w-[max-content] relative w-max mx-auto"
+              style={{ 
+                gridTemplateColumns: 'repeat(18, minmax(38px, 44px))',
+                gridAutoRows: 'minmax(38px, 44px)'
+              }}
+            >
+              {/* Horizontal Aisles (Row 2, Row 4, Row 8) */}
+              <div className="flex items-center justify-center text-slate-400 pointer-events-none border-b border-dashed border-slate-300" style={{ gridRow: 2, gridColumn: '1 / -1', minHeight: '16px', alignSelf: 'center' }}>
+                <div className="bg-slate-50/50 px-2 flex items-center gap-2"><span className="material-symbols-outlined text-[12px]">west</span> <span className="text-[9px] uppercase tracking-widest font-bold">Walkway</span> <span className="material-symbols-outlined text-[12px]">east</span></div>
+              </div>
+              <div className="flex items-center justify-center text-slate-400 pointer-events-none border-b border-dashed border-slate-300" style={{ gridRow: 4, gridColumn: '1 / -1', minHeight: '16px', alignSelf: 'center' }}>
+                <div className="bg-slate-50/50 px-2 flex items-center gap-2"><span className="material-symbols-outlined text-[12px]">west</span> <span className="text-[9px] uppercase tracking-widest font-bold">Walkway</span> <span className="material-symbols-outlined text-[12px]">east</span></div>
+              </div>
+              <div className="flex items-center justify-center text-slate-400 pointer-events-none border-b border-dashed border-slate-300" style={{ gridRow: 8, gridColumn: '1 / -1', minHeight: '16px', alignSelf: 'center' }}>
+                <div className="bg-slate-50/50 px-2 flex items-center gap-2"><span className="material-symbols-outlined text-[12px]">west</span> <span className="text-[9px] uppercase tracking-widest font-bold">Walkway</span> <span className="material-symbols-outlined text-[12px]">east</span></div>
+              </div>
+
+              {/* Vertical Aisle (Col 10) */}
+              <div className="flex flex-col items-center justify-center text-slate-400 pointer-events-none border-r border-dashed border-slate-300" style={{ gridRow: '1 / -1', gridColumn: 10, minWidth: '16px', justifySelf: 'center' }}>
+                <div className="bg-slate-50/50 py-2 flex flex-col items-center gap-2"><span className="material-symbols-outlined text-[12px]">north</span> <span className="text-[9px] uppercase tracking-widest font-bold" style={{ writingMode: 'vertical-rl' }}>Main Aisle</span> <span className="material-symbols-outlined text-[12px]">south</span></div>
+              </div>
+
+              {[...Array(seats)].map((_, i) => {
+                const seatNum = i + 1;
+                const seatId = seatNum.toString();
+                const style = getSeatStyle(seatId);
+                const occupants = seatMap[seatId] || [];
+                const isSelected = selectedSeat === seatId;
+                
+                let r: number | 'auto' = 'auto';
+                let c: number | 'auto' = 'auto';
+
+                // LEFT BLOCK (Cols 1 to 9)
+                if (seatNum >= 1 && seatNum <= 8) {
+                  r = 1; c = seatNum + 1;
+                } else if (seatNum >= 24 && seatNum <= 32) {
+                  r = 3; c = 33 - seatNum;
+                } else if (seatNum >= 33 && seatNum <= 41) {
+                  r = 5; c = seatNum - 32;
+                } else if (seatNum >= 55 && seatNum <= 62) {
+                  r = 6; c = 64 - seatNum;
+                } else if (seatNum >= 63 && seatNum <= 70) {
+                  r = 7; c = seatNum - 61;
+                } else if (seatNum >= 71 && seatNum <= 79) {
+                  r = 9; c = 80 - seatNum;
+                } else if (seatNum >= 80 && seatNum <= 88) {
+                  r = 10; c = 89 - seatNum;
+                }
+                
+                // RIGHT BLOCK TOP (Cols 11 to 18)
+                else if (seatNum >= 9 && seatNum <= 16) {
+                  r = 1; c = seatNum + 2;
+                } else if (seatNum >= 17 && seatNum <= 23) {
+                  r = 3; c = 35 - seatNum;
+                } else if (seatNum >= 42 && seatNum <= 48) {
+                  r = 5; c = seatNum - 30;
+                } else if (seatNum >= 49 && seatNum <= 54) {
+                  r = 6; c = 65 - seatNum;
+                } else if (seatNum >= 89 && seatNum <= 94) {
+                  r = 7; c = seatNum - 78;
+                }
+
+                // RIGHT BLOCK BOTTOM (Cols 12 to 18)
+                else if (seatNum >= 115 && seatNum <= 121) {
+                  r = 130 - seatNum; c = 12; // Rows 9 to 15
+                } else if (seatNum >= 95 && seatNum <= 98) {
+                  r = 9; c = 113 - seatNum;
+                } else if (seatNum >= 99 && seatNum <= 102) {
+                  r = 10; c = seatNum - 84;
+                } else if (seatNum >= 103 && seatNum <= 106) {
+                  r = 11; c = 121 - seatNum;
+                } else if (seatNum >= 107 && seatNum <= 110) {
+                  r = 12; c = seatNum - 92;
+                } else if (seatNum >= 111 && seatNum <= 114) {
+                  r = 13; c = 129 - seatNum;
+                }
+
+                return (
+                  <button
+                    key={i}
+                    id={`seat-btn-${seatId}`}
+                    onClick={() => setSelectedSeat(seatId)}
+                    style={{ ...style.style, gridRowStart: r, gridColumnStart: c }}
+                    className={`w-full h-full aspect-square ${style.bg} rounded-full border border-slate-200/50 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 ${
+                      isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black' : ''
+                    } ${blinkingSeat === seatId ? 'seat-blink-active' : ''}`}
+                    title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
+                  >
+                    <span className={`text-[11px] font-bold ${style.textColor || 'text-slate-500'}`}>{seatId}</span>
+                    {style.dot === 'multishift' ? (
+                      <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
+                        {occupants.map((occ, idx) => {
+                          const getDotColor = (s: string) => {
+                            if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
+                            if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
+                            return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
+                          };
+                          return (
+                            <span key={idx} className={`w-1 h-1 rounded-full ${getDotColor(occ.shift)}`} />
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      style.dot && <span className={`w-1 h-1 rounded-full ${style.dot} absolute bottom-1`} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : activeBranch === 'bengali-chowk' ? (
+          <div className="overflow-x-auto p-4 pt-10 bg-slate-50/50 rounded-2xl border border-slate-100 relative mt-4">
+            {/* Room Labels */}
+            <div className="absolute top-4 left-0 right-0 flex justify-center pointer-events-none">
+              <div className="w-full max-w-[800px] flex justify-between px-16">
+                <span className="font-black text-blue-900/40 tracking-widest text-xl uppercase">Light Room</span>
+                <span className="font-black text-blue-900/40 tracking-widest text-xl uppercase">Dark Room</span>
+              </div>
+            </div>
+
+            <div 
+              className="grid gap-2 min-w-[max-content] relative w-max mx-auto"
+              style={{ 
+                gridTemplateColumns: 'repeat(19, minmax(36px, 42px))',
+                gridAutoRows: 'minmax(36px, 42px)'
+              }}
+            >
+              {/* Vertical Room Divider (Red Line) */}
+              <div className="flex flex-col items-center justify-center pointer-events-none border-r-2 border-red-500/50" style={{ gridRow: '1 / -1', gridColumn: 12, minWidth: '16px', justifySelf: 'center', height: '100%' }}>
+              </div>
+              
+              {/* Horizontal Top Aisle (Row 2) */}
+              <div className="flex items-center justify-center text-slate-400 pointer-events-none border-b border-dashed border-slate-300" style={{ gridRow: 2, gridColumn: '1 / -1', minHeight: '16px', alignSelf: 'center' }}>
+                <div className="bg-slate-50/50 px-2 flex items-center gap-2"><span className="material-symbols-outlined text-[12px]">west</span> <span className="text-[9px] uppercase tracking-widest font-bold">Walkway</span> <span className="material-symbols-outlined text-[12px]">east</span></div>
+              </div>
+
+              {[...Array(seats)].map((_, i) => {
+                const seatNum = i + 1;
+                const seatId = seatNum.toString();
+                const style = getSeatStyle(seatId);
+                const occupants = seatMap[seatId] || [];
+                const isSelected = selectedSeat === seatId;
+                
+                let r: number | 'auto' = 'auto';
+                let c: number | 'auto' = 'auto';
+
+                // Light Room
+                if (seatNum >= 1 && seatNum <= 9) {
+                  const topRowCols = { 9: 1, 8: 2, 7: 3, 6: 4, 5: 5, 4: 7, 3: 8, 2: 9, 1: 11 };
+                  r = 1; c = topRowCols[seatNum as keyof typeof topRowCols];
+                } else if (seatNum >= 10 && seatNum <= 22) {
+                  r = seatNum - 7; c = 1;
+                } else if (seatNum >= 23 && seatNum <= 37) {
+                  r = 40 - seatNum; c = 3;
+                } else if (seatNum >= 38 && seatNum <= 52) {
+                  r = seatNum - 35; c = 5;
+                } else if (seatNum >= 53 && seatNum <= 64) {
+                  r = 67 - seatNum; c = 7;
+                } else if (seatNum >= 65 && seatNum <= 67) {
+                  r = 3; c = 76 - seatNum;
+                } else if (seatNum >= 68 && seatNum <= 70) {
+                  r = 5; c = seatNum - 59;
+                } else if (seatNum >= 71 && seatNum <= 73) {
+                  r = 6; c = 82 - seatNum;
+                } else if (seatNum >= 74 && seatNum <= 76) {
+                  r = 8; c = seatNum - 65;
+                } else if (seatNum >= 77 && seatNum <= 79) {
+                  r = 9; c = 88 - seatNum;
+                } else if (seatNum >= 80 && seatNum <= 82) {
+                  r = 11; c = seatNum - 71;
+                } else if (seatNum >= 83 && seatNum <= 85) {
+                  r = 12; c = 94 - seatNum;
+                } else if (seatNum >= 86 && seatNum <= 88) {
+                  r = 16; c = seatNum - 77;
+                } 
+                // Dark Room
+                else if (seatNum >= 150 && seatNum <= 153) {
+                  r = 1; c = 166 - seatNum;
+                } else if (seatNum >= 89 && seatNum <= 103) {
+                  r = seatNum - 86; c = 13;
+                } else if (seatNum >= 104 && seatNum <= 118) {
+                  r = 121 - seatNum; c = 15;
+                } else if (seatNum >= 119 && seatNum <= 133) {
+                  r = seatNum - 116; c = 17;
+                } else if (seatNum >= 134 && seatNum <= 149) {
+                  r = 151 - seatNum; c = 19;
+                }
+
+                return (
+                  <button
+                    key={i}
+                    id={`seat-btn-${seatId}`}
+                    onClick={() => setSelectedSeat(seatId)}
+                    style={{ ...style.style, gridRowStart: r, gridColumnStart: c }}
+                    className={`w-full h-full aspect-square ${style.bg} border border-slate-200/50 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 ${
+                      isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black z-10 relative' : ''
+                    } ${blinkingSeat === seatId ? 'seat-blink-active' : ''} ${
+                      seatNum >= 89 && seatNum <= 153 ? 'rounded-md shadow-sm' : 'rounded-full'
+                    }`}
+                    title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
+                  >
+                    <span className={`text-[11px] font-bold ${style.textColor || 'text-slate-500'}`}>{seatId}</span>
+                    {style.dot === 'multishift' ? (
+                      <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
+                        {occupants.map((occ, idx) => {
+                          const getDotColor = (s: string) => {
+                            if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
+                            if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
+                            return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
+                          };
+                          return (
+                            <span key={idx} className={`w-1 h-1 rounded-full ${getDotColor(occ.shift)}`} />
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      style.dot && <span className={`w-1 h-1 rounded-full ${style.dot} absolute bottom-1`} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-10 md:grid-cols-12 lg:grid-cols-15 gap-2 min-w-[600px]">
+            {[...Array(seats)].map((_, i) => {
+              const seatId = (i + 1).toString();
+              const style = getSeatStyle(seatId);
+              const occupants = seatMap[seatId] || [];
+              const isSelected = selectedSeat === seatId;
+              
+              return (
+                <button
+                  key={i}
+                  id={`seat-btn-${seatId}`}
+                  onClick={() => setSelectedSeat(seatId)}
+                  style={style.style}
+                  className={`aspect-square ${style.bg} rounded-lg border flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 ${
+                    isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black' : ''
+                  } ${blinkingSeat === seatId ? 'seat-blink-active' : ''}`}
+                  title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
+                >
+                  <span className={`text-[10px] font-bold ${style.textColor || 'text-white/50'}`}>{seatId}</span>
+                  {style.dot === 'multishift' ? (
+                    <div className="flex gap-0.5 mt-0.5">
+                      {occupants.map((occ, idx) => {
+                        const getDotColor = (s: string) => {
+                          if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
+                          if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
+                          return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
+                        };
+                        return (
+                          <span key={idx} className={`w-1.5 h-1.5 rounded-full ${getDotColor(occ.shift)}`} />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    style.dot && <span className={`w-1.5 h-1.5 rounded-full ${style.dot} mt-0.5`} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ═══ Seat Management Modal (SaaS Redesign) ═══ */}

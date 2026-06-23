@@ -2,7 +2,7 @@
 import React, { useEffect, useState, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { getTemplate, parseTemplate } from '@/lib/whatsapp';
+import { getTemplate, parseTemplate, formatWhatsAppNumber } from '@/lib/whatsapp';
 
 function parseInvoiceNotes(notes: string) {
   const info = {
@@ -248,7 +248,7 @@ function InvoiceContent() {
           Download PDF
         </button>
         <a 
-          href={`https://wa.me/${member.mobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(shareMessage)}`}
+          href={`https://wa.me/${formatWhatsAppNumber(member.mobile)}?text=${encodeURIComponent(shareMessage)}`}
           target="_blank" rel="noreferrer"
           className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all hover:scale-[1.02] shadow-md"
         >
@@ -278,7 +278,7 @@ function InvoiceContent() {
               <h1 className="text-2xl font-montserrat font-black text-[#003178] tracking-tight uppercase leading-none">{libName}</h1>
               <p className="text-[#0D47A1] font-black uppercase text-[10px] tracking-widest mt-1.5">{member.branch ? `${member.branch.replace('-', ' ')} Branch` : 'Namnakala Branch'}</p>
               <div className="mt-2 text-xs text-[#434652] font-lexend leading-relaxed">
-                <p>{libAddress}</p>
+                <p>{member.branch === 'namnakala' ? 'Infront of Manjusha Academy, Namnakala' : 'Infront of Aastha Hospital, Bengali Chowk'}</p>
                 <p>Phone: {libPhone}</p>
               </div>
             </div>

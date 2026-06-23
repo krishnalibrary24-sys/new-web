@@ -3,9 +3,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
-import { getMemberStatus } from "@/lib/utils";
+import { getMemberStatus, checkAndReleaseSeats } from "@/lib/utils";
 import { logActivity } from "@/lib/activity";
-import { getTemplate, parseTemplate } from "@/lib/whatsapp";
+import { getTemplate, parseTemplate, formatWhatsAppNumber } from "@/lib/whatsapp";
 
 export default function DuesPage() {
   const { activeBranch } = useBranch();
@@ -41,15 +41,16 @@ export default function DuesPage() {
       if (!active) return;
 
       if (data) {
-        setDueSoon(data.filter(m => {
+        const { updatedMembers } = await checkAndReleaseSeats(data, activeBranch);
+        setDueSoon(updatedMembers.filter(m => {
           const status = getMemberStatus(m);
           return status.type === 'due-soon';
         }));
-        setDefaulters(data.filter(m => {
+        setDefaulters(updatedMembers.filter(m => {
           const status = getMemberStatus(m);
           return status.type === 'overdue';
         }));
-        setPending(data.filter(m => {
+        setPending(updatedMembers.filter(m => {
           const status = getMemberStatus(m);
           return status.type === 'pending';
         }));
@@ -77,7 +78,7 @@ export default function DuesPage() {
   };
 
   const sendWhatsApp = async (member: any, type: 'reminder' | 'overdue' | 'pending') => {
-    const mobile = member.mobile.replace(/[^0-9]/g, '');
+    const mobile = formatWhatsAppNumber(member.mobile);
     const endDate = member.subscription_end_date ? new Date(member.subscription_end_date).toLocaleDateString() : 'N/A';
     const dueDate = member.payment_due_date ? new Date(member.payment_due_date).toLocaleDateString() : 'N/A';
     

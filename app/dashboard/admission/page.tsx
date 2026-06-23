@@ -21,8 +21,8 @@ export default function AdmissionPage() {
   const [address, setAddress] = useState("");
   const [shift, setShift] = useState("Full Day");
   const [isReserved, setIsReserved] = useState<boolean>(true);
+  const [customPrice, setCustomPrice] = useState<string>("1000");
   
-  // No pricing or payment states here anymore
   const [recordFound, setRecordFound] = useState(false);
   const [permanentId, setPermanentId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,6 +48,12 @@ export default function AdmissionPage() {
   }, [searchParams, editId]);
 
   useEffect(() => {
+    if (editId) return;
+    const defaultPrice = shift === 'Full Day' ? "1000" : "600";
+    setCustomPrice(defaultPrice);
+  }, [shift, editId]);
+
+  useEffect(() => {
     const fetchMemberToEdit = async () => {
       if (!editId) return;
       const { data } = await supabase.from('members').select('*').eq('id', editId).eq('branch', activeBranch).maybeSingle();
@@ -63,6 +69,9 @@ export default function AdmissionPage() {
         setPermanentId(data.permanent_id || "");
         setRecordFound(true);
         setExistingMemberState(data);
+        if (data.plan_amount !== undefined && data.plan_amount !== null) {
+          setCustomPrice(String(data.plan_amount));
+        }
       }
     };
     fetchMemberToEdit();
@@ -90,6 +99,9 @@ export default function AdmissionPage() {
         setIsReserved(!data.permanent_id?.includes('U'));
         setRecordFound(true);
         setShowRecordPopup(true);
+        if (data.plan_amount !== undefined && data.plan_amount !== null) {
+          setCustomPrice(String(data.plan_amount));
+        }
       } else {
         setRecordFound(false);
         setPermanentId("");
@@ -112,6 +124,7 @@ export default function AdmissionPage() {
     setGender("");
     setAddress("");
     setShift("Full Day");
+    setCustomPrice("1000");
     setIsReserved(true);
     setRecordFound(false);
     setPermanentId("");
@@ -119,9 +132,7 @@ export default function AdmissionPage() {
     setShowRecordPopup(false);
     setErrorMsg(null);
     setSuccess(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  };  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
@@ -165,8 +176,14 @@ export default function AdmissionPage() {
         setPermanentId(finalId);
       }
 
-      // Default plan amount based on shift
-      const basePriceVal = shift === 'Full Day' ? 1000 : 600;
+      // Determine final plan amount (use customPrice if set, fallback to default based on shift)
+      let basePriceVal = shift === 'Full Day' ? 1000 : 600;
+      if (customPrice) {
+        const parsed = parseInt(customPrice);
+        if (!isNaN(parsed)) {
+          basePriceVal = parsed;
+        }
+      }
 
       let seatToAllot = null;
       let prevSeatVal = null;
@@ -472,6 +489,18 @@ export default function AdmissionPage() {
                     </div>
                   </button>
                 ))}
+              </div>
+              <div className="mt-4 max-w-xs animate-fade-in-fast">
+                <FormField label={isReserved ? "Custom Price for Reserved Slot (₹)" : "Custom Price for Unreserved Slot (₹)"} icon="payments">
+                  <input
+                    type="number"
+                    value={customPrice}
+                    onChange={(e) => setCustomPrice(e.target.value)}
+                    placeholder="e.g. 800"
+                    className="input-premium [color-scheme:light] font-semibold text-slate-800"
+                    min="1"
+                  />
+                </FormField>
               </div>
               {isReserved ? (
                 <div className="flex items-start gap-2 text-xs text-on-surface-variant bg-white/[0.02] border border-white/[0.04] rounded-lg p-3">

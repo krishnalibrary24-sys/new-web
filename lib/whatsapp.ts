@@ -12,6 +12,18 @@ export const defaultTemplates = {
   invoice_share_msg: `🧾 *Official Payment Invoice — {lib_name}* 🧾\n\nDear *{name}*,\n\nHere is your official payment invoice from {lib_name}.\n\n🧾 *Receipt No:* {receipt_no}\n📅 *Date:* {date}\n👤 *Student ID:* {permanent_id}\n🪑 *Seat / Shift:* {seat} / {shift}\n\n💰 *Invoice Breakdown:*\n▪️ *Subtotal:* ₹{subtotal}\n▪️ *Discount:* -₹{discount}\n▪️ *Total Billed:* ₹{total_amount}\n▪️ *Amount Paid:* ₹{paid_amount}\n▪️ *Dues Outstanding:* ₹{due_amount}\n▪️ *Payment Status:* {status}\n\n🔗 *View & Download Digital PDF Invoice:* \n{invoice_link}\n\nThank you for choosing {lib_name}! 📚✨`
 };
 
+export function formatWhatsAppNumber(mobile: string | undefined | null): string {
+  if (!mobile) return '';
+  let cleaned = mobile.replace(/[^0-9]/g, '');
+  if (cleaned.length === 10) {
+    return '91' + cleaned;
+  }
+  if (cleaned.length === 11 && cleaned.startsWith('0')) {
+    return '91' + cleaned.substring(1);
+  }
+  return cleaned;
+}
+
 export async function getTemplate(key: keyof typeof defaultTemplates): Promise<string> {
   try {
     const { data } = await supabase.from('library_settings').select('value').eq('id', key).maybeSingle();

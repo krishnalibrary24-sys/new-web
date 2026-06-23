@@ -1,5 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { supabase } from "@/lib/supabase"
+import { logActivity } from "@/lib/activity"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -88,4 +90,44 @@ export function getMemberStatus(member: any) {
     label: 'Active (Paid)',
     badgeClass: 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center gap-1 font-bold text-[11px]'
   };
+}
+
+export async function checkAndReleaseSeats(members: any[], activeBranch: string) {
+  const today = new Date();
+  const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const fiveDaysAgo = new Date(todayZero.getTime() - 5 * 24 * 60 * 60 * 1000);
+
+  const updatedMembers = [...members];
+  let changed = false;
+
+  for (let i = 0; i < updatedMembers.length; i++) {
+    const m = updatedMembers[i];
+    if (m.status === 'LEFT' || m.left_at) continue;
+
+    if (m.seat_no) {
+      const isSubExpired = m.subscription_end_date && new Date(m.subscription_end_date) < fiveDaysAgo;
+      const isDuesOverdue = m.outstanding_dues > 0 && m.payment_due_date && new Date(m.payment_due_date) < fiveDaysAgo;
+
+      if (isSubExpired || isDuesOverdue) {
+        const oldSeat = m.seat_no;
+        // Update local object immediately
+        updatedMembers[i] = {
+          ...m,
+          previous_seat_no: oldSeat,
+          seat_no: null
+        };
+        changed = true;
+
+        // Update database in background
+        supabase.from('members')
+          .update({ previous_seat_no: oldSeat, seat_no: null })
+          .eq('id', m.id)
+          .then(() => {
+            const reason = isSubExpired ? 'subscription expired >5 days' : 'dues outstanding >5 days';
+            logActivity(activeBranch, "seating", `Auto-released Seat #${oldSeat} for ${m.full_name} (${m.permanent_id}) due to ${reason}.`);
+          });
+      }
+    }
+  }
+  return { updatedMembers, changed };
 }

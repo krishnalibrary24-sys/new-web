@@ -5,6 +5,7 @@ import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { createPortal } from "react-dom";
+import { checkAndReleaseSeats } from "@/lib/utils";
 
 export default function DashboardPage() {
   const [role, setRole] = useState<string | null>(null);
@@ -90,6 +91,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const getMonthOptions = () => {
     const options = [{ label: "All Time", value: "all" }];
@@ -140,10 +142,12 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
 
         if (!active) return;
 
-        const members = membersRes.data;
+        let members = membersRes.data;
         const payments = paymentsRes.data;
 
         if (members) {
+          const { updatedMembers } = await checkAndReleaseSeats(members, activeBranch);
+          members = updatedMembers;
           setRawMembers(members);
           setRawPayments(payments || []);
           const today = new Date();
@@ -568,51 +572,71 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
   return (
     <div className="space-y-6 animate-fade-in-fast">
       {/* ─── Month Filter Dropdown ─── */}
-      <div className="glass-pane-elevated flex justify-between items-center gap-4 flex-wrap border-white/[0.06] bg-white/[0.02] !py-3.5 !px-5">
+      <div className="glass-pane-elevated flex justify-between items-center gap-4 flex-wrap !border-slate-200/60 !bg-white/80 !py-3.5 !px-5 shadow-sm rounded-2xl relative z-20 !overflow-visible">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
             <span className="material-symbols-outlined text-lg">calendar_month</span>
           </div>
           <div>
-            <div className="text-white font-bold text-sm font-manrope">Billing Period Filter</div>
-            <div className="text-[10px] text-on-surface-variant">Filter collections and expected renewals month-wise</div>
+            <div className="text-slate-800 font-bold text-sm font-manrope">Billing Period Filter</div>
+            <div className="text-[10px] text-slate-500">Filter collections and expected renewals month-wise</div>
           </div>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {selectedMonth === "custom" && (
-            <div className="flex items-center gap-2 bg-[#0f172a]/60 border border-white/5 rounded-xl p-1.5 px-3">
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 rounded-xl p-1.5 px-3">
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-on-surface-variant uppercase font-bold">From</span>
+                <span className="text-[10px] text-slate-500 uppercase font-bold">From</span>
                 <input
                   type="date"
                   value={customStartDate}
                   onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="bg-transparent border-none text-white font-semibold text-xs focus:outline-none focus:ring-0 cursor-pointer [color-scheme:dark]"
+                  className="bg-transparent border-none text-slate-800 font-semibold text-xs focus:outline-none focus:ring-0 cursor-pointer [color-scheme:light]"
                 />
               </div>
-              <div className="w-[1px] h-4 bg-white/10" />
+              <div className="w-[1px] h-4 bg-slate-200" />
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-on-surface-variant uppercase font-bold">To</span>
+                <span className="text-[10px] text-slate-500 uppercase font-bold">To</span>
                 <input
                   type="date"
                   value={customEndDate}
                   onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="bg-transparent border-none text-white font-semibold text-xs focus:outline-none focus:ring-0 cursor-pointer [color-scheme:dark]"
+                  className="bg-transparent border-none text-slate-800 font-semibold text-xs focus:outline-none focus:ring-0 cursor-pointer [color-scheme:light]"
                 />
               </div>
             </div>
           )}
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="bg-[#0f172a]/80 border border-white/10 text-white font-semibold text-xs rounded-xl py-2.5 px-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer min-w-[170px]"
-          >
-          {getMonthOptions().map((opt) => (
-            <option key={opt.value} value={opt.value} className="bg-slate-900 text-white">
-              {opt.label}
-            </option>
-          ))}
-          </select>
+          <div className="relative">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="bg-white border border-slate-200/80 text-slate-800 font-bold text-xs rounded-xl py-2.5 px-4 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer min-w-[170px] flex items-center justify-between gap-2 shadow-sm hover:bg-slate-50 transition-all"
+            >
+              <span>{getMonthOptions().find(opt => opt.value === selectedMonth)?.label || selectedMonth}</span>
+              <span className="material-symbols-outlined text-[16px] text-slate-500 transition-transform duration-200" style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0)' }}>keyboard_arrow_down</span>
+            </button>
+
+            {isDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
+                <div className="absolute right-0 mt-2 w-[180px] bg-white border border-slate-200/80 rounded-xl py-1.5 shadow-xl z-50 max-h-[250px] overflow-y-auto backdrop-blur-md scrollbar-thin scrollbar-thumb-slate-200">
+                  {getMonthOptions().map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        setSelectedMonth(opt.value);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-primary/10 hover:text-primary transition-all ${
+                        selectedMonth === opt.value ? 'bg-primary/5 text-primary border-l-2 border-primary pl-3' : 'text-slate-700'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -837,35 +861,6 @@ function OfficeDashboard({ branch }: { branch: string }) {
   useEffect(() => {
     const fetchLiveMembers = async () => {
       setLoading(true);
-      
-      // Auto-eviction of expired members
-      try {
-        const graceThreshold = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
-        const { data: expired } = await supabase
-          .from('members')
-          .select('id, seat_no')
-          .eq('branch', branch)
-          .eq('is_active', true)
-          .lt('subscription_end_date', graceThreshold);
-
-        if (expired && expired.length > 0) {
-          await Promise.all(
-            expired.map(m =>
-              supabase
-                .from('members')
-                .update({ 
-                  is_active: false, 
-                  previous_seat_no: m.seat_no, 
-                  seat_no: null 
-                })
-                .eq('id', m.id)
-            )
-          );
-        }
-      } catch (err) {
-        console.error("Auto-eviction failed", err);
-      }
-
       const { data, error } = await supabase
         .from('members')
         .select('*')
@@ -873,19 +868,20 @@ function OfficeDashboard({ branch }: { branch: string }) {
         .order('created_at', { ascending: false });
       
       if (data) {
-        setRawMembers(data);
+        const { updatedMembers } = await checkAndReleaseSeats(data, branch);
+        setRawMembers(updatedMembers);
         const today = new Date();
         const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
         
-        const dueSoonCount = data.filter(m => {
+        const dueSoonCount = updatedMembers.filter(m => {
           if (!m.is_active || !m.subscription_end_date) return false;
           const end = new Date(m.subscription_end_date);
           return end >= todayZero && end <= in3Days;
         }).length;
 
-        const defaulterCount = data.filter(m => !m.is_active || (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero)).length;
-        const activeMembers = data.filter(m => m.is_active && !(m.subscription_end_date && new Date(m.subscription_end_date) < todayZero));
+        const defaulterCount = updatedMembers.filter(m => !m.is_active || (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero)).length;
+        const activeMembers = updatedMembers.filter(m => m.is_active && !(m.subscription_end_date && new Date(m.subscription_end_date) < todayZero));
         
         setDueSoon(dueSoonCount);
         setOverdueCount(defaulterCount);

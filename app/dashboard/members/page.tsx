@@ -6,7 +6,8 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
 import { logActivity } from "@/lib/activity";
 import { getLibrarySetting } from "@/lib/settings";
-import { getMemberStatus } from "@/lib/utils";
+import { getMemberStatus, checkAndReleaseSeats } from "@/lib/utils";
+import { formatWhatsAppNumber } from "@/lib/whatsapp";
 
 export default function MembersPage() {
   const { activeBranch } = useBranch();
@@ -78,7 +79,10 @@ export default function MembersPage() {
       .eq('branch', activeBranch)
       .order('created_at', { ascending: false });
     
-    if (data) setMembers(data);
+    if (data) {
+      const { updatedMembers } = await checkAndReleaseSeats(data, activeBranch);
+      setMembers(updatedMembers);
+    }
     setLoading(false);
   }, [activeBranch]);
 
@@ -318,7 +322,7 @@ export default function MembersPage() {
     
     window.open(`/invoice?id=${newInv ? newInv.id : member.id}`, '_blank');
 
-    const mobile = member.mobile.replace(/[^0-9]/g, '');
+    const mobile = formatWhatsAppNumber(member.mobile);
     const welcomeTemplate = await getLibrarySetting(
       "welcome_msg",
       "Dear {name},\n\nWelcome to Krishna Library! Your admission is confirmed.\nBranch: {branch}\nSeat No: {seat}\nShift: {shift}\nValid Till: {expiry}\n\nHappy Learning!\nKrishna Library"
@@ -491,6 +495,117 @@ export default function MembersPage() {
       setIsActionLoading(false);
     }
   };
+
+  const handleExportPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
+      
+      const doc = new jsPDF();
+      
+      // Header Banner Style
+      doc.setFillColor(0, 49, 120); // #003178 Krishna Blue
+      doc.rect(0, 0, 210, 35, 'F');
+      
+      // Title
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.text("KRISHNA LIBRARY", 14, 18);
+      
+      // Subtitle
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(220, 230, 255);
+      doc.text(`${branchName} Branch  |  Student Directory Report`, 14, 25);
+      
+      // Generation Info (Date & Time)
+      const nowStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+      doc.text(`Generated: ${nowStr}`, 130, 25);
+      
+      // Add current filter category and total records count under header
+      doc.setTextColor(51, 65, 85); // Slate 700
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      
+      const filterLabels: Record<string, string> = {
+        active: "Active (Paid)",
+        inactive: "Inactive",
+        unreserved: "Unreserved",
+        pending: "Pending",
+        overdue: "Overdue",
+        'due-soon': "Due Soon",
+        left: "Left",
+        all: "All Students"
+      };
+      
+      const activeFilterName = filterLabels[filterStatus] || filterStatus;
+      doc.text(`Report Category: ${activeFilterName} (${filteredMembers.length} records)`, 14, 45);
+      
+      // Table Generation
+      const tableHeaders = [["ID", "Name", "Mobile", "Seat", "Shift", "Status", "Validity Expiry"]];
+      const tableRows = filteredMembers.map(m => {
+        const statusInfo = getMemberStatus(m);
+        let statusText = "Active (Paid)";
+        if (statusInfo.type === 'active-paid') statusText = "Active (Paid)";
+        else if (statusInfo.type === 'unassigned') statusText = "Active (Unassigned)";
+        else if (statusInfo.type === 'inactive') statusText = "Inactive";
+        else if (statusInfo.type === 'unreserved') statusText = "Unreserved";
+        else if (statusInfo.type === 'pending') statusText = `Pending (Rs. ${m.outstanding_dues || 0})`;
+        else if (statusInfo.type === 'overdue') statusText = `Overdue (Rs. ${m.outstanding_dues || 0})`;
+        else if (statusInfo.type === 'due-soon') statusText = "Due Soon";
+        else if (statusInfo.type === 'left') {
+          statusText = m.left_with_dues ? `Left with Dues (Rs. ${m.loss_amount || 0})` : "Left (Clear)";
+        }
+        
+        return [
+          m.permanent_id || "N/A",
+          m.full_name || "N/A",
+          m.mobile || "N/A",
+          m.seat_no || "—",
+          m.shift || "N/A",
+          statusText,
+          m.subscription_end_date ? new Date(m.subscription_end_date).toLocaleDateString('en-GB') : "N/A"
+        ];
+      });
+      
+      autoTable(doc, {
+        head: tableHeaders,
+        body: tableRows,
+        startY: 52,
+        theme: 'striped',
+        headStyles: { fillColor: [0, 49, 120], textColor: [255, 255, 255], fontSize: 9, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8, textColor: [51, 65, 85] },
+        alternateRowStyles: { fillColor: [248, 250, 252] }, // Light blue-slate tint
+        margin: { left: 14, right: 14 },
+        didDrawPage: (data) => {
+          // Footer
+          const pageCount = (doc as any).internal.getNumberOfPages();
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184); // Slate 400
+          doc.text(
+            `Page ${data.pageNumber} of ${pageCount}`,
+            14,
+            doc.internal.pageSize.height - 10
+          );
+          doc.text(
+            "Confidential - Krishna Library Management System",
+            doc.internal.pageSize.width - 90,
+            doc.internal.pageSize.height - 10
+          );
+        }
+      });
+      
+      const fileName = `Student_Directory_${activeFilterName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      
+      logActivity(activeBranch, "student_export_pdf", `Exported student directory (${activeFilterName}) to PDF`);
+    } catch (error) {
+      console.error("PDF export failed:", error);
+      alert("Failed to export PDF. Please check console for details.");
+    }
+  };
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -513,9 +628,12 @@ export default function MembersPage() {
               className="input-premium !py-2.5 !pl-9 !pr-4 !text-sm !rounded-xl w-full"
             />
           </div>
-          <button className="btn-ghost px-4 py-2.5 text-sm flex items-center gap-2 shrink-0">
-            <span className="material-symbols-outlined text-base">download</span>
-            Export
+          <button 
+            onClick={handleExportPDF}
+            className="btn-ghost px-4 py-2.5 text-sm flex items-center gap-2 shrink-0 text-[#003178] border border-[#003178]/20 hover:bg-[#003178]/5 transition-all"
+          >
+            <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+            Export PDF
           </button>
         </div>
       </div>
@@ -524,7 +642,7 @@ export default function MembersPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.04] pb-4">
         <div className="flex gap-2">
           {[
-            { key: 'active' as const, label: `Active (${activeCount})` },
+            {key: 'active' as const, label: `Active (Paid) (${activeCount})` },
             { key: 'inactive' as const, label: `Inactive (${inactiveCount})` },
             { key: 'unreserved' as const, label: `Unreserved (${unreservedCount})` },
             { key: 'pending' as const, label: `Pending (${pendingCount})` },
@@ -661,7 +779,7 @@ export default function MembersPage() {
                 </div>
                 <div className="flex items-center justify-between border-t border-white/[0.06] pt-3">
                   <div className="text-on-surface-variant text-xs font-medium">{member.mobile}</div>
-                  <a href={`https://wa.me/${member.mobile.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all text-sm border border-emerald-500/20">
+                  <a href={`https://wa.me/${formatWhatsAppNumber(member.mobile)}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all text-sm border border-emerald-500/20">
                     <span className="material-symbols-outlined text-sm">chat</span>
                   </a>
                 </div>
@@ -724,7 +842,7 @@ export default function MembersPage() {
                       </td>
                       <td className="px-6 py-4 border-b border-[#f1f5f9] text-right">
                         <a 
-                          href={`https://wa.me/${member.mobile.replace(/[^0-9]/g, '')}`} 
+                          href={`https://wa.me/${formatWhatsAppNumber(member.mobile)}`} 
                           target="_blank" rel="noreferrer" 
                           onClick={(e) => e.stopPropagation()} 
                           className="inline-flex w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-400 items-center justify-center hover:bg-emerald-500 hover:text-white transition-all text-sm border border-emerald-500/20"

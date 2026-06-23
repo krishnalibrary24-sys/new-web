@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logActivity } from "@/lib/activity";
-import { getTemplate, parseTemplate } from "@/lib/whatsapp";
+import { getTemplate, parseTemplate, formatWhatsAppNumber } from "@/lib/whatsapp";
 import { getMemberStatus } from "@/lib/utils";
 
 function RecordPaymentInner() {
@@ -519,7 +519,7 @@ function RecordPaymentInner() {
         const isReserved = refreshedMember.permanent_id && !refreshedMember.permanent_id.includes('U');
 
         if (targetInvoice) {
-          const mobileClean = refreshedMember.mobile ? refreshedMember.mobile.replace(/[^0-9]/g, '') : '';
+          const mobileClean = formatWhatsAppNumber(refreshedMember.mobile);
           const branchLabel = refreshedMember.branch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
           const seatText = refreshedMember.seat_no || 'Unreserved (No seat allotted)';
           const expiryDate = refreshedMember.subscription_end_date ? new Date(refreshedMember.subscription_end_date).toLocaleDateString('en-IN') : 'N/A';

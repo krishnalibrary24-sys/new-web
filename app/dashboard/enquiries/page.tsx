@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
+import { formatWhatsAppNumber } from "@/lib/whatsapp";
 
 interface Lead {
   id: string;
@@ -263,7 +264,7 @@ export default function EnquiriesPage() {
                           Admit
                         </a>
                         <a 
-                          href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${lead.full_name}, thank you for your enquiry at Krishna Library! How can we assist you today?`)}`} 
+                          href={`https://wa.me/${formatWhatsAppNumber(lead.phone)}?text=${encodeURIComponent(`Hello ${lead.full_name}, thank you for your enquiry at Krishna Library! How can we assist you today?`)}`} 
                           target="_blank" rel="noreferrer"
                           className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-on-surface-variant hover:text-emerald-400 transition-all"
                           title="Message on WhatsApp"
@@ -359,7 +360,7 @@ export default function EnquiriesPage() {
                     <span className="material-symbols-outlined text-base">sticky_note_2</span>
                   </button>
                   <a 
-                    href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${lead.full_name}, thank you for your enquiry at Krishna Library! How can we assist you today?`)}`} 
+                    href={`https://wa.me/${formatWhatsAppNumber(lead.phone)}?text=${encodeURIComponent(`Hello ${lead.full_name}, thank you for your enquiry at Krishna Library! How can we assist you today?`)}`} 
                     target="_blank" rel="noreferrer"
                     className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all"
                   >
