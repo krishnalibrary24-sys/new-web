@@ -515,23 +515,6 @@ export default function AdmissionPage() {
               )}
             </div>
 
-            {/* Documents Section */}
-            <div className="space-y-5 pt-6 border-t border-white/[0.06]">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="material-symbols-outlined text-secondary text-base">upload_file</span>
-                <h3 className="text-xs font-bold text-secondary uppercase tracking-widest">Documents (Optional)</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border border-dashed border-white/10 rounded-xl p-5 text-center hover:bg-white/[0.02] hover:border-white/20 cursor-pointer transition-all group">
-                  <span className="material-symbols-outlined text-2xl text-on-surface-variant/50 mb-2 group-hover:text-on-surface-variant transition-colors">add_a_photo</span>
-                  <div className="text-xs text-white/60 font-medium group-hover:text-white/80 transition-colors">Upload Profile Photo</div>
-                </div>
-                <div className="border border-dashed border-white/10 rounded-xl p-5 text-center hover:bg-white/[0.02] hover:border-white/20 cursor-pointer transition-all group">
-                  <span className="material-symbols-outlined text-2xl text-on-surface-variant/50 mb-2 group-hover:text-on-surface-variant transition-colors">id_card</span>
-                  <div className="text-xs text-white/60 font-medium group-hover:text-white/80 transition-colors">Upload ID Proof</div>
-                </div>
-              </div>
-            </div>
 
             {/* Submit */}
             <button disabled={isSubmitting} type="submit" className="w-full btn-primary py-4 mt-4 flex justify-center items-center gap-2 disabled:opacity-50">
