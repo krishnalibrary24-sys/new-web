@@ -602,15 +602,7 @@ export default function SeatingPage() {
             </div>
           </div>
         ) : activeBranch === 'bengali-chowk' ? (
-          <div className="overflow-x-auto p-4 pt-10 bg-slate-50/50 rounded-2xl border border-slate-100 relative mt-4">
-            {/* Room Labels */}
-            <div className="absolute top-4 left-0 right-0 flex justify-center pointer-events-none">
-              <div className="w-full max-w-[800px] flex justify-between px-16">
-                <span className="font-black text-blue-900/40 tracking-widest text-xl uppercase">Light Room</span>
-                <span className="font-black text-blue-900/40 tracking-widest text-xl uppercase">Dark Room</span>
-              </div>
-            </div>
-
+          <div className="overflow-x-auto p-4 pt-16 bg-slate-50/50 rounded-2xl border border-slate-100 relative mt-4">
             <div 
               className="grid gap-2 min-w-[max-content] relative w-max mx-auto"
               style={{ 
@@ -618,6 +610,11 @@ export default function SeatingPage() {
                 gridAutoRows: 'minmax(36px, 42px)'
               }}
             >
+              {/* Room Labels */}
+              <div className="absolute -top-12 left-0 right-0 flex justify-between pointer-events-none px-12 md:px-24">
+                <span className="font-black text-blue-900/40 tracking-widest text-lg uppercase">Light Room</span>
+                <span className="font-black text-blue-900/40 tracking-widest text-lg uppercase">Dark Room</span>
+              </div>
               {/* Vertical Room Divider (Red Line) */}
               <div className="flex flex-col items-center justify-center pointer-events-none border-r-2 border-red-500/50" style={{ gridRow: '1 / -1', gridColumn: 12, minWidth: '16px', justifySelf: 'center', height: '100%' }}>
               </div>

@@ -259,6 +259,30 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
             <span className="material-symbols-outlined text-lg">logout</span>
           </button>
         </header>
+
+        {/* Mobile Branch Toggle (Admin Only) */}
+        {isAdmin && (
+          <div className="md:hidden px-4 py-2 bg-white border-b border-[#e2e8f0] sticky top-[56px] z-40 shadow-sm">
+            <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-1 flex relative">
+              <button 
+                onClick={() => setActiveBranch('bengali-chowk')}
+                className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all z-20 relative ${activeBranch === 'bengali-chowk' ? '!text-white' : 'text-[#475569] hover:text-[#0f172a]'}`}
+              >
+                Bangali Chowk
+              </button>
+              <button 
+                onClick={() => setActiveBranch('namnakala')}
+                className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all z-20 relative ${activeBranch === 'namnakala' ? '!text-white' : 'text-[#475569] hover:text-[#0f172a]'}`}
+              >
+                Namnakala
+              </button>
+              <div 
+                className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-[#003178] rounded-lg transition-all duration-300 ease-out shadow-[0_4px_12px_rgba(0,49,120,0.2)]"
+                style={{ left: activeBranch === 'bengali-chowk' ? '4px' : 'calc(50%)' }}
+              />
+            </div>
+          </div>
+        )}
  
         <div className="p-4 md:p-8 max-w-7xl mx-auto">
           {children}
