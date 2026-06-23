@@ -639,8 +639,8 @@ export default function MembersPage() {
       </div>
 
       {/* Filter Tabs & Sorting */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.04] pb-4">
-        <div className="flex gap-2">
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 border-b border-white/[0.04] pb-4">
+        <div className="flex gap-2 overflow-x-auto w-full xl:w-auto pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {[
             {key: 'active' as const, label: `Active (Paid) (${activeCount})` },
             { key: 'inactive' as const, label: `Inactive (${inactiveCount})` },
@@ -654,7 +654,7 @@ export default function MembersPage() {
             <button
               key={tab.key}
               onClick={() => setFilterStatus(tab.key)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
+              className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
                 filterStatus === tab.key
                   ? (tab.key === 'overdue' ? 'bg-red-500/15 text-red-400 border-red-500/30 shadow-sm' :
                      tab.key === 'left' ? 'bg-red-500/15 text-red-400 border-red-500/30 shadow-sm' :

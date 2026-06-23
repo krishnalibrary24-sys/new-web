@@ -406,31 +406,31 @@ CREATE POLICY "anon_all_activity_logs" ON public.activity_logs FOR ALL TO anon, 
                   return (
                     <div key={log.id} className="p-4 hover:bg-slate-50/50 transition-colors flex gap-3 sm:gap-4 items-start group">
                       {/* Timeline Icon / Category Indicator */}
-                      <div className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center flex-shrink-0 shadow-sm bg-white">
-                        <span className="text-[10px] font-bold text-slate-400 font-mono">
+                      <div className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center flex-shrink-0 shadow-sm bg-white">
+                        <span className="text-xs font-bold text-slate-400 font-mono">
                           {log.staff_id.charAt(0).toUpperCase()}
                         </span>
                       </div>
 
                       {/* Log details */}
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
-                          <span className={`badge text-[9px] px-2 py-0.5 rounded font-bold font-manrope w-fit flex-shrink-0 ${badge.class}`}>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                          <span className={`badge text-[10px] px-2.5 py-1 rounded-md font-bold font-manrope w-fit flex-shrink-0 ${badge.class}`}>
                             {badge.label}
                           </span>
-                          <span className="text-xs text-slate-900 font-bold leading-normal break-words">
+                          <span className="text-sm md:text-[15px] text-slate-900 font-bold leading-snug break-words">
                             {log.details}
                           </span>
                         </div>
                         
-                        <div className="flex flex-col xs:flex-row xs:items-center gap-1.5 xs:gap-3 text-[10px] text-slate-500">
-                          <span className="flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[12px] opacity-75">person</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-xs text-slate-500">
+                          <span className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[14px] opacity-75">person</span>
                             Logged by: <strong className="text-slate-700">{log.staff_id}</strong>
                           </span>
-                          <span className="hidden xs:inline w-1 h-1 rounded-full bg-slate-300" />
-                          <span className="flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[12px] opacity-75">calendar_month</span>
+                          <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300" />
+                          <span className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[14px] opacity-75">calendar_month</span>
                             {formatDate(log.created_at)} at {formatTime(log.created_at)}
                           </span>
                         </div>
