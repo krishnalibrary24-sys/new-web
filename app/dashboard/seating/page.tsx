@@ -491,27 +491,70 @@ export default function SeatingPage() {
         {activeBranch === 'namnakala' ? (
           <div className="overflow-x-auto p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
             <div 
-              className="grid gap-2 min-w-[max-content] relative w-max mx-auto"
+              className="grid gap-1.5 min-w-[max-content] relative w-max mx-auto px-4"
               style={{ 
-                gridTemplateColumns: 'repeat(18, minmax(38px, 44px))',
-                gridAutoRows: 'minmax(38px, 44px)'
+                gridTemplateColumns: 'repeat(19, minmax(30px, 36px))',
+                gridAutoRows: 'minmax(30px, 36px)'
               }}
             >
-              {/* Horizontal Aisles (Row 2, Row 4, Row 8) */}
-              <div className="flex items-center justify-center text-slate-400 pointer-events-none border-b border-dashed border-slate-300" style={{ gridRow: 2, gridColumn: '1 / -1', minHeight: '16px', alignSelf: 'center' }}>
-                <div className="bg-slate-50/50 px-2 flex items-center gap-2"><span className="material-symbols-outlined text-[12px]">west</span> <span className="text-[9px] uppercase tracking-widest font-bold">Walkway</span> <span className="material-symbols-outlined text-[12px]">east</span></div>
+              {/* Row 2: Left Arrow under 1..8 */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 2, gridColumn: '2 / 10' }}>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                <div className="h-[1.5px] bg-[#003178] w-full" />
               </div>
-              <div className="flex items-center justify-center text-slate-400 pointer-events-none border-b border-dashed border-slate-300" style={{ gridRow: 4, gridColumn: '1 / -1', minHeight: '16px', alignSelf: 'center' }}>
-                <div className="bg-slate-50/50 px-2 flex items-center gap-2"><span className="material-symbols-outlined text-[12px]">west</span> <span className="text-[9px] uppercase tracking-widest font-bold">Walkway</span> <span className="material-symbols-outlined text-[12px]">east</span></div>
+              {/* Row 2: Right Arrow under 9..16 */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 2, gridColumn: '12 / 20' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full" />
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
-              <div className="flex items-center justify-center text-slate-400 pointer-events-none border-b border-dashed border-slate-300" style={{ gridRow: 8, gridColumn: '1 / -1', minHeight: '16px', alignSelf: 'center' }}>
-                <div className="bg-slate-50/50 px-2 flex items-center gap-2"><span className="material-symbols-outlined text-[12px]">west</span> <span className="text-[9px] uppercase tracking-widest font-bold">Walkway</span> <span className="material-symbols-outlined text-[12px]">east</span></div>
+              
+              {/* Row 5: Left Arrow under 33..41 */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 5, gridColumn: '1 / 10' }}>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                <div className="h-[1.5px] bg-[#003178] w-full" />
+              </div>
+              {/* Row 5: Right Arrow under 42..48 */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 5, gridColumn: '13 / 20' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full" />
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
-              {/* Vertical Aisle (Col 10) */}
-              <div className="flex flex-col items-center justify-center text-slate-400 pointer-events-none border-r border-dashed border-slate-300" style={{ gridRow: '1 / -1', gridColumn: 10, minWidth: '16px', justifySelf: 'center' }}>
-                <div className="bg-slate-50/50 py-2 flex flex-col items-center gap-2"><span className="material-symbols-outlined text-[12px]">north</span> <span className="text-[9px] uppercase tracking-widest font-bold" style={{ writingMode: 'vertical-rl' }}>Main Aisle</span> <span className="material-symbols-outlined text-[12px]">south</span></div>
+              {/* Row 9: Left Arrow below 63..70 */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 9, gridColumn: '1 / 10' }}>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                <div className="h-[1.5px] bg-[#003178] w-full" />
               </div>
+              {/* Row 9: Right Arrow below 89..94 */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 9, gridColumn: '14 / 20' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full" />
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              </div>
+
+              {/* Sub-Right Arrows */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 12, gridColumn: '16 / 20' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full" />
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              </div>
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 15, gridColumn: '16 / 20' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full" />
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              </div>
+
+              {/* Up Arrow Vertical */}
+              <div className="flex flex-col items-center text-[#003178] opacity-70" style={{ gridRow: '1 / 8', gridColumn: 11 }}>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)' }}>arrow_right_alt</span>
+                <div className="w-[1.5px] bg-[#003178] h-full" />
+              </div>
+
+              {/* Down Arrow Vertical */}
+              <div className="flex flex-col items-center justify-end text-[#003178] opacity-70" style={{ gridRow: '10 / 17', gridColumn: 15 }}>
+                <div className="w-[1.5px] bg-[#003178] h-[85%]" />
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(90deg)' }}>arrow_right_alt</span>
+              </div>
+
+              {/* Horizontal Separator Lines */}
+              <div className="border-b-[1.5px] border-[#003178] opacity-70 w-full self-end -mb-[5px]" style={{ gridRow: 6, gridColumn: '2 / 10' }} />
+              <div className="border-b-[1.5px] border-[#003178] opacity-70 w-full self-end -mb-[5px]" style={{ gridRow: 6, gridColumn: '14 / 20' }} />
 
               {[...Array(seats)].map((_, i) => {
                 const seatNum = i + 1;
@@ -523,49 +566,52 @@ export default function SeatingPage() {
                 let r: number | 'auto' = 'auto';
                 let c: number | 'auto' = 'auto';
 
-                // LEFT BLOCK (Cols 1 to 9)
+                // LEFT BLOCK
                 if (seatNum >= 1 && seatNum <= 8) {
-                  r = 1; c = seatNum + 1;
+                  r = 1; c = seatNum + 1; // 1->C2, 8->C9
                 } else if (seatNum >= 24 && seatNum <= 32) {
-                  r = 3; c = 33 - seatNum;
+                  r = 3; c = 33 - seatNum; // 32->C1, 24->C9
                 } else if (seatNum >= 33 && seatNum <= 41) {
-                  r = 5; c = seatNum - 32;
+                  r = 4; c = seatNum - 32; // 33->C1, 41->C9
                 } else if (seatNum >= 55 && seatNum <= 62) {
-                  r = 6; c = 64 - seatNum;
+                  r = 6; c = 64 - seatNum; // 62->C2, 55->C9
                 } else if (seatNum >= 63 && seatNum <= 70) {
-                  r = 7; c = seatNum - 61;
+                  r = 7; c = seatNum - 61; // 63->C2, 70->C9
                 } else if (seatNum >= 71 && seatNum <= 79) {
-                  r = 9; c = 80 - seatNum;
+                  r = 10; c = 80 - seatNum; // 79->C1, 71->C9
                 } else if (seatNum >= 80 && seatNum <= 88) {
-                  r = 10; c = 89 - seatNum;
+                  r = 11; c = 89 - seatNum; // 88->C1, 80->C9
                 }
                 
-                // RIGHT BLOCK TOP (Cols 11 to 18)
+                // RIGHT BLOCK TOP
                 else if (seatNum >= 9 && seatNum <= 16) {
-                  r = 1; c = seatNum + 2;
+                  r = 1; c = seatNum + 3; // 9->C12, 16->C19
                 } else if (seatNum >= 17 && seatNum <= 23) {
-                  r = 3; c = 35 - seatNum;
+                  r = 3; c = 36 - seatNum; // 23->C13, 17->C19
                 } else if (seatNum >= 42 && seatNum <= 48) {
-                  r = 5; c = seatNum - 30;
+                  r = 4; c = seatNum - 29; // 42->C13, 48->C19
                 } else if (seatNum >= 49 && seatNum <= 54) {
-                  r = 6; c = 65 - seatNum;
+                  r = 6; c = 68 - seatNum; // 54->C14, 49->C19
                 } else if (seatNum >= 89 && seatNum <= 94) {
-                  r = 7; c = seatNum - 78;
+                  r = 7; c = seatNum - 75; // 89->C14, 94->C19
                 }
 
-                // RIGHT BLOCK BOTTOM (Cols 12 to 18)
-                else if (seatNum >= 115 && seatNum <= 121) {
-                  r = 130 - seatNum; c = 12; // Rows 9 to 15
-                } else if (seatNum >= 95 && seatNum <= 98) {
-                  r = 9; c = 113 - seatNum;
+                // BOTTOM RIGHT BLOCKS
+                else if (seatNum >= 95 && seatNum <= 98) {
+                  r = 10; c = 114 - seatNum; // 98->C16, 95->C19
                 } else if (seatNum >= 99 && seatNum <= 102) {
-                  r = 10; c = seatNum - 84;
+                  r = 11; c = seatNum - 83; // 99->C16, 102->C19
                 } else if (seatNum >= 103 && seatNum <= 106) {
-                  r = 11; c = 121 - seatNum;
+                  r = 13; c = 122 - seatNum; // 106->C16, 103->C19
                 } else if (seatNum >= 107 && seatNum <= 110) {
-                  r = 12; c = seatNum - 92;
+                  r = 14; c = seatNum - 91; // 107->C16, 110->C19
                 } else if (seatNum >= 111 && seatNum <= 114) {
-                  r = 13; c = 129 - seatNum;
+                  r = 16; c = 130 - seatNum; // 114->C16, 111->C19
+                }
+
+                // CENTER VERTICAL BLOCK
+                else if (seatNum >= 115 && seatNum <= 121) {
+                  r = 131 - seatNum; c = 13; // 121->R10, 115->R16
                 }
 
                 return (
