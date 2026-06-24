@@ -697,113 +697,126 @@ export default function SeatingPage() {
             </div>
           </div>
         ) : activeBranch === 'bengali-chowk' ? (
-          <div className="overflow-x-auto p-4 pt-16 bg-slate-50/50 rounded-2xl border border-slate-100 relative mt-4">
-            <div 
-              className="grid gap-2 min-w-[max-content] relative w-max mx-auto"
-              style={{ 
-                gridTemplateColumns: 'repeat(19, minmax(36px, 42px))',
-                gridAutoRows: 'minmax(36px, 42px)'
-              }}
-            >
-              {/* Room Labels */}
-              <div className="absolute -top-12 left-0 right-0 flex justify-between pointer-events-none px-12 md:px-24">
-                <span className="font-black text-blue-900/40 tracking-widest text-lg uppercase">Light Room</span>
-                <span className="font-black text-blue-900/40 tracking-widest text-lg uppercase">Dark Room</span>
-              </div>
-              {/* Vertical Room Divider (Red Line) */}
-              <div className="flex flex-col items-center justify-center pointer-events-none border-r-2 border-red-500/50" style={{ gridRow: '1 / -1', gridColumn: 12, minWidth: '16px', justifySelf: 'center', height: '100%' }}>
-              </div>
-              
-              {/* Horizontal Top Aisle (Row 2) */}
-              <div className="flex items-center justify-center text-slate-400 pointer-events-none border-b border-dashed border-slate-300" style={{ gridRow: 2, gridColumn: '1 / -1', minHeight: '16px', alignSelf: 'center' }}>
-                <div className="bg-slate-50/50 px-2 flex items-center gap-2"><span className="material-symbols-outlined text-[12px]">west</span> <span className="text-[9px] uppercase tracking-widest font-bold">Walkway</span> <span className="material-symbols-outlined text-[12px]">east</span></div>
-              </div>
+          <div className="overflow-x-auto p-4 bg-slate-50/50 rounded-2xl border border-slate-100 relative mt-4">
+            <div className="min-w-[max-content] relative w-max mx-auto border-[3px] border-[#003178]/80 bg-[#f8faff] p-3 rounded-lg shadow-sm">
+              <div className="absolute top-[52px] left-0 right-0 border-t-[3px] border-[#003178]/80" />
+              <div 
+                className="grid gap-1.5 relative"
+                style={{ 
+                  gridTemplateColumns: 'repeat(19, minmax(30px, 36px))',
+                  gridAutoRows: 'minmax(30px, 36px)'
+                }}
+              >
+                {/* Room Labels */}
+                <div className="font-bold text-xl text-[#003178] uppercase tracking-widest text-center self-center" style={{ gridRow: 1, gridColumn: '1 / 10' }}>
+                  Light Room
+                </div>
+                <div className="font-bold text-xl text-[#003178] uppercase tracking-widest text-center self-center" style={{ gridRow: 1, gridColumn: '11 / 20' }}>
+                  Dark Room
+                </div>
 
-              {[...Array(seats)].map((_, i) => {
-                const seatNum = i + 1;
-                const seatId = seatNum.toString();
-                const style = getSeatStyle(seatId);
-                const occupants = seatMap[seatId] || [];
-                const isSelected = selectedSeat === seatId;
-                
-                let r: number | 'auto' = 'auto';
-                let c: number | 'auto' = 'auto';
+                {/* Vertical Room Divider (Red Line) */}
+                <div className="w-[3px] bg-red-600/90 mx-auto" style={{ gridRow: '1 / 19', gridColumn: 10, height: 'calc(100% + 24px)', marginTop: '-12px', zIndex: 10 }} />
 
-                // Light Room
-                if (seatNum >= 1 && seatNum <= 9) {
-                  const topRowCols = { 9: 1, 8: 2, 7: 3, 6: 4, 5: 5, 4: 7, 3: 8, 2: 9, 1: 11 };
-                  r = 1; c = topRowCols[seatNum as keyof typeof topRowCols];
-                } else if (seatNum >= 10 && seatNum <= 22) {
-                  r = seatNum - 7; c = 1;
-                } else if (seatNum >= 23 && seatNum <= 37) {
-                  r = 40 - seatNum; c = 3;
-                } else if (seatNum >= 38 && seatNum <= 52) {
-                  r = seatNum - 35; c = 5;
-                } else if (seatNum >= 53 && seatNum <= 64) {
-                  r = 67 - seatNum; c = 7;
-                } else if (seatNum >= 65 && seatNum <= 67) {
-                  r = 3; c = 76 - seatNum;
-                } else if (seatNum >= 68 && seatNum <= 70) {
-                  r = 5; c = seatNum - 59;
-                } else if (seatNum >= 71 && seatNum <= 73) {
-                  r = 6; c = 82 - seatNum;
-                } else if (seatNum >= 74 && seatNum <= 76) {
-                  r = 8; c = seatNum - 65;
-                } else if (seatNum >= 77 && seatNum <= 79) {
-                  r = 9; c = 88 - seatNum;
-                } else if (seatNum >= 80 && seatNum <= 82) {
-                  r = 11; c = seatNum - 71;
-                } else if (seatNum >= 83 && seatNum <= 85) {
-                  r = 12; c = 94 - seatNum;
-                } else if (seatNum >= 86 && seatNum <= 88) {
-                  r = 16; c = seatNum - 77;
-                } 
-                // Dark Room
-                else if (seatNum >= 150 && seatNum <= 153) {
-                  r = 1; c = 166 - seatNum;
-                } else if (seatNum >= 89 && seatNum <= 103) {
-                  r = seatNum - 86; c = 13;
-                } else if (seatNum >= 104 && seatNum <= 118) {
-                  r = 121 - seatNum; c = 15;
-                } else if (seatNum >= 119 && seatNum <= 133) {
-                  r = seatNum - 116; c = 17;
-                } else if (seatNum >= 134 && seatNum <= 149) {
-                  r = 151 - seatNum; c = 19;
-                }
+                {/* Squiggly Line Light Room */}
+                <div className="w-full h-full flex justify-center items-center opacity-80 mix-blend-multiply" style={{ gridRow: '4 / 19', gridColumn: 4 }}>
+                  <svg className="h-[95%] w-[120%] text-[#003178]" viewBox="0 0 20 200" preserveAspectRatio="none">
+                    <path d="M10,0 Q20,10 10,20 T10,40 T10,60 T10,80 T10,100 T10,120 T10,140 T10,160 T10,180 T10,200" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                  </svg>
+                </div>
 
-                return (
-                  <button
-                    key={i}
-                    id={`seat-btn-${seatId}`}
-                    onClick={() => setSelectedSeat(seatId)}
-                    style={{ ...style.style, gridRowStart: r, gridColumnStart: c }}
-                    className={`w-full h-full aspect-square ${style.bg} border border-slate-200/50 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 ${
-                      isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black z-10 relative' : ''
-                    } ${blinkingSeat === seatId ? 'seat-blink-active' : ''} ${
-                      seatNum >= 89 && seatNum <= 153 ? 'rounded-md shadow-sm' : 'rounded-full'
-                    }`}
-                    title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
-                  >
-                    <span className={`text-[11px] font-bold ${style.textColor || 'text-slate-500'}`}>{seatId}</span>
-                    {style.dot === 'multishift' ? (
-                      <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
-                        {occupants.map((occ, idx) => {
-                          const getDotColor = (s: string) => {
-                            if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
-                            if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
-                            return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
-                          };
-                          return (
-                            <span key={idx} className={`w-1 h-1 rounded-full ${getDotColor(occ.shift)}`} />
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      style.dot && <span className={`w-1 h-1 rounded-full ${style.dot} absolute bottom-1`} />
-                    )}
-                  </button>
-                );
-              })}
+                {/* Squiggly Line Dark Room */}
+                <div className="w-full h-full flex justify-center items-center opacity-80 mix-blend-multiply" style={{ gridRow: '4 / 19', gridColumn: 14 }}>
+                  <svg className="h-[95%] w-[120%] text-[#003178]" viewBox="0 0 20 200" preserveAspectRatio="none">
+                    <path d="M10,0 Q20,10 10,20 T10,40 T10,60 T10,80 T10,100 T10,120 T10,140 T10,160 T10,180 T10,200" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                  </svg>
+                </div>
+
+                {[...Array(seats)].map((_, i) => {
+                  const seatNum = i + 1;
+                  const seatId = seatNum.toString();
+                  const style = getSeatStyle(seatId);
+                  const occupants = seatMap[seatId] || [];
+                  const isSelected = selectedSeat === seatId;
+                  
+                  let r: number | 'auto' = 'auto';
+                  let c: number | 'auto' = 'auto';
+
+                  // Light Room
+                  if (seatNum >= 1 && seatNum <= 9) {
+                    r = 2; c = 10 - seatNum; // C9..C1
+                  } else if (seatNum >= 10 && seatNum <= 22) {
+                    r = seatNum - 7; c = 1; // R3..R15
+                  } else if (seatNum >= 23 && seatNum <= 37) {
+                    r = 41 - seatNum; c = 3; // R18..R4
+                  } else if (seatNum >= 38 && seatNum <= 52) {
+                    r = seatNum - 34; c = 5; // R4..R18
+                  } else if (seatNum >= 53 && seatNum <= 64) {
+                    r = 68 - seatNum; c = 6; // R15..R4
+                  } else if (seatNum >= 65 && seatNum <= 67) {
+                    r = 4; c = 74 - seatNum; // C9..C7
+                  } else if (seatNum >= 68 && seatNum <= 70) {
+                    r = 7; c = seatNum - 61; // C7..C9
+                  } else if (seatNum >= 71 && seatNum <= 73) {
+                    r = 8; c = 80 - seatNum; // C9..C7
+                  } else if (seatNum >= 74 && seatNum <= 76) {
+                    r = 10; c = seatNum - 67; // C7..C9
+                  } else if (seatNum >= 77 && seatNum <= 79) {
+                    r = 11; c = 86 - seatNum; // C9..C7
+                  } else if (seatNum >= 80 && seatNum <= 82) {
+                    r = 13; c = seatNum - 73; // C7..C9
+                  } else if (seatNum >= 83 && seatNum <= 85) {
+                    r = 14; c = 92 - seatNum; // C9..C7
+                  } else if (seatNum >= 86 && seatNum <= 88) {
+                    r = 17; c = seatNum - 79; // C7..C9
+                  } 
+                  // Dark Room
+                  else if (seatNum >= 89 && seatNum <= 103) {
+                    r = seatNum - 85; c = 11; // R4..R18
+                  } else if (seatNum >= 104 && seatNum <= 118) {
+                    r = 122 - seatNum; c = 13; // R18..R4
+                  } else if (seatNum >= 119 && seatNum <= 133) {
+                    r = seatNum - 115; c = 15; // R4..R18
+                  } else if (seatNum >= 134 && seatNum <= 148) {
+                    r = 152 - seatNum; c = 19; // R18..R4
+                  } else if (seatNum >= 149 && seatNum <= 153) {
+                    r = 2;
+                    if (seatNum >= 150) c = 164 - seatNum; // C14..C11
+                    else c = 19; // 149 -> C19
+                  }
+
+                  return (
+                    <button
+                      key={i}
+                      id={`seat-btn-${seatId}`}
+                      onClick={() => setSelectedSeat(seatId)}
+                      style={{ ...style.style, gridRowStart: r, gridColumnStart: c }}
+                      className={`w-full h-full aspect-square ${style.bg} border-[1.5px] border-[#003178]/60 bg-white/5 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 ${
+                        isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black z-20 relative shadow-lg' : ''
+                      } ${blinkingSeat === seatId ? 'seat-blink-active' : ''}`}
+                      title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
+                    >
+                      <span className={`text-[11px] font-bold ${style.textColor || 'text-[#003178]'}`}>{seatId}</span>
+                      {style.dot === 'multishift' ? (
+                        <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
+                          {occupants.map((occ, idx) => {
+                            const getDotColor = (s: string) => {
+                              if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
+                              if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
+                              return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
+                            };
+                            return (
+                              <span key={idx} className={`w-1 h-1 rounded-full ${getDotColor(occ.shift)}`} />
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        style.dot && <span className={`w-1 h-1 rounded-full ${style.dot} absolute bottom-1`} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         ) : (
