@@ -1113,13 +1113,13 @@ export default function MembersPage() {
               {/* Transaction Ledger */}
               <h4 className="text-xs font-bold text-on-surface-variant mb-3 uppercase tracking-widest">Payment History</h4>
               <div className="bg-white/[0.03] border border-white/[0.04] rounded-xl overflow-x-auto max-h-48 overflow-y-auto" data-lenis-prevent="true">
-                <table className="w-full text-left text-sm relative">
+                <table className="w-full min-w-[500px] text-left text-sm relative">
                   <thead className="bg-slate-900 sticky top-0 text-on-surface-variant text-xs uppercase tracking-wider">
                     <tr>
                       <th className="px-4 py-2.5">Date</th>
                       <th className="px-4 py-2.5">Amount</th>
                       <th className="px-4 py-2.5">Mode</th>
-                      <th className="px-4 py-2.5 w-1/2">Notes / Plan Details</th>
+                      <th className="px-4 py-2.5">Notes / Plan Details</th>
                     </tr>
                   </thead>
                   <tbody className="text-white divide-y divide-white/[0.04]">
