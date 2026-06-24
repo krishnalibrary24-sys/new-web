@@ -1141,7 +1141,7 @@ export default function MembersPage() {
                           <td className="px-4 py-3">
                             <span className="badge badge-info">{p.payment_mode || "Cash"}</span>
                           </td>
-                          <td className="px-4 py-3 text-xs text-on-surface-variant max-w-[200px] truncate" title={p.notes}>
+                          <td className="px-4 py-3 text-xs text-on-surface-variant min-w-[120px] max-w-[200px] break-words whitespace-normal">
                             {p.notes || "—"}
                           </td>
                         </tr>
@@ -1459,7 +1459,7 @@ function InfoField({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider mb-0.5">{label}</div>
-      <div className="text-white text-sm truncate">{value}</div>
+      <div className="text-white text-sm break-words whitespace-normal">{value}</div>
     </div>
   );
 }
