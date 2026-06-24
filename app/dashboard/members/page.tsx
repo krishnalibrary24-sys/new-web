@@ -864,7 +864,7 @@ export default function MembersPage() {
         <div className="fixed inset-0 z-[9999] bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center p-4 dashboard-light-theme" onClick={() => setSelectedMember(null)}>
           <div className="glass-pane-elevated rounded-3xl w-full max-w-2xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-white/[0.06] flex justify-between items-center bg-white/[0.02]">
+            <div className="px-4 sm:px-6 py-4 border-b border-white/[0.06] flex justify-between items-center bg-white/[0.02]">
               <h2 className="text-lg font-bold text-white font-manrope">Member Profile</h2>
               <button onClick={() => setSelectedMember(null)} className="text-on-surface-variant hover:text-white p-1.5 rounded-lg hover:bg-white/[0.04] transition-all">
                 <span className="material-symbols-outlined">close</span>
@@ -872,9 +872,9 @@ export default function MembersPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto flex-1" data-lenis-prevent="true">
-              <div className="flex gap-5 items-start mb-6 pb-6 border-b border-white/[0.06]">
-                <div className="w-16 h-16 rounded-2xl bg-blue-100 border border-blue-200 flex items-center justify-center text-[#003178] text-2xl font-bold shrink-0">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1" data-lenis-prevent="true">
+              <div className="flex gap-4 sm:gap-5 items-start mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-white/[0.06]">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-100 border border-blue-200 flex items-center justify-center text-[#003178] text-xl sm:text-2xl font-bold shrink-0">
                   {selectedMember.full_name.charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1067,7 +1067,7 @@ export default function MembersPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 text-sm">
                       <InfoField label="Father's Name" value={selectedMember.father_name || 'N/A'} />
                       <InfoField label="Mobile" value={selectedMember.mobile} />
                       <InfoField label="DOB / Gender" value={`${selectedMember.dob ? selectedMember.dob.split('T')[0] : 'N/A'} / ${selectedMember.gender || 'N/A'}`} />
@@ -1112,7 +1112,7 @@ export default function MembersPage() {
 
               {/* Transaction Ledger */}
               <h4 className="text-xs font-bold text-on-surface-variant mb-3 uppercase tracking-widest">Payment History</h4>
-              <div className="bg-white/[0.03] border border-white/[0.04] rounded-xl overflow-hidden max-h-48 overflow-y-auto" data-lenis-prevent="true">
+              <div className="bg-white/[0.03] border border-white/[0.04] rounded-xl overflow-x-auto max-h-48 overflow-y-auto" data-lenis-prevent="true">
                 <table className="w-full text-left text-sm relative">
                   <thead className="bg-slate-900 sticky top-0 text-on-surface-variant text-xs uppercase tracking-wider">
                     <tr>
@@ -1385,43 +1385,43 @@ export default function MembersPage() {
             </div>
 
             {/* Modal Actions */}
-            <div className="px-6 py-4 border-t border-white/[0.06] flex flex-wrap gap-3 bg-white/[0.02]">
+            <div className="px-4 sm:px-6 py-4 border-t border-white/[0.06] grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 bg-white/[0.02]">
               {isEditingProfile ? (
                 <>
-                  <button disabled={isActionLoading} onClick={() => setIsEditingProfile(false)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50">
+                  <button disabled={isActionLoading} onClick={() => setIsEditingProfile(false)} className="col-span-1 btn-ghost px-4 py-2.5 disabled:opacity-50 text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50">
                     Cancel
                   </button>
-                  <button disabled={isActionLoading} onClick={handleUpdateProfile} className="btn-primary px-4 py-2.5 flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold">
+                  <button disabled={isActionLoading} onClick={handleUpdateProfile} className="col-span-1 btn-primary px-4 py-2.5 sm:flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold">
                     {isActionLoading ? <span className="material-symbols-outlined animate-spin text-base">progress_activity</span> : null}
-                    Save Changes
+                    Save
                   </button>
                 </>
               ) : !isRenewingInline && !isMarkingLeft ? (
                 <>
-                  <button disabled={isActionLoading} onClick={() => handleDelete(selectedMember.id)} className="btn-danger px-4 py-2.5 disabled:opacity-50 flex items-center gap-2 text-xs font-bold">
-                    <span className="material-symbols-outlined text-base">delete</span>
+                  <button disabled={isActionLoading} onClick={() => handleDelete(selectedMember.id)} className="col-span-1 btn-danger px-2 sm:px-4 py-2 disabled:opacity-50 flex justify-center items-center gap-1 text-[11px] sm:text-xs font-bold">
+                    <span className="material-symbols-outlined text-sm sm:text-base">delete</span>
                     Delete
                   </button>
-                  <button disabled={isActionLoading} onClick={() => handleToggleStatus(selectedMember)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-[#1e40af] border border-[#1e40af]/30 hover:bg-[#1e40af]/5 text-xs font-bold flex justify-center items-center gap-1.5">
-                    <span className="material-symbols-outlined text-base">{selectedMember.is_active ? 'toggle_off' : 'toggle_on'}</span>
+                  <button disabled={isActionLoading} onClick={() => handleToggleStatus(selectedMember)} className="col-span-1 btn-ghost px-2 sm:px-4 py-2 disabled:opacity-50 text-[#1e40af] border border-[#1e40af]/30 hover:bg-[#1e40af]/5 text-[11px] sm:text-xs font-bold flex justify-center items-center gap-1">
+                    <span className="material-symbols-outlined text-sm sm:text-base">{selectedMember.is_active ? 'toggle_off' : 'toggle_on'}</span>
                     {selectedMember.is_active ? 'Deactivate' : 'Activate'}
                   </button>
-                  <button disabled={isActionLoading} onClick={() => setIsMarkingLeft(true)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-red-500 border border-red-500/20 hover:bg-red-500/10 text-xs font-bold flex justify-center items-center gap-1">
-                    <span className="material-symbols-outlined text-base">directions_run</span>
-                    Mark as Left
+                  <button disabled={isActionLoading} onClick={() => setIsMarkingLeft(true)} className="col-span-1 btn-ghost px-2 sm:px-4 py-2 disabled:opacity-50 text-red-500 border border-red-500/20 hover:bg-red-500/10 text-[11px] sm:text-xs font-bold flex justify-center items-center gap-1">
+                    <span className="material-symbols-outlined text-sm sm:text-base">directions_run</span>
+                    Mark Left
                   </button>
-                  <button disabled={isActionLoading} onClick={() => setIsEditingProfile(true)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1.5">
-                    <span className="material-symbols-outlined text-sm">edit</span>
+                  <button disabled={isActionLoading} onClick={() => setIsEditingProfile(true)} className="col-span-1 btn-ghost px-2 sm:px-4 py-2 disabled:opacity-50 text-[11px] sm:text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1">
+                    <span className="material-symbols-outlined text-sm sm:text-base">edit</span>
                     Edit Profile
                   </button>
                   <button disabled={isActionLoading} onClick={() => {
                     setSelectedMember(null);
                     router.push(`/dashboard/admission?edit=${selectedMember.id}`);
-                  }} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1.5">
-                    <span className="material-symbols-outlined text-sm">app_registration</span>
+                  }} className="col-span-2 btn-ghost px-2 sm:px-4 py-2 disabled:opacity-50 text-[11px] sm:text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1">
+                    <span className="material-symbols-outlined text-sm sm:text-base">app_registration</span>
                     Edit in Admission
                   </button>
-                  <button disabled={isActionLoading} onClick={() => setIsRenewingInline(true)} className="btn-primary px-4 py-2.5 flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold">
+                  <button disabled={isActionLoading} onClick={() => setIsRenewingInline(true)} className="col-span-2 btn-primary px-4 py-2.5 sm:flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold mt-1 sm:mt-0">
                     Renew Subscription
                   </button>
                 </>
