@@ -697,127 +697,186 @@ export default function SeatingPage() {
             </div>
           </div>
         ) : activeBranch === 'bengali-chowk' ? (
-          <div className="overflow-x-auto p-8 flex justify-center mt-4">
-            <div className="relative border-[1.5px] border-[#1e3a8a] flex flex-col bg-white w-max shadow-sm">
-              {/* Headers */}
-              <div className="flex border-b-[1.5px] border-[#1e3a8a] relative bg-white z-10 h-14">
-                <div className="h-full font-bold text-[#1e3a8a] text-[22px] flex items-center justify-center tracking-wide" style={{ width: '412px' }}>
-                  Light Room
-                </div>
-                <div className="h-full font-bold text-[#1e3a8a] text-[22px] flex items-center justify-center tracking-wide" style={{ width: '292px' }}>
-                  Dark Room
-                </div>
-                {/* Red Line Top Part */}
-                <div className="absolute top-0 bottom-0 w-[2px] bg-[#ef4444] z-20" style={{ left: '412px' }}></div>
+          <div className="overflow-x-auto p-4 pt-16 bg-slate-50/50 rounded-2xl border border-slate-100 relative mt-4">
+            {/* Room Labels and Grid */}
+            <div className="flex flex-col relative w-max mx-auto min-w-[max-content]">
+              
+              {/* Room Labels */}
+              <div className="absolute -top-10 left-0 right-0 flex justify-between pointer-events-none px-12 md:px-24">
+                <span className="font-black text-blue-900/40 tracking-widest text-lg uppercase">Light Room</span>
+                <span className="font-black text-blue-900/40 tracking-widest text-lg uppercase">Dark Room</span>
               </div>
 
               {/* Grid Container */}
-              <div className="relative p-8">
-                {/* Red Line Bottom Part */}
-                <div className="absolute top-0 bottom-0 w-[2px] bg-[#ef4444] z-0" style={{ left: '412px' }}></div>
+              <div 
+                className="grid gap-0 relative border-[1.5px] border-blue-900/40 p-2 bg-white"
+                style={{ 
+                  gridTemplateColumns: 'repeat(17, minmax(34px, 40px))',
+                  gridAutoRows: 'minmax(34px, 40px)'
+                }}
+              >
+                {/* Vertical Room Divider (Red Line) */}
+                <div className="flex justify-center pointer-events-none" style={{ gridRow: '1 / 18', gridColumn: 11, zIndex: 0 }}>
+                  <div className="w-[1.5px] bg-red-500 h-full" />
+                </div>
 
-                <div 
-                  className="grid relative z-10"
-                  style={{ 
-                    gridTemplateColumns: 'repeat(16, 40px)',
-                    gridAutoRows: '40px',
-                    gap: '0px'
-                  }}
-                >
-                  {[...Array(seats)].map((_, i) => {
-                    const seatNum = i + 1;
-                    const seatId = seatNum.toString();
-                    const style = getSeatStyle(seatId);
-                    const occupants = seatMap[seatId] || [];
-                    const isSelected = selectedSeat === seatId;
-                    
-                    let r: number | 'auto' = 'auto';
-                    let c: number | 'auto' = 'auto';
+                {/* Walkway Labels */}
+                {[2, 5, 7, 13, 16].map(col => (
+                  <div key={`walkway-${col}`} style={{ gridColumn: col, gridRow: '2 / 18' }} className="flex flex-col items-center justify-center text-blue-900/30 gap-8 h-full pointer-events-none">
+                    <span className="material-symbols-outlined" style={{ transform: 'rotate(-90deg)' }}>arrow_right_alt</span>
+                    <span className="tracking-[0.3em] font-black uppercase text-[10px]" style={{ writingMode: 'vertical-rl' }}>Walkway</span>
+                    <span className="material-symbols-outlined" style={{ transform: 'rotate(90deg)' }}>arrow_right_alt</span>
+                  </div>
+                ))}
 
-                    // Light Room
-                    if (seatNum >= 1 && seatNum <= 9) {
-                      r = 1; c = 10 - seatNum;
-                    } else if (seatNum >= 10 && seatNum <= 22) {
-                      r = seatNum - 7; c = 1;
-                    } else if (seatNum >= 23 && seatNum <= 37) {
-                      r = 40 - seatNum; c = 3;
-                    } else if (seatNum >= 38 && seatNum <= 52) {
-                      r = seatNum - 35; c = 4;
-                    } else if (seatNum >= 53 && seatNum <= 64) {
-                      r = 67 - seatNum; c = 6;
-                    } else if (seatNum >= 65 && seatNum <= 67) {
-                      r = 3; c = 74 - seatNum;
-                    } else if (seatNum >= 68 && seatNum <= 70) {
-                      r = 6; c = seatNum - 61;
-                    } else if (seatNum >= 71 && seatNum <= 73) {
-                      r = 7; c = 80 - seatNum;
-                    } else if (seatNum >= 74 && seatNum <= 76) {
-                      r = 9; c = seatNum - 67;
-                    } else if (seatNum >= 77 && seatNum <= 79) {
-                      r = 10; c = 86 - seatNum;
-                    } else if (seatNum >= 80 && seatNum <= 82) {
-                      r = 12; c = seatNum - 73;
-                    } else if (seatNum >= 83 && seatNum <= 85) {
-                      r = 13; c = 92 - seatNum;
-                    } else if (seatNum >= 86 && seatNum <= 88) {
-                      r = 17; c = seatNum - 79;
-                    } 
-                    // Dark Room
-                    else if (seatNum >= 150 && seatNum <= 153) {
-                      r = 1; c = 164 - seatNum;
-                    } else if (seatNum >= 89 && seatNum <= 103) {
-                      r = seatNum - 86; c = 11;
-                    } else if (seatNum >= 104 && seatNum <= 118) {
-                      r = 121 - seatNum; c = 13;
-                    } else if (seatNum >= 119 && seatNum <= 133) {
-                      r = seatNum - 116; c = 14;
-                    } else if (seatNum >= 134 && seatNum <= 149) {
-                      r = 150 - seatNum; c = 16;
-                    }
-
-                    // For the exact block look, we overlap borders by -1px using margins
+                {[...Array(seats)].map((_, i) => {
+                  const seatNum = i + 1;
+                  const seatId = seatNum.toString();
+                  
+                  // Top Row Light Room
+                  if (seatNum === 9) {
                     return (
-                      <div
-                        key={i}
-                        style={{ gridRowStart: r, gridColumnStart: c, zIndex: isSelected ? 30 : 10 }}
-                        className="relative"
-                      >
-                        <button
-                          id={`seat-btn-${seatId}`}
-                          onClick={() => setSelectedSeat(seatId)}
-                          style={{ ...style.style, width: '41px', height: '41px', marginTop: '-1px', marginLeft: '-1px' }}
-                          className={`absolute inset-0 bg-white border border-[#1e3a8a] flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-blue-50 ${
-                            isSelected ? 'ring-2 ring-primary ring-offset-1 z-20 font-black bg-blue-100' : ''
-                          } ${blinkingSeat === seatId ? 'seat-blink-active' : ''}`}
-                          title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
-                        >
-                          {/* Ensure background tint from style is applied but doesn't override border */}
-                          <div className={`absolute inset-[1px] -z-10 ${style.bg === 'bg-white' ? '' : style.bg}`} />
-                          
-                          <span className={`text-[13.5px] font-bold ${style.textColor || 'text-[#1e3a8a]'}`}>{seatId}</span>
-                          
-                          {style.dot === 'multishift' ? (
-                            <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
-                              {occupants.map((occ, idx) => {
-                                const getDotColor = (s: string) => {
-                                  if (s === 'Morning') return 'bg-amber-500';
-                                  if (s === 'Evening') return 'bg-purple-500';
-                                  return 'bg-emerald-500';
-                                };
-                                return (
-                                  <span key={idx} className={`w-1 h-1 rounded-full ${getDotColor(occ.shift)}`} />
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            style.dot && <span className={`w-1.5 h-1.5 rounded-full ${style.dot} absolute bottom-1`} />
-                          )}
-                        </button>
+                      <div key="top-light" style={{ gridRow: 1, gridColumn: '1 / 11' }} className="flex w-full">
+                        {[9,8,7,6,5,4,3,2,1].map(n => {
+                          const sId = n.toString();
+                          const sStyle = getSeatStyle(sId);
+                          const sOcc = seatMap[sId] || [];
+                          const sSel = selectedSeat === sId;
+                          return (
+                            <button
+                              key={n}
+                              id={`seat-btn-${sId}`}
+                              onClick={() => setSelectedSeat(sId)}
+                              style={sStyle.style}
+                              className={`flex-1 border-[0.5px] border-blue-900/30 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 bg-white ${
+                                sSel ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black z-10 relative' : ''
+                              } ${blinkingSeat === sId ? 'seat-blink-active' : ''}`}
+                              title={sOcc.length > 0 ? `${sId}: ${sOcc.map(o => o.full_name).join(', ')}` : `Seat ${sId} — Available`}
+                            >
+                              <span className={`text-[11px] font-bold ${sStyle.textColor || 'text-blue-900'}`}>{sId}</span>
+                              {sStyle.dot === 'multishift' ? (
+                                <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
+                                  {sOcc.map((occ, idx) => {
+                                    const getDotColor = (s: string) => {
+                                      if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
+                                      if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
+                                      return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
+                                    };
+                                    return <span key={idx} className={`w-1 h-1 rounded-full ${getDotColor(occ.shift)}`} />;
+                                  })}
+                                </div>
+                              ) : (
+                                sStyle.dot && <span className={`w-1 h-1 rounded-full ${sStyle.dot} absolute bottom-1`} />
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     );
-                  })}
-                </div>
-              </div>
+                  }
+                  if (seatNum >= 1 && seatNum <= 8) return null;
+
+                  // Top Row Dark Room
+                  if (seatNum === 153) {
+                    return (
+                      <div key="top-dark" style={{ gridRow: 1, gridColumn: '12 / 16' }} className="flex w-full">
+                        {[153,152,151,150].map(n => {
+                          const sId = n.toString();
+                          const sStyle = getSeatStyle(sId);
+                          const sOcc = seatMap[sId] || [];
+                          const sSel = selectedSeat === sId;
+                          return (
+                            <button
+                              key={n}
+                              id={`seat-btn-${sId}`}
+                              onClick={() => setSelectedSeat(sId)}
+                              style={sStyle.style}
+                              className={`flex-1 border-[0.5px] border-blue-900/30 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 bg-white ${
+                                sSel ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black z-10 relative' : ''
+                              } ${blinkingSeat === sId ? 'seat-blink-active' : ''}`}
+                              title={sOcc.length > 0 ? `${sId}: ${sOcc.map(o => o.full_name).join(', ')}` : `Seat ${sId} — Available`}
+                            >
+                              <span className={`text-[11px] font-bold ${sStyle.textColor || 'text-blue-900'}`}>{sId}</span>
+                              {sStyle.dot === 'multishift' ? (
+                                <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
+                                  {sOcc.map((occ, idx) => {
+                                    const getDotColor = (s: string) => {
+                                      if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
+                                      if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
+                                      return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
+                                    };
+                                    return <span key={idx} className={`w-1 h-1 rounded-full ${getDotColor(occ.shift)}`} />;
+                                  })}
+                                </div>
+                              ) : (
+                                sStyle.dot && <span className={`w-1 h-1 rounded-full ${sStyle.dot} absolute bottom-1`} />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+                  if (seatNum >= 150 && seatNum <= 152) return null;
+
+                  let r: number | 'auto' = 'auto';
+                  let c: number | 'auto' = 'auto';
+
+                  // Light Room Main Grid
+                  if (seatNum >= 10 && seatNum <= 22) { r = seatNum - 6; c = 1; }
+                  else if (seatNum >= 23 && seatNum <= 37) { r = 40 - seatNum; c = 3; }
+                  else if (seatNum >= 38 && seatNum <= 52) { r = seatNum - 35; c = 4; }
+                  else if (seatNum >= 53 && seatNum <= 64) { r = 67 - seatNum; c = 6; }
+                  else if (seatNum >= 65 && seatNum <= 67) { r = 3; c = 75 - seatNum; }
+                  else if (seatNum >= 68 && seatNum <= 70) { r = 6; c = seatNum - 60; }
+                  else if (seatNum >= 71 && seatNum <= 73) { r = 7; c = 81 - seatNum; }
+                  else if (seatNum >= 74 && seatNum <= 76) { r = 9; c = seatNum - 66; }
+                  else if (seatNum >= 77 && seatNum <= 79) { r = 10; c = 87 - seatNum; }
+                  else if (seatNum >= 80 && seatNum <= 82) { r = 12; c = seatNum - 72; }
+                  else if (seatNum >= 83 && seatNum <= 85) { r = 13; c = 93 - seatNum; }
+                  else if (seatNum >= 86 && seatNum <= 88) { r = 17; c = seatNum - 78; }
+                  
+                  // Dark Room Main Grid
+                  else if (seatNum >= 89 && seatNum <= 103) { r = seatNum - 86; c = 12; }
+                  else if (seatNum >= 104 && seatNum <= 118) { r = 121 - seatNum; c = 14; }
+                  else if (seatNum >= 119 && seatNum <= 133) { r = seatNum - 116; c = 15; }
+                  else if (seatNum >= 134 && seatNum <= 149) { r = 150 - seatNum; c = 17; }
+
+                  const style = getSeatStyle(seatId);
+                  const occupants = seatMap[seatId] || [];
+                  const isSelected = selectedSeat === seatId;
+
+                  return (
+                    <button
+                      key={i}
+                      id={`seat-btn-${seatId}`}
+                      onClick={() => setSelectedSeat(seatId)}
+                      style={{ ...style.style, gridRowStart: r, gridColumnStart: c }}
+                      className={`w-full h-full border-[0.5px] border-blue-900/30 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 bg-white ${
+                        isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black z-10 relative' : ''
+                      } ${blinkingSeat === seatId ? 'seat-blink-active' : ''}`}
+                      title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
+                    >
+                      <span className={`text-[11px] font-bold ${style.textColor || 'text-blue-900'}`}>{seatId}</span>
+                      {style.dot === 'multishift' ? (
+                        <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
+                          {occupants.map((occ, idx) => {
+                            const getDotColor = (s: string) => {
+                              if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
+                              if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
+                              return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
+                            };
+                            return (
+                              <span key={idx} className={`w-1 h-1 rounded-full ${getDotColor(occ.shift)}`} />
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        style.dot && <span className={`w-1 h-1 rounded-full ${style.dot} absolute bottom-1`} />
+                      )}
+                    </button>
+                  );
+                })}
             </div>
           </div>
         ) : (
