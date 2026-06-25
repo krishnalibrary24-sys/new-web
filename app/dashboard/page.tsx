@@ -25,24 +25,8 @@ export default function DashboardPage() {
 
   const isAdmin = role === "admin";
 
-  const handleExportPDF = async () => {
-    try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const element = document.getElementById('admin-dashboard-content');
-      if (!element) return;
-      
-      const opt = {
-        margin:       10,
-        filename:     `Monthly_Dashboard_${activeBranch}_${new Date().toISOString().split('T')[0]}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
-      };
-
-      html2pdf().set(opt).from(element).save();
-    } catch (err) {
-      console.error("PDF export error", err);
-    }
+  const handleExportPDF = () => {
+    window.dispatchEvent(new Event('export-dashboard-pdf'));
   };
 
   return (
@@ -334,6 +318,74 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
       active = false;
     };
   }, [activeBranch, selectedMonth, customStartDate, customEndDate]);
+
+  useEffect(() => {
+    const handleExport = async () => {
+      try {
+        const { jsPDF } = await import('jspdf');
+        const { default: autoTable } = await import('jspdf-autotable');
+        
+        const doc = new jsPDF();
+        
+        // Header Banner Style
+        doc.setFillColor(0, 49, 120); // #003178
+        doc.rect(0, 0, 210, 35, 'F');
+        
+        // Title
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(22);
+        doc.text("KRISHNA LIBRARY", 14, 18);
+        
+        // Subtitle
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(226, 232, 240);
+        
+        const periodStr = selectedMonth === "all" ? "All Time" : (selectedMonth === "custom" ? `${customStartDate} to ${customEndDate}` : selectedMonth);
+        doc.text(`Dashboard Report - ${branchName} Branch  |  Period: ${periodStr}`, 14, 25);
+        
+        // Generation Info (Date & Time)
+        const nowStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+        doc.text(`Generated: ${nowStr}`, 130, 25);
+        
+        // Stats Summary
+        doc.setTextColor(51, 65, 85);
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("Financial & Operational Summary", 14, 45);
+
+        autoTable(doc, {
+          startY: 50,
+          head: [["Metric", "Value"]],
+          body: [
+            ["Total Revenue", stats.totalRevenue],
+            ["Received Revenue", stats.receivedRevenue],
+            ["Cash Revenue", stats.cashRevenue],
+            ["Online Revenue", stats.onlineRevenue],
+            ["Upcoming Expected/Dues", stats.upcomingRevenue],
+            ["Loss Payments", stats.lossPayments],
+            ["Active Members", stats.members],
+            ["Occupancy", `${stats.occupancy}%`],
+            ["Left Members (Filtered Period)", stats.leftMembers]
+          ],
+          theme: 'striped',
+          headStyles: { fillColor: [0, 49, 120], textColor: [255, 255, 255], fontSize: 10, fontStyle: 'bold' },
+          bodyStyles: { fontSize: 10, textColor: [51, 65, 85] },
+          alternateRowStyles: { fillColor: [241, 245, 249] }
+        });
+
+        const fileName = `Dashboard_Report_${activeBranch}_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+      } catch (err) {
+        console.error("PDF generation failed:", err);
+        alert("Failed to export dashboard data. Please check console for details.");
+      }
+    };
+
+    window.addEventListener('export-dashboard-pdf', handleExport);
+    return () => window.removeEventListener('export-dashboard-pdf', handleExport as EventListener);
+  }, [stats, activeBranch, branchName, selectedMonth, customStartDate, customEndDate]);
 
   const getInspectData = () => {
     if (!inspectCategory) return [];
