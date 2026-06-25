@@ -877,6 +877,7 @@ export default function SeatingPage() {
                     </button>
                   );
                 })}
+              </div>
             </div>
           </div>
         ) : (
