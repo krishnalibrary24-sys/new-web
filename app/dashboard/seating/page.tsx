@@ -697,105 +697,127 @@ export default function SeatingPage() {
             </div>
           </div>
         ) : activeBranch === 'bengali-chowk' ? (
-          <div className="overflow-x-auto p-4 pt-16 bg-slate-50/50 rounded-2xl border border-slate-100 relative mt-4">
-            <div 
-              className="grid gap-1 min-w-[max-content] relative w-max mx-auto"
-              style={{ 
-                gridTemplateColumns: 'repeat(16, minmax(36px, 42px))',
-                gridAutoRows: 'minmax(36px, 42px)'
-              }}
-            >
-              {/* Room Labels */}
-              <div className="absolute -top-12 left-0 right-0 flex justify-between pointer-events-none px-12 md:px-32">
-                <span className="font-black text-[#1e3a8a]/70 tracking-widest text-lg uppercase">Light Room</span>
-                <span className="font-black text-[#1e3a8a]/70 tracking-widest text-lg uppercase mr-8">Dark Room</span>
-              </div>
-              {/* Vertical Room Divider (Red Line) */}
-              <div className="flex flex-col items-center justify-center pointer-events-none border-r-[2px] border-red-500" style={{ gridRow: '1 / 19', gridColumn: 10, justifySelf: 'center', height: '100%', transform: 'translateX(2px)' }}>
+          <div className="overflow-x-auto p-8 flex justify-center mt-4">
+            <div className="relative border-[1.5px] border-[#1e3a8a] flex flex-col bg-white w-max shadow-sm">
+              {/* Headers */}
+              <div className="flex border-b-[1.5px] border-[#1e3a8a] relative bg-white z-10 h-14">
+                <div className="h-full font-bold text-[#1e3a8a] text-[22px] flex items-center justify-center tracking-wide" style={{ width: '412px' }}>
+                  Light Room
+                </div>
+                <div className="h-full font-bold text-[#1e3a8a] text-[22px] flex items-center justify-center tracking-wide" style={{ width: '292px' }}>
+                  Dark Room
+                </div>
+                {/* Red Line Top Part */}
+                <div className="absolute top-0 bottom-0 w-[2px] bg-[#ef4444] z-20" style={{ left: '412px' }}></div>
               </div>
 
-              {[...Array(seats)].map((_, i) => {
-                const seatNum = i + 1;
-                const seatId = seatNum.toString();
-                const style = getSeatStyle(seatId);
-                const occupants = seatMap[seatId] || [];
-                const isSelected = selectedSeat === seatId;
-                
-                let r: number | 'auto' = 'auto';
-                let c: number | 'auto' = 'auto';
+              {/* Grid Container */}
+              <div className="relative p-8">
+                {/* Red Line Bottom Part */}
+                <div className="absolute top-0 bottom-0 w-[2px] bg-[#ef4444] z-0" style={{ left: '412px' }}></div>
 
-                // Light Room
-                if (seatNum >= 1 && seatNum <= 9) {
-                  r = 1; c = 10 - seatNum;
-                } else if (seatNum >= 10 && seatNum <= 22) {
-                  r = seatNum - 7; c = 1;
-                } else if (seatNum >= 23 && seatNum <= 37) {
-                  r = 40 - seatNum; c = 3;
-                } else if (seatNum >= 38 && seatNum <= 52) {
-                  r = seatNum - 35; c = 4;
-                } else if (seatNum >= 53 && seatNum <= 64) {
-                  r = 67 - seatNum; c = 6;
-                } else if (seatNum >= 65 && seatNum <= 67) {
-                  r = 3; c = 74 - seatNum;
-                } else if (seatNum >= 68 && seatNum <= 70) {
-                  r = 6; c = seatNum - 61;
-                } else if (seatNum >= 71 && seatNum <= 73) {
-                  r = 7; c = 80 - seatNum;
-                } else if (seatNum >= 74 && seatNum <= 76) {
-                  r = 9; c = seatNum - 67;
-                } else if (seatNum >= 77 && seatNum <= 79) {
-                  r = 10; c = 86 - seatNum;
-                } else if (seatNum >= 80 && seatNum <= 82) {
-                  r = 12; c = seatNum - 73;
-                } else if (seatNum >= 83 && seatNum <= 85) {
-                  r = 13; c = 92 - seatNum;
-                } else if (seatNum >= 86 && seatNum <= 88) {
-                  r = 17; c = seatNum - 79;
-                } 
-                // Dark Room
-                else if (seatNum >= 150 && seatNum <= 153) {
-                  r = 1; c = 164 - seatNum;
-                } else if (seatNum >= 89 && seatNum <= 103) {
-                  r = seatNum - 86; c = 11;
-                } else if (seatNum >= 104 && seatNum <= 118) {
-                  r = 121 - seatNum; c = 13;
-                } else if (seatNum >= 119 && seatNum <= 133) {
-                  r = seatNum - 116; c = 14;
-                } else if (seatNum >= 134 && seatNum <= 149) {
-                  r = 150 - seatNum; c = 16;
-                }
+                <div 
+                  className="grid relative z-10"
+                  style={{ 
+                    gridTemplateColumns: 'repeat(16, 40px)',
+                    gridAutoRows: '40px',
+                    gap: '0px'
+                  }}
+                >
+                  {[...Array(seats)].map((_, i) => {
+                    const seatNum = i + 1;
+                    const seatId = seatNum.toString();
+                    const style = getSeatStyle(seatId);
+                    const occupants = seatMap[seatId] || [];
+                    const isSelected = selectedSeat === seatId;
+                    
+                    let r: number | 'auto' = 'auto';
+                    let c: number | 'auto' = 'auto';
 
-                return (
-                  <button
-                    key={i}
-                    id={`seat-btn-${seatId}`}
-                    onClick={() => setSelectedSeat(seatId)}
-                    style={{ ...style.style, gridRowStart: r, gridColumnStart: c }}
-                    className={`w-full h-full aspect-square ${style.bg} border border-[#1e3a8a]/20 rounded-[4px] flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 ${
-                      isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black z-10 relative' : ''
-                    } ${blinkingSeat === seatId ? 'seat-blink-active' : ''}`}
-                    title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
-                  >
-                    <span className={`text-[12px] font-bold ${style.textColor || 'text-[#1e3a8a]/80'}`}>{seatId}</span>
-                    {style.dot === 'multishift' ? (
-                      <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
-                        {occupants.map((occ, idx) => {
-                          const getDotColor = (s: string) => {
-                            if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
-                            if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
-                            return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
-                          };
-                          return (
-                            <span key={idx} className={`w-1 h-1 rounded-full ${getDotColor(occ.shift)}`} />
-                          );
-                        })}
+                    // Light Room
+                    if (seatNum >= 1 && seatNum <= 9) {
+                      r = 1; c = 10 - seatNum;
+                    } else if (seatNum >= 10 && seatNum <= 22) {
+                      r = seatNum - 7; c = 1;
+                    } else if (seatNum >= 23 && seatNum <= 37) {
+                      r = 40 - seatNum; c = 3;
+                    } else if (seatNum >= 38 && seatNum <= 52) {
+                      r = seatNum - 35; c = 4;
+                    } else if (seatNum >= 53 && seatNum <= 64) {
+                      r = 67 - seatNum; c = 6;
+                    } else if (seatNum >= 65 && seatNum <= 67) {
+                      r = 3; c = 74 - seatNum;
+                    } else if (seatNum >= 68 && seatNum <= 70) {
+                      r = 6; c = seatNum - 61;
+                    } else if (seatNum >= 71 && seatNum <= 73) {
+                      r = 7; c = 80 - seatNum;
+                    } else if (seatNum >= 74 && seatNum <= 76) {
+                      r = 9; c = seatNum - 67;
+                    } else if (seatNum >= 77 && seatNum <= 79) {
+                      r = 10; c = 86 - seatNum;
+                    } else if (seatNum >= 80 && seatNum <= 82) {
+                      r = 12; c = seatNum - 73;
+                    } else if (seatNum >= 83 && seatNum <= 85) {
+                      r = 13; c = 92 - seatNum;
+                    } else if (seatNum >= 86 && seatNum <= 88) {
+                      r = 17; c = seatNum - 79;
+                    } 
+                    // Dark Room
+                    else if (seatNum >= 150 && seatNum <= 153) {
+                      r = 1; c = 164 - seatNum;
+                    } else if (seatNum >= 89 && seatNum <= 103) {
+                      r = seatNum - 86; c = 11;
+                    } else if (seatNum >= 104 && seatNum <= 118) {
+                      r = 121 - seatNum; c = 13;
+                    } else if (seatNum >= 119 && seatNum <= 133) {
+                      r = seatNum - 116; c = 14;
+                    } else if (seatNum >= 134 && seatNum <= 149) {
+                      r = 150 - seatNum; c = 16;
+                    }
+
+                    // For the exact block look, we overlap borders by -1px using margins
+                    return (
+                      <div
+                        key={i}
+                        style={{ gridRowStart: r, gridColumnStart: c, zIndex: isSelected ? 30 : 10 }}
+                        className="relative"
+                      >
+                        <button
+                          id={`seat-btn-${seatId}`}
+                          onClick={() => setSelectedSeat(seatId)}
+                          style={{ ...style.style, width: '41px', height: '41px', marginTop: '-1px', marginLeft: '-1px' }}
+                          className={`absolute inset-0 bg-white border border-[#1e3a8a] flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-blue-50 ${
+                            isSelected ? 'ring-2 ring-primary ring-offset-1 z-20 font-black bg-blue-100' : ''
+                          } ${blinkingSeat === seatId ? 'seat-blink-active' : ''}`}
+                          title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
+                        >
+                          {/* Ensure background tint from style is applied but doesn't override border */}
+                          <div className={`absolute inset-[1px] -z-10 ${style.bg === 'bg-white' ? '' : style.bg}`} />
+                          
+                          <span className={`text-[13.5px] font-bold ${style.textColor || 'text-[#1e3a8a]'}`}>{seatId}</span>
+                          
+                          {style.dot === 'multishift' ? (
+                            <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
+                              {occupants.map((occ, idx) => {
+                                const getDotColor = (s: string) => {
+                                  if (s === 'Morning') return 'bg-amber-500';
+                                  if (s === 'Evening') return 'bg-purple-500';
+                                  return 'bg-emerald-500';
+                                };
+                                return (
+                                  <span key={idx} className={`w-1 h-1 rounded-full ${getDotColor(occ.shift)}`} />
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            style.dot && <span className={`w-1.5 h-1.5 rounded-full ${style.dot} absolute bottom-1`} />
+                          )}
+                        </button>
                       </div>
-                    ) : (
-                      style.dot && <span className={`w-1 h-1 rounded-full ${style.dot} absolute bottom-1`} />
-                    )}
-                  </button>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         ) : (
