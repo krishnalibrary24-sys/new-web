@@ -497,6 +497,14 @@ export default function SeatingPage() {
                 gridAutoRows: 'minmax(30px, 36px)'
               }}
             >
+              {/* Room Labels */}
+              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end whitespace-nowrap -ml-2" style={{ gridRow: 1, gridColumn: '1 / 6' }}>
+                LIGHT ROOM
+              </div>
+              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end whitespace-nowrap -ml-2" style={{ gridRow: 8, gridColumn: '1 / 6' }}>
+                DARK ROOM
+              </div>
+
               {/* Row 2: Left Arrows under 1..8 */}
               <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 2, gridColumn: '2 / 6' }}>
                 <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
