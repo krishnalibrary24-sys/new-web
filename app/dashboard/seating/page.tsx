@@ -493,125 +493,101 @@ export default function SeatingPage() {
             <div 
               className="grid gap-1.5 min-w-[max-content] relative w-max mx-auto px-4"
               style={{ 
-                gridTemplateColumns: 'repeat(20, minmax(30px, 36px))',
+                gridTemplateColumns: 'repeat(17, minmax(30px, 36px))',
                 gridAutoRows: 'minmax(30px, 36px)'
               }}
             >
               {/* Room Labels */}
-              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end whitespace-nowrap -ml-2" style={{ gridRow: 1, gridColumn: '1 / 6' }}>
+              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end whitespace-nowrap" style={{ gridRow: 1, gridColumn: '1 / 10' }}>
                 LIGHT ROOM
               </div>
-              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end whitespace-nowrap -ml-2" style={{ gridRow: 8, gridColumn: '1 / 6' }}>
+              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end whitespace-nowrap" style={{ gridRow: 9, gridColumn: '1 / 10' }}>
                 DARK ROOM
               </div>
 
-              {/* Row 2: Left Arrows under 1..8 */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 2, gridColumn: '2 / 6' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
-                <div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              {/* Row 3 Arrows */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 3, gridColumn: '2 / 6' }}>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 2, gridColumn: '6 / 10' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
-                <div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 3, gridColumn: '6 / 10' }}>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
               </div>
-
-              {/* Row 2: Right Arrows under 9..16 */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 2, gridColumn: '13 / 17' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" />
-                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 3, gridColumn: '11 / 14' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 2, gridColumn: '17 / 21' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" />
-                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
-              </div>
-              
-              {/* Row 5: Left Arrows under 33..41 */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 5, gridColumn: '1 / 5' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
-                <div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
-              </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 5, gridColumn: '6 / 10' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
-                <div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 3, gridColumn: '14 / 18' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
-              {/* Row 5: Right Arrows under 42..48 */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 5, gridColumn: '14 / 17' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" />
-                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              {/* Row 6 Arrows */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 6, gridColumn: '1 / 5' }}>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 5, gridColumn: '18 / 21' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" />
-                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 6, gridColumn: '5 / 10' }}>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
               </div>
-
-              {/* Row 9: Right Arrows under 89..94 */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 9, gridColumn: '15 / 18' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" />
-                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 6, gridColumn: '11 / 14' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 9, gridColumn: '18 / 21' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" />
-                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 6, gridColumn: '14 / 18' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
-              {/* Row 10: Left Arrows above 79..71 */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 10, gridColumn: '1 / 5' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
-                <div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              {/* Row 8 Divider Line */}
+              <div className="border-b-[1.5px] border-[#003178] opacity-70 w-full self-center" style={{ gridRow: 8, gridColumn: '1 / 10' }} />
+              <div className="border-b-[1.5px] border-[#003178] opacity-70 w-full self-center" style={{ gridRow: 8, gridColumn: '11 / 18' }} />
+
+              {/* Row 11 Arrows */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 11, gridColumn: '2 / 6' }}>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 10, gridColumn: '6 / 10' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
-                <div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 11, gridColumn: '6 / 10' }}>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              </div>
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 11, gridColumn: '11 / 14' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              </div>
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 11, gridColumn: '14 / 17' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
-              {/* Sub-Right Arrows Row 13 */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 13, gridColumn: '17 / 19' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" />
-                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              {/* Row 12 Long Left Arrows */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 12, gridColumn: '1 / 5' }}>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 13, gridColumn: '19 / 21' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" />
-                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 12, gridColumn: '5 / 10' }}>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
               </div>
 
-              {/* Sub-Right Arrows Row 16 */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 16, gridColumn: '17 / 19' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" />
-                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              {/* Row 16 Right Arrows */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 16, gridColumn: '14 / 16' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 16, gridColumn: '19 / 21' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" />
-                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 16, gridColumn: '16 / 18' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
-              {/* Top Up Arrow Vertical */}
-              <div className="flex flex-col items-center justify-start text-[#003178] opacity-70" style={{ gridRow: '1 / 4', gridColumn: 11 }}>
+              {/* Row 19 Right Arrows */}
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 19, gridColumn: '14 / 16' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              </div>
+              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 19, gridColumn: '16 / 18' }}>
+                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              </div>
+
+              {/* UP/DOWN Vertical Arrows */}
+              <div className="flex flex-col items-center justify-start text-[#003178] opacity-70" style={{ gridRow: '2 / 8', gridColumn: 10 }}>
                 <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)', marginBottom: '-6px' }}>arrow_right_alt</span>
                 <div className="w-[1.5px] bg-[#003178] h-full" />
               </div>
-
-              {/* Mid Up Arrow Vertical */}
-              <div className="flex flex-col items-center justify-start text-[#003178] opacity-70" style={{ gridRow: '4 / 9', gridColumn: 11 }}>
+              <div className="flex flex-col items-center justify-start text-[#003178] opacity-70" style={{ gridRow: '13 / 21', gridColumn: 10 }}>
                 <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)', marginBottom: '-6px' }}>arrow_right_alt</span>
                 <div className="w-[1.5px] bg-[#003178] h-full" />
               </div>
-
-              {/* Bottom Up Arrow Vertical */}
-              <div className="flex flex-col items-center justify-start text-[#003178] opacity-70" style={{ gridRow: '11 / 18', gridColumn: 10 }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)', marginBottom: '-6px' }}>arrow_right_alt</span>
-                <div className="w-[1.5px] bg-[#003178] h-full" />
-              </div>
-
-              {/* Bottom Down Arrow Vertical */}
-              <div className="flex flex-col items-center justify-end text-[#003178] opacity-70" style={{ gridRow: '11 / 18', gridColumn: 12 }}>
+              <div className="flex flex-col items-center justify-end text-[#003178] opacity-70" style={{ gridRow: '14 / 21', gridColumn: 12 }}>
                 <div className="w-[1.5px] bg-[#003178] h-full" />
                 <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(90deg)', marginTop: '-6px' }}>arrow_right_alt</span>
               </div>
-
-              {/* Horizontal Separator Lines Row 7 */}
-              <div className="border-b-[1.5px] border-[#003178] opacity-70 w-full self-center" style={{ gridRow: 7, gridColumn: '2 / 10' }} />
-              <div className="border-b-[1.5px] border-[#003178] opacity-70 w-full self-center" style={{ gridRow: 7, gridColumn: '15 / 21' }} />
 
               {[...Array(seats)].map((_, i) => {
                 const seatNum = i + 1;
@@ -623,53 +599,25 @@ export default function SeatingPage() {
                 let r: number | 'auto' = 'auto';
                 let c: number | 'auto' = 'auto';
 
-                // LEFT BLOCK
-                if (seatNum >= 1 && seatNum <= 8) {
-                  r = 1; c = seatNum + 1; // C2..C9
-                } else if (seatNum >= 24 && seatNum <= 32) {
-                  r = 3; c = 33 - seatNum; // C1..C9
-                } else if (seatNum >= 33 && seatNum <= 41) {
-                  r = 4; c = seatNum - 32; // C1..C9
-                } else if (seatNum >= 55 && seatNum <= 62) {
-                  r = 6; c = 64 - seatNum; // C2..C9
-                } else if (seatNum >= 63 && seatNum <= 70) {
-                  r = 8; c = seatNum - 61; // C2..C9
-                } else if (seatNum >= 71 && seatNum <= 79) {
-                  r = 11; c = 80 - seatNum; // C1..C9
-                } else if (seatNum >= 80 && seatNum <= 88) {
-                  r = 12; c = 89 - seatNum; // C1..C9
-                }
-                
-                // RIGHT BLOCK TOP
-                else if (seatNum >= 9 && seatNum <= 16) {
-                  r = 1; c = seatNum + 4; // C13..C20
-                } else if (seatNum >= 17 && seatNum <= 23) {
-                  r = 3; c = 37 - seatNum; // C14..C20
-                } else if (seatNum >= 42 && seatNum <= 48) {
-                  r = 4; c = seatNum - 28; // C14..C20
-                } else if (seatNum >= 49 && seatNum <= 54) {
-                  r = 6; c = 69 - seatNum; // C15..C20
-                } else if (seatNum >= 89 && seatNum <= 94) {
-                  r = 8; c = seatNum - 74; // C15..C20
-                }
-
-                // BOTTOM RIGHT BLOCKS
-                else if (seatNum >= 95 && seatNum <= 98) {
-                  r = 11; c = 115 - seatNum; // C17..C20
-                } else if (seatNum >= 99 && seatNum <= 102) {
-                  r = 12; c = seatNum - 82; // C17..C20
-                } else if (seatNum >= 103 && seatNum <= 106) {
-                  r = 14; c = 123 - seatNum; // C17..C20
-                } else if (seatNum >= 107 && seatNum <= 110) {
-                  r = 15; c = seatNum - 90; // C17..C20
-                } else if (seatNum >= 111 && seatNum <= 114) {
-                  r = 17; c = 131 - seatNum; // C17..C20
-                }
-
-                // CENTER VERTICAL BLOCK
-                else if (seatNum >= 115 && seatNum <= 121) {
-                  r = 132 - seatNum; c = 11; // R11..R17 at C11
-                }
+                // Exact Coordinate Map for Namnakala
+                if (seatNum >= 1 && seatNum <= 8) { r = 2; c = seatNum + 1; }
+                else if (seatNum >= 9 && seatNum <= 16) { r = 2; c = seatNum === 16 ? 17 : seatNum + 2; }
+                else if (seatNum >= 17 && seatNum <= 23) { r = 4; c = 34 - seatNum; }
+                else if (seatNum >= 24 && seatNum <= 32) { r = 4; c = 33 - seatNum; }
+                else if (seatNum >= 33 && seatNum <= 41) { r = 5; c = seatNum - 32; }
+                else if (seatNum >= 42 && seatNum <= 48) { r = 5; c = seatNum - 31; }
+                else if (seatNum >= 49 && seatNum <= 54) { r = 7; c = 65 - seatNum; }
+                else if (seatNum >= 55 && seatNum <= 62) { r = 7; c = 64 - seatNum; }
+                else if (seatNum >= 63 && seatNum <= 70) { r = 10; c = seatNum - 61; }
+                else if (seatNum >= 71 && seatNum <= 79) { r = 13; c = 80 - seatNum; }
+                else if (seatNum >= 80 && seatNum <= 88) { r = 14; c = 89 - seatNum; }
+                else if (seatNum >= 89 && seatNum <= 94) { r = 10; c = seatNum - 78; }
+                else if (seatNum >= 95 && seatNum <= 98) { r = 14; c = 112 - seatNum; }
+                else if (seatNum >= 99 && seatNum <= 102) { r = 15; c = seatNum - 85; }
+                else if (seatNum >= 103 && seatNum <= 106) { r = 17; c = 120 - seatNum; }
+                else if (seatNum >= 107 && seatNum <= 110) { r = 18; c = seatNum - 93; }
+                else if (seatNum >= 111 && seatNum <= 114) { r = 20; c = 128 - seatNum; }
+                else if (seatNum >= 115 && seatNum <= 121) { r = 13 + (121 - seatNum); c = 11; }
 
                 return (
                   <button
