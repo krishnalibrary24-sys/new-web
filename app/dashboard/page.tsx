@@ -25,6 +25,26 @@ export default function DashboardPage() {
 
   const isAdmin = role === "admin";
 
+  const handleExportPDF = async () => {
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const element = document.getElementById('admin-dashboard-content');
+      if (!element) return;
+      
+      const opt = {
+        margin:       10,
+        filename:     `Monthly_Dashboard_${activeBranch}_${new Date().toISOString().split('T')[0]}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+
+      html2pdf().set(opt).from(element).save();
+    } catch (err) {
+      console.error("PDF export error", err);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Page Header */}
@@ -40,10 +60,12 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="btn-ghost px-4 py-2.5 text-sm flex items-center gap-2">
-            <span className="material-symbols-outlined text-base">download</span>
-            Export
-          </button>
+          {isAdmin && (
+            <button onClick={handleExportPDF} className="btn-ghost px-4 py-2.5 text-sm flex items-center gap-2">
+              <span className="material-symbols-outlined text-base">download</span>
+              Export
+            </button>
+          )}
           {!isAdmin && (
             <Link href="/dashboard/admission" className="btn-primary px-4 py-2.5 text-sm flex items-center gap-2">
               <span className="material-symbols-outlined text-base">person_add</span>
@@ -53,7 +75,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {isAdmin ? <AdminDashboard activeBranch={activeBranch} /> : <OfficeDashboard branch={activeBranch} />}
+      <div id="admin-dashboard-content">
+        {isAdmin ? <AdminDashboard activeBranch={activeBranch} /> : <OfficeDashboard branch={activeBranch} />}
+      </div>
     </div>
   );
 }

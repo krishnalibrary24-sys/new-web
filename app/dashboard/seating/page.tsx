@@ -709,121 +709,46 @@ export default function SeatingPage() {
 
               {/* Grid Container */}
               <div 
-                className="grid gap-0 relative border-[1.5px] border-blue-900/40 p-2 bg-white"
+                className="grid gap-1.5 relative w-max mx-auto px-4"
                 style={{ 
-                  gridTemplateColumns: 'repeat(17, minmax(34px, 40px))',
-                  gridAutoRows: 'minmax(34px, 40px)'
+                  gridTemplateColumns: 'repeat(17, minmax(30px, 36px))',
+                  gridAutoRows: 'minmax(30px, 36px)'
                 }}
               >
                 {/* Vertical Room Divider (Red Line) */}
                 <div className="flex justify-center pointer-events-none" style={{ gridRow: '1 / 18', gridColumn: 11, zIndex: 0 }}>
-                  <div className="w-[1.5px] bg-red-500 h-full" />
+                  <div className="w-[1.5px] bg-[#003178]/30 h-full" />
                 </div>
 
                 {/* Walkway Labels */}
                 {[2, 5, 7, 13, 16].map(col => (
-                  <div key={`walkway-${col}`} style={{ gridColumn: col, gridRow: '2 / 18' }} className="flex flex-col items-center justify-center text-blue-900/30 gap-8 h-full pointer-events-none">
-                    <span className="material-symbols-outlined" style={{ transform: 'rotate(-90deg)' }}>arrow_right_alt</span>
+                  <div key={`walkway-${col}`} style={{ gridColumn: col, gridRow: '2 / 18' }} className="flex flex-col items-center justify-center text-[#003178] opacity-30 gap-8 h-full pointer-events-none">
+                    <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)' }}>arrow_right_alt</span>
                     <span className="tracking-[0.3em] font-black uppercase text-[10px]" style={{ writingMode: 'vertical-rl' }}>Walkway</span>
-                    <span className="material-symbols-outlined" style={{ transform: 'rotate(90deg)' }}>arrow_right_alt</span>
+                    <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(90deg)' }}>arrow_right_alt</span>
                   </div>
                 ))}
 
                 {[...Array(seats)].map((_, i) => {
                   const seatNum = i + 1;
                   const seatId = seatNum.toString();
+                  const style = getSeatStyle(seatId);
+                  const occupants = seatMap[seatId] || [];
+                  const isSelected = selectedSeat === seatId;
                   
-                  // Top Row Light Room
-                  if (seatNum === 9) {
-                    return (
-                      <div key="top-light" style={{ gridRow: 1, gridColumn: '1 / 11' }} className="flex w-full">
-                        {[9,8,7,6,5,4,3,2,1].map(n => {
-                          const sId = n.toString();
-                          const sStyle = getSeatStyle(sId);
-                          const sOcc = seatMap[sId] || [];
-                          const sSel = selectedSeat === sId;
-                          return (
-                            <button
-                              key={n}
-                              id={`seat-btn-${sId}`}
-                              onClick={() => setSelectedSeat(sId)}
-                              style={sStyle.style}
-                              className={`flex-1 border-[0.5px] border-blue-900/30 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 bg-white ${
-                                sSel ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black z-10 relative' : ''
-                              } ${blinkingSeat === sId ? 'seat-blink-active' : ''}`}
-                              title={sOcc.length > 0 ? `${sId}: ${sOcc.map(o => o.full_name).join(', ')}` : `Seat ${sId} — Available`}
-                            >
-                              <span className={`text-[11px] font-bold ${sStyle.textColor || 'text-blue-900'}`}>{sId}</span>
-                              {sStyle.dot === 'multishift' ? (
-                                <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
-                                  {sOcc.map((occ, idx) => {
-                                    const getDotColor = (s: string) => {
-                                      if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
-                                      if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
-                                      return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
-                                    };
-                                    return <span key={idx} className={`w-1 h-1 rounded-full ${getDotColor(occ.shift)}`} />;
-                                  })}
-                                </div>
-                              ) : (
-                                sStyle.dot && <span className={`w-1 h-1 rounded-full ${sStyle.dot} absolute bottom-1`} />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    );
-                  }
-                  if (seatNum >= 1 && seatNum <= 8) return null;
-
-                  // Top Row Dark Room
-                  if (seatNum === 153) {
-                    return (
-                      <div key="top-dark" style={{ gridRow: 1, gridColumn: '12 / 16' }} className="flex w-full">
-                        {[153,152,151,150].map(n => {
-                          const sId = n.toString();
-                          const sStyle = getSeatStyle(sId);
-                          const sOcc = seatMap[sId] || [];
-                          const sSel = selectedSeat === sId;
-                          return (
-                            <button
-                              key={n}
-                              id={`seat-btn-${sId}`}
-                              onClick={() => setSelectedSeat(sId)}
-                              style={sStyle.style}
-                              className={`flex-1 border-[0.5px] border-blue-900/30 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 bg-white ${
-                                sSel ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black z-10 relative' : ''
-                              } ${blinkingSeat === sId ? 'seat-blink-active' : ''}`}
-                              title={sOcc.length > 0 ? `${sId}: ${sOcc.map(o => o.full_name).join(', ')}` : `Seat ${sId} — Available`}
-                            >
-                              <span className={`text-[11px] font-bold ${sStyle.textColor || 'text-blue-900'}`}>{sId}</span>
-                              {sStyle.dot === 'multishift' ? (
-                                <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
-                                  {sOcc.map((occ, idx) => {
-                                    const getDotColor = (s: string) => {
-                                      if (s === 'Morning') return 'bg-amber-500 shadow-[0_0_3px_rgba(245,158,11,0.5)]';
-                                      if (s === 'Evening') return 'bg-purple-500 shadow-[0_0_3px_rgba(168,85,247,0.5)]';
-                                      return 'bg-emerald-500 shadow-[0_0_3px_rgba(16,185,129,0.5)]';
-                                    };
-                                    return <span key={idx} className={`w-1 h-1 rounded-full ${getDotColor(occ.shift)}`} />;
-                                  })}
-                                </div>
-                              ) : (
-                                sStyle.dot && <span className={`w-1 h-1 rounded-full ${sStyle.dot} absolute bottom-1`} />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    );
-                  }
-                  if (seatNum >= 150 && seatNum <= 152) return null;
-
                   let r: number | 'auto' = 'auto';
                   let c: number | 'auto' = 'auto';
 
+                  // Top Rows
+                  if (seatNum >= 1 && seatNum <= 9) {
+                    const topLight = { 9: 1, 8: 2, 7: 3, 6: 4, 5: 5, 4: 6, 3: 7, 2: 8, 1: 9 };
+                    r = 1; c = topLight[seatNum as keyof typeof topLight];
+                  } else if (seatNum >= 150 && seatNum <= 153) {
+                    const topDark = { 153: 12, 152: 13, 151: 14, 150: 15 };
+                    r = 1; c = topDark[seatNum as keyof typeof topDark];
+                  }
                   // Light Room Main Grid
-                  if (seatNum >= 10 && seatNum <= 22) { r = seatNum - 6; c = 1; }
+                  else if (seatNum >= 10 && seatNum <= 22) { r = seatNum - 6; c = 1; }
                   else if (seatNum >= 23 && seatNum <= 37) { r = 40 - seatNum; c = 3; }
                   else if (seatNum >= 38 && seatNum <= 52) { r = seatNum - 35; c = 4; }
                   else if (seatNum >= 53 && seatNum <= 64) { r = 67 - seatNum; c = 6; }
@@ -842,22 +767,18 @@ export default function SeatingPage() {
                   else if (seatNum >= 119 && seatNum <= 133) { r = seatNum - 116; c = 15; }
                   else if (seatNum >= 134 && seatNum <= 149) { r = 150 - seatNum; c = 17; }
 
-                  const style = getSeatStyle(seatId);
-                  const occupants = seatMap[seatId] || [];
-                  const isSelected = selectedSeat === seatId;
-
                   return (
                     <button
                       key={i}
                       id={`seat-btn-${seatId}`}
                       onClick={() => setSelectedSeat(seatId)}
                       style={{ ...style.style, gridRowStart: r, gridColumnStart: c }}
-                      className={`w-full h-full border-[0.5px] border-blue-900/30 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 bg-white ${
+                      className={`w-full h-full aspect-square ${style.bg} rounded-full border border-slate-200/50 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 ${
                         isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-105 font-black z-10 relative' : ''
                       } ${blinkingSeat === seatId ? 'seat-blink-active' : ''}`}
                       title={occupants.length > 0 ? `${seatId}: ${occupants.map(o => o.full_name).join(', ')}` : `Seat ${seatId} — Available`}
                     >
-                      <span className={`text-[11px] font-bold ${style.textColor || 'text-blue-900'}`}>{seatId}</span>
+                      <span className={`text-[11px] font-bold ${style.textColor || 'text-slate-500'}`}>{seatId}</span>
                       {style.dot === 'multishift' ? (
                         <div className="flex gap-0.5 mt-0.5 absolute bottom-1">
                           {occupants.map((occ, idx) => {

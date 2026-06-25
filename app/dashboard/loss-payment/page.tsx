@@ -131,6 +131,11 @@ export default function LossPaymentPage() {
       alert("Failed to export PDF. Please check console for details.");
     }
   };
+  const [role, setRole] = useState<string | null>(null);
+  useEffect(() => {
+    setRole(localStorage.getItem("krishna_role"));
+  }, []);
+  const isAdmin = role === "admin";
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -156,13 +161,15 @@ export default function LossPaymentPage() {
               className="input-premium !py-2.5 !pl-9 !pr-4 !text-sm !rounded-xl w-full"
             />
           </div>
-          <button 
-            onClick={handleExportPDF}
-            className="btn-ghost px-4 py-2.5 text-sm flex items-center gap-2 shrink-0 text-red-500 border border-red-500/20 hover:bg-red-500/5 transition-all"
-          >
-            <span className="material-symbols-outlined text-base">picture_as_pdf</span>
-            Export PDF
-          </button>
+          {isAdmin && (
+            <button 
+              onClick={handleExportPDF}
+              className="btn-ghost px-4 py-2.5 text-sm flex items-center gap-2 shrink-0 text-red-500 border border-red-500/20 hover:bg-red-500/5 transition-all"
+            >
+              <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+              Export PDF
+            </button>
+          )}
         </div>
       </div>
 
