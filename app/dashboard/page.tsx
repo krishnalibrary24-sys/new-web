@@ -327,6 +327,16 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
         
         const doc = new jsPDF();
         
+        // Month Formatting
+        let displayPeriod = "All Time";
+        if (selectedMonth === "custom") {
+          displayPeriod = `${new Date(customStartDate).toLocaleDateString()} to ${new Date(customEndDate).toLocaleDateString()}`;
+        } else if (selectedMonth !== "all") {
+          const [y, m] = selectedMonth.split('-');
+          const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+          displayPeriod = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        }
+        
         // Header Banner Style
         doc.setFillColor(0, 49, 120); // #003178
         doc.rect(0, 0, 210, 35, 'F');
@@ -342,38 +352,53 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
         doc.setFontSize(10);
         doc.setTextColor(226, 232, 240);
         
-        const periodStr = selectedMonth === "all" ? "All Time" : (selectedMonth === "custom" ? `${customStartDate} to ${customEndDate}` : selectedMonth);
-        doc.text(`Dashboard Report - ${branchName} Branch  |  Period: ${periodStr}`, 14, 25);
+        doc.text(`Dashboard Report - ${branchName} Branch  |  Period: ${displayPeriod}`, 14, 25);
         
         // Generation Info (Date & Time)
         const nowStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
         doc.text(`Generated: ${nowStr}`, 130, 25);
         
-        // Stats Summary
-        doc.setTextColor(51, 65, 85);
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "bold");
-        doc.text("Financial & Operational Summary", 14, 45);
-
+        // Financial Table
         autoTable(doc, {
-          startY: 50,
-          head: [["Metric", "Value"]],
+          startY: 45,
+          head: [["Financial Overview", "Amount"]],
           body: [
-            ["Total Revenue", stats.totalRevenue],
-            ["Received Revenue", stats.receivedRevenue],
-            ["Cash Revenue", stats.cashRevenue],
-            ["Online Revenue", stats.onlineRevenue],
-            ["Upcoming Expected/Dues", stats.upcomingRevenue],
-            ["Loss Payments", stats.lossPayments],
-            ["Active Members", stats.members],
-            ["Occupancy", `${stats.occupancy}%`],
-            ["Left Members (Filtered Period)", stats.leftMembers]
+            ["Total Revenue", stats.totalRevenue.replace('₹', 'Rs. ')],
+            ["Total Received", stats.receivedRevenue.replace('₹', 'Rs. ')],
+            ["Cash Collection", stats.cashRevenue.replace('₹', 'Rs. ')],
+            ["Online Collection", stats.onlineRevenue.replace('₹', 'Rs. ')],
+            ["Upcoming / Pending Dues", stats.upcomingRevenue.replace('₹', 'Rs. ')],
+            ["Loss Payments (Defaulters)", stats.lossPayments.replace('₹', 'Rs. ')]
           ],
-          theme: 'striped',
-          headStyles: { fillColor: [0, 49, 120], textColor: [255, 255, 255], fontSize: 10, fontStyle: 'bold' },
-          bodyStyles: { fontSize: 10, textColor: [51, 65, 85] },
-          alternateRowStyles: { fillColor: [241, 245, 249] }
+          theme: 'grid',
+          headStyles: { fillColor: [0, 49, 120], textColor: [255, 255, 255], fontSize: 11, fontStyle: 'bold' },
+          bodyStyles: { fontSize: 10, textColor: [30, 41, 59] },
+          columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right', fontStyle: 'bold', textColor: [21, 128, 61] } },
+          alternateRowStyles: { fillColor: [248, 250, 252] }
         });
+
+        // Operational Table
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 15,
+          head: [["Operational Metrics", "Count / Value"]],
+          body: [
+            ["Active Members", stats.members],
+            ["Current Occupancy", `${stats.occupancy}%`],
+            ["Full Day Students", `${stats.fullDayCount} (${stats.fullDayPct}%)`],
+            ["Half Day Students", `${stats.halfDayCount} (${stats.halfDayPct}%)`],
+            ["Total Left Members (Defaulters)", stats.leftMembers]
+          ],
+          theme: 'grid',
+          headStyles: { fillColor: [234, 88, 12], textColor: [255, 255, 255], fontSize: 11, fontStyle: 'bold' },
+          bodyStyles: { fontSize: 10, textColor: [30, 41, 59] },
+          columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right', fontStyle: 'bold' } },
+          alternateRowStyles: { fillColor: [255, 247, 237] }
+        });
+        
+        // Footer Note
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Note: Values shown represent the selected billing period filter.", 14, (doc as any).lastAutoTable.finalY + 15);
 
         const fileName = `Dashboard_Report_${activeBranch}_${new Date().toISOString().split('T')[0]}.pdf`;
         doc.save(fileName);
