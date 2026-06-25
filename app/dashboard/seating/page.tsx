@@ -506,81 +506,87 @@ export default function SeatingPage() {
               </div>
 
               {/* Row 3 Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 3, gridColumn: '2 / 6' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 3, gridColumn: '2 / 6' }}>
+                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 3, gridColumn: '6 / 10' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 3, gridColumn: '6 / 10' }}>
+                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 3, gridColumn: '11 / 14' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 3, gridColumn: '11 / 14' }}>
+                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 3, gridColumn: '14 / 18' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 3, gridColumn: '14 / 18' }}>
+                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
               </div>
 
               {/* Row 6 Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 6, gridColumn: '1 / 5' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 6, gridColumn: '1 / 5' }}>
+                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 6, gridColumn: '5 / 10' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 6, gridColumn: '5 / 10' }}>
+                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 6, gridColumn: '11 / 14' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 6, gridColumn: '11 / 14' }}>
+                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 6, gridColumn: '14 / 18' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 6, gridColumn: '14 / 18' }}>
+                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
               </div>
 
               {/* Row 8 Divider Line */}
-              <div className="border-b-[1.5px] border-[#003178] opacity-70 w-full self-center" style={{ gridRow: 8, gridColumn: '1 / 10' }} />
-              <div className="border-b-[1.5px] border-[#003178] opacity-70 w-full self-center" style={{ gridRow: 8, gridColumn: '11 / 18' }} />
+              <div className="h-[1.5px] bg-[#003178] opacity-30 w-full self-center" style={{ gridRow: 8, gridColumn: '1 / 10' }} />
+              <div className="h-[1.5px] bg-[#003178] opacity-30 w-full self-center" style={{ gridRow: 8, gridColumn: '11 / 18' }} />
 
               {/* Row 11 Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 11, gridColumn: '2 / 6' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 11, gridColumn: '2 / 6' }}>
+                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 11, gridColumn: '6 / 10' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 11, gridColumn: '6 / 10' }}>
+                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 11, gridColumn: '11 / 14' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 11, gridColumn: '11 / 14' }}>
+                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 11, gridColumn: '14 / 17' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 11, gridColumn: '14 / 17' }}>
+                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
               </div>
 
               {/* Row 12 Long Left Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 12, gridColumn: '1 / 5' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 12, gridColumn: '1 / 5' }}>
+                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
               </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 12, gridColumn: '5 / 10' }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] w-full -ml-1" />
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 12, gridColumn: '5 / 10' }}>
+                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
               </div>
 
               {/* Row 16 Right Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70 pr-3 pl-3" style={{ gridRow: 16, gridColumn: '14 / 18' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 16, gridColumn: '14 / 16' }}>
+                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
+              </div>
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 16, gridColumn: '16 / 18' }}>
+                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
               </div>
 
               {/* Row 19 Right Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70 pr-3 pl-3" style={{ gridRow: 19, gridColumn: '14 / 18' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 19, gridColumn: '14 / 16' }}>
+                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
+              </div>
+              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 19, gridColumn: '16 / 18' }}>
+                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
               </div>
 
               {/* UP/DOWN Vertical Arrows */}
-              <div className="flex flex-col items-center justify-start text-[#003178] opacity-70" style={{ gridRow: '2 / 8', gridColumn: 10 }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)', marginBottom: '-6px' }}>arrow_right_alt</span>
-                <div className="w-[1.5px] bg-[#003178] h-full" />
+              <div className="flex flex-col items-center justify-start text-[#003178] opacity-70 w-full h-full" style={{ gridRow: '2 / 8', gridColumn: 10 }}>
+                <span className="material-symbols-outlined text-xl z-10 bg-slate-50" style={{ transform: 'rotate(-90deg)', marginBottom: '-1px' }}>arrow_right_alt</span>
+                <div className="w-[1.5px] bg-[#003178] flex-grow -mt-3" />
               </div>
-              <div className="flex flex-col items-center justify-start text-[#003178] opacity-70" style={{ gridRow: '13 / 21', gridColumn: 10 }}>
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)', marginBottom: '-6px' }}>arrow_right_alt</span>
-                <div className="w-[1.5px] bg-[#003178] h-full" />
+              <div className="flex flex-col items-center justify-start text-[#003178] opacity-70 w-full h-full" style={{ gridRow: '13 / 21', gridColumn: 10 }}>
+                <span className="material-symbols-outlined text-xl z-10 bg-slate-50" style={{ transform: 'rotate(-90deg)', marginBottom: '-1px' }}>arrow_right_alt</span>
+                <div className="w-[1.5px] bg-[#003178] flex-grow -mt-3" />
               </div>
-              <div className="flex flex-col items-center justify-end text-[#003178] opacity-70" style={{ gridRow: '14 / 21', gridColumn: 12 }}>
-                <div className="w-[1.5px] bg-[#003178] h-full" />
-                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(90deg)', marginTop: '-6px' }}>arrow_right_alt</span>
+              <div className="flex flex-col items-center justify-end text-[#003178] opacity-70 w-full h-full" style={{ gridRow: '14 / 21', gridColumn: 12 }}>
+                <div className="w-[1.5px] bg-[#003178] flex-grow -mb-3" />
+                <span className="material-symbols-outlined text-xl z-10 bg-slate-50" style={{ transform: 'rotate(90deg)', marginTop: '-1px' }}>arrow_right_alt</span>
               </div>
 
               {[...Array(seats)].map((_, i) => {
