@@ -560,18 +560,12 @@ export default function SeatingPage() {
               </div>
 
               {/* Row 16 Right Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 16, gridColumn: '14 / 16' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
-              </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 16, gridColumn: '16 / 18' }}>
+              <div className="flex items-center text-[#003178] opacity-70 pr-3 pl-3" style={{ gridRow: 16, gridColumn: '14 / 18' }}>
                 <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
               {/* Row 19 Right Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 19, gridColumn: '14 / 16' }}>
-                <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
-              </div>
-              <div className="flex items-center text-[#003178] opacity-70" style={{ gridRow: 19, gridColumn: '16 / 18' }}>
+              <div className="flex items-center text-[#003178] opacity-70 pr-3 pl-3" style={{ gridRow: 19, gridColumn: '14 / 18' }}>
                 <div className="h-[1.5px] bg-[#003178] w-full -mr-1" /><span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
