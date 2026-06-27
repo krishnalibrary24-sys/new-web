@@ -499,10 +499,10 @@ export default function SeatingPage() {
             >
               {/* Room Labels */}
               <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end whitespace-nowrap" style={{ gridRow: 1, gridColumn: '1 / 10' }}>
-                LIGHT ROOM
+                DARK ROOM
               </div>
               <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end whitespace-nowrap" style={{ gridRow: 9, gridColumn: '1 / 10' }}>
-                DARK ROOM
+                LIGHT ROOM
               </div>
 
               {/* Row 3 Arrows */}
