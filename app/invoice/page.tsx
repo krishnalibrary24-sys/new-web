@@ -306,7 +306,7 @@ function InvoiceContent() {
             <h3 className="text-[10px] font-montserrat font-black uppercase text-[#737783] mb-2.5 border-b border-[#efecff] pb-1.5 tracking-wider">Subscription details</h3>
             <p className="text-xs mb-1 font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Shift:</span> <span className="font-bold text-[#1a1a2e]">{member.shift}</span></p>
             <p className="text-xs mb-1 font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Seat No:</span> <span className="font-bold text-[#1a1a2e]">{member.permanent_id && member.permanent_id.includes('U') ? 'Unreserved' : (member.seat_no || 'Unassigned')}</span></p>
-            <p className="text-xs mb-1 font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Start Date:</span> <span className="font-bold text-[#1a1a2e]">{displayJoiningDate}</span></p>
+            <p className="text-xs mb-1 font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Join Date:</span> <span className="font-bold text-[#1a1a2e]">{displayJoiningDate}</span></p>
             <p className="text-xs font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Valid Till:</span> <span className="font-bold text-[#003178]">{displayExpiryDate}</span></p>
           </div>
         </div>

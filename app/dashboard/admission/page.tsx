@@ -172,7 +172,7 @@ export default function AdmissionPage() {
           });
         }
         const seq = maxSeq + 1;
-        finalId = `${prefix}${seq.toString().padStart(3, '0')}`;
+        finalId = `${prefix}${seq.toString().padStart(4, '0')}`;
         setPermanentId(finalId);
       }
 
