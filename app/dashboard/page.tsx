@@ -395,6 +395,99 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           alternateRowStyles: { fillColor: [255, 247, 237] }
         });
         
+        // Detailed Revenue Table
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const isFiltered = selectedMonth !== "all";
+        
+        let startDate: Date | null = null;
+        let endDate: Date | null = null;
+        if (selectedMonth === "custom") {
+          startDate = new Date(customStartDate);
+          endDate = new Date(customEndDate);
+          endDate.setHours(23, 59, 59, 999);
+        } else if (isFiltered) {
+          const [y, m] = selectedMonth.split('-').map(Number);
+          startDate = new Date(y, m - 1, 1);
+          endDate = new Date(y, m, 0, 23, 59, 59, 999);
+        }
+
+        const filteredPayments = (rawPayments || []).filter(p => {
+          if (!isFiltered) return true;
+          const paidDate = p.paid_at ? new Date(p.paid_at) : null;
+          return !!(paidDate && paidDate >= startDate! && paidDate <= endDate!);
+        });
+
+        const revenueBody = filteredPayments.map(p => {
+           const member = rawMembers.find(m => m.id === p.member_id);
+           return [
+             member ? member.full_name : "Unknown",
+             `Rs. ${p.amount}`,
+             p.payment_mode || "Cash",
+             p.paid_at ? new Date(p.paid_at).toLocaleDateString() : "N/A"
+           ];
+        });
+
+        if (revenueBody.length > 0) {
+          autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 15,
+            head: [["Member Name", "Received Amount", "Payment Mode", "Date"]],
+            body: revenueBody,
+            theme: 'grid',
+            headStyles: { fillColor: [21, 128, 61], textColor: [255, 255, 255], fontSize: 10, fontStyle: 'bold' },
+            bodyStyles: { fontSize: 9, textColor: [30, 41, 59] },
+            alternateRowStyles: { fillColor: [240, 253, 244] }
+          });
+        }
+
+        // Detailed Upcoming Table
+        const upcomingBody = rawMembers.filter(m => !m.left_at).map(m => {
+          let upcoming = 0;
+          let isDueBeforeEnd = false;
+          if (!isFiltered) {
+            isDueBeforeEnd = true;
+          } else {
+            if (m.payment_due_date) {
+              const dueDate = new Date(m.payment_due_date);
+              isDueBeforeEnd = dueDate <= endDate!;
+            } else {
+              const createdDate = m.created_at ? new Date(m.created_at) : null;
+              isDueBeforeEnd = !!(createdDate && createdDate <= endDate!);
+            }
+          }
+
+          if (isDueBeforeEnd) {
+            upcoming = Number(m.pay_later ? (m.outstanding_dues || m.plan_amount || 0) : (m.outstanding_dues || 0));
+          }
+
+          if (m.subscription_end_date) {
+            const endDateObj = new Date(m.subscription_end_date);
+            const isExpired = endDateObj < today;
+            const matchesRenewalRange = !isFiltered || (endDateObj >= startDate! && endDateObj <= endDate!);
+            if (matchesRenewalRange && isExpired && !m.pay_later && upcoming === 0) {
+              upcoming = m.plan_amount || 0;
+            }
+          }
+
+          return { name: m.full_name, phone: m.phone || "N/A", upcoming };
+        }).filter(m => m.upcoming > 0).map(m => [
+          m.name,
+          `Rs. ${m.upcoming}`,
+          m.phone
+        ]);
+
+        if (upcomingBody.length > 0) {
+          autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 15,
+            head: [["Upcoming / Pending Member", "Due Amount", "Phone"]],
+            body: upcomingBody,
+            theme: 'grid',
+            headStyles: { fillColor: [245, 158, 11], textColor: [255, 255, 255], fontSize: 10, fontStyle: 'bold' },
+            bodyStyles: { fontSize: 9, textColor: [30, 41, 59] },
+            alternateRowStyles: { fillColor: [255, 251, 235] }
+          });
+        }
+        
         // Footer Note
         doc.setFontSize(9);
         doc.setTextColor(100, 116, 139);
@@ -410,7 +503,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
 
     window.addEventListener('export-dashboard-pdf', handleExport);
     return () => window.removeEventListener('export-dashboard-pdf', handleExport as EventListener);
-  }, [stats, activeBranch, branchName, selectedMonth, customStartDate, customEndDate]);
+  }, [stats, activeBranch, branchName, selectedMonth, customStartDate, customEndDate, rawMembers, rawPayments]);
 
   const getInspectData = () => {
     if (!inspectCategory) return [];
