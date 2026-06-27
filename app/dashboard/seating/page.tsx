@@ -685,6 +685,15 @@ export default function SeatingPage() {
                   </div>
                 ))}
 
+                {/* Horizontal Walkways */}
+                {[8, 11].map(row => (
+                  <div key={`h-walkway-${row}`} style={{ gridRow: row, gridColumn: '7 / 11' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+                    <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                    <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
+                    <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
+                  </div>
+                ))}
+
                 {[...Array(seats)].map((_, i) => {
                   const seatNum = i + 1;
                   const seatId = seatNum.toString();
