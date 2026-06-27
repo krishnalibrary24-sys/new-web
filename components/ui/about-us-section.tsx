@@ -20,10 +20,8 @@ import {
   TrendingUp,
 } from "lucide-react"
 import { motion, useScroll, useTransform, useInView, useSpring } from "framer-motion"
-import { supabase } from "@/lib/supabase"
 
 export default function AboutUsSection() {
-  const [activeCount, setActiveCount] = useState(12)
   const [isVisible, setIsVisible] = useState(false)
   const sectionRef = useRef<HTMLDivElement>(null)
   const statsRef = useRef<HTMLDivElement>(null)
@@ -43,18 +41,6 @@ export default function AboutUsSection() {
 
   useEffect(() => {
     setIsVisible(true)
-    const fetchActiveCount = async () => {
-      try {
-        const { data, error } = await supabase.from("members").select("is_active")
-        if (data && !error) {
-          const active = data.filter((m: any) => m.is_active).length
-          setActiveCount(active)
-        }
-      } catch (err) {
-        console.error("Failed to fetch active member count:", err)
-      }
-    }
-    fetchActiveCount()
   }, [])
 
   const containerVariants = {
@@ -129,8 +115,8 @@ export default function AboutUsSection() {
   ]
 
   const stats = [
-    { icon: <Award />, value: activeCount, label: "Active Members", suffix: "" },
-    { icon: <BookMarked />, value: 278, label: "Total Study Seats", suffix: "" },
+    { icon: <Users />, value: 1500, label: "Students Guided", suffix: "+" },
+    { icon: <Award />, value: 50, label: "Top Selections", suffix: "+" },
     { icon: <MapPin />, value: 2, label: "City Branches", suffix: "" },
     { icon: <TrendingUp />, value: 99, label: "Satisfaction Rate", suffix: "%" },
   ]
