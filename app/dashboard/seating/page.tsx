@@ -667,17 +667,17 @@ export default function SeatingPage() {
               <div 
                 className="grid gap-1.5 relative w-max mx-auto px-4"
                 style={{ 
-                  gridTemplateColumns: 'repeat(16, minmax(30px, 36px))',
+                  gridTemplateColumns: 'repeat(17, minmax(30px, 36px))',
                   gridAutoRows: 'minmax(30px, 36px)'
                 }}
               >
                 {/* Vertical Room Divider (Red Line) */}
-                <div className="flex justify-center pointer-events-none" style={{ gridRow: '1 / 18', gridColumn: 10, zIndex: 0 }}>
+                <div className="flex justify-center pointer-events-none" style={{ gridRow: '1 / 18', gridColumn: 11, zIndex: 0 }}>
                   <div className="w-[1.5px] bg-[#003178]/30 h-full" />
                 </div>
 
                 {/* Walkway Labels */}
-                {[2, 5, 12, 15].map(col => (
+                {[2, 5, 13, 16].map(col => (
                   <div key={`walkway-${col}`} style={{ gridColumn: col, gridRow: '2 / 18' }} className="flex flex-col items-center justify-center text-[#003178] opacity-30 gap-8 h-full pointer-events-none">
                     <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)' }}>arrow_right_alt</span>
                     <span className="tracking-[0.3em] font-black uppercase text-[10px]" style={{ writingMode: 'vertical-rl' }}>Walkway</span>
@@ -700,7 +700,7 @@ export default function SeatingPage() {
                     const topLight = { 9: 1, 8: 2, 7: 3, 6: 4, 5: 5, 4: 6, 3: 7, 2: 8, 1: 9 };
                     r = 1; c = topLight[seatNum as keyof typeof topLight];
                   } else if (seatNum >= 150 && seatNum <= 153) {
-                    const topDark = { 153: 11, 152: 12, 151: 13, 150: 14 };
+                    const topDark = { 153: 12, 152: 13, 151: 14, 150: 15 };
                     r = 1; c = topDark[seatNum as keyof typeof topDark];
                   }
                   // Light Room Main Grid
@@ -708,20 +708,20 @@ export default function SeatingPage() {
                   else if (seatNum >= 23 && seatNum <= 37) { r = 40 - seatNum; c = 3; }
                   else if (seatNum >= 38 && seatNum <= 52) { r = seatNum - 35; c = 4; }
                   else if (seatNum >= 53 && seatNum <= 64) { r = 67 - seatNum; c = 6; }
-                  else if (seatNum >= 65 && seatNum <= 67) { r = 3; c = 74 - seatNum; }
-                  else if (seatNum >= 68 && seatNum <= 70) { r = 6; c = seatNum - 61; }
-                  else if (seatNum >= 71 && seatNum <= 73) { r = 7; c = 80 - seatNum; }
-                  else if (seatNum >= 74 && seatNum <= 76) { r = 9; c = seatNum - 67; }
-                  else if (seatNum >= 77 && seatNum <= 79) { r = 10; c = 86 - seatNum; }
-                  else if (seatNum >= 80 && seatNum <= 82) { r = 12; c = seatNum - 73; }
-                  else if (seatNum >= 83 && seatNum <= 85) { r = 13; c = 92 - seatNum; }
-                  else if (seatNum >= 86 && seatNum <= 88) { r = 17; c = seatNum - 79; }
+                  else if (seatNum >= 65 && seatNum <= 67) { r = 3; c = 75 - seatNum; }
+                  else if (seatNum >= 68 && seatNum <= 70) { r = 6; c = seatNum - 60; }
+                  else if (seatNum >= 71 && seatNum <= 73) { r = 7; c = 81 - seatNum; }
+                  else if (seatNum >= 74 && seatNum <= 76) { r = 9; c = seatNum - 66; }
+                  else if (seatNum >= 77 && seatNum <= 79) { r = 10; c = 87 - seatNum; }
+                  else if (seatNum >= 80 && seatNum <= 82) { r = 12; c = seatNum - 72; }
+                  else if (seatNum >= 83 && seatNum <= 85) { r = 13; c = 93 - seatNum; }
+                  else if (seatNum >= 86 && seatNum <= 88) { r = 17; c = seatNum - 78; }
                   
                   // Dark Room Main Grid
-                  else if (seatNum >= 89 && seatNum <= 103) { r = seatNum - 86; c = 11; }
-                  else if (seatNum >= 104 && seatNum <= 118) { r = 121 - seatNum; c = 13; }
-                  else if (seatNum >= 119 && seatNum <= 133) { r = seatNum - 116; c = 14; }
-                  else if (seatNum >= 134 && seatNum <= 149) { r = 150 - seatNum; c = 16; }
+                  else if (seatNum >= 89 && seatNum <= 103) { r = seatNum - 86; c = 12; }
+                  else if (seatNum >= 104 && seatNum <= 118) { r = 121 - seatNum; c = 14; }
+                  else if (seatNum >= 119 && seatNum <= 133) { r = seatNum - 116; c = 15; }
+                  else if (seatNum >= 134 && seatNum <= 149) { r = 150 - seatNum; c = 17; }
 
                   return (
                     <button
