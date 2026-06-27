@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
 
 const NAV_LINKS = [
   { id: "about",      label: "About"      },
@@ -15,19 +14,13 @@ const NAV_LINKS = [
 ];
 
 export default function VisitorNav() {
-  const [mounted,  setMounted]  = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeId, setActiveId] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const { resolvedTheme } = useTheme();
   const navRef = useRef<HTMLDivElement>(null);
-
-  /* ── Hydration guard: never run on server ── */
-  useEffect(() => { setMounted(true); }, []);
 
   /* ── Scroll detection ── */
   useEffect(() => {
-    if (!mounted) return;
     const onScroll = () => {
       setScrolled(window.scrollY > 24);
       let current = "";
@@ -52,33 +45,7 @@ export default function VisitorNav() {
     }
   };
 
-  /* ── SSR placeholder: matches client initial state exactly ── */
-  if (!mounted) {
-    return (
-      <>
-        <header
-          style={{
-            position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
-            background: "rgba(252,248,255,0.96)",
-            boxShadow: "0 1px 0 rgba(0,49,120,0.08)",
-          }}
-        >
-          <nav style={{
-            maxWidth: "1280px", margin: "0 auto", padding: "0 24px",
-            height: "100px", display: "flex", alignItems: "center",
-            justifyContent: "space-between",
-          }}>
-            <img
-              src="/assets/logo.png"
-              alt="Krishna Library"
-              style={{ height: "84px", width: "auto", objectFit: "contain" }}
-            />
-          </nav>
-        </header>
-        <div style={{ height: "100px" }} />
-      </>
-    );
-  }
+  };
 
   /* ── Full interactive nav (client only) ── */
   return (
@@ -88,14 +55,10 @@ export default function VisitorNav() {
         style={{
           position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
           transition: "background 0.35s ease, box-shadow 0.35s ease, backdrop-filter 0.35s ease",
-          background: resolvedTheme === "dark"
-            ? (scrolled ? "rgba(2, 4, 10, 0.82)" : "rgba(2, 4, 10, 0.96)")
-            : (scrolled ? "rgba(252,248,255,0.82)" : "rgba(252,248,255,0.96)"),
+          background: scrolled ? "rgba(252,248,255,0.82)" : "rgba(252,248,255,0.96)",
           backdropFilter: scrolled ? "blur(18px) saturate(180%)" : "none",
           WebkitBackdropFilter: scrolled ? "blur(18px) saturate(180%)" : "none",
-          boxShadow: resolvedTheme === "dark"
-            ? (scrolled ? "0 1px 0 rgba(255,255,255,0.06), 0 4px 24px rgba(0,0,0,0.4)" : "0 1px 0 rgba(255,255,255,0.06)")
-            : (scrolled ? "0 1px 0 rgba(0,49,120,0.08), 0 4px 24px rgba(0,0,0,0.06)" : "0 1px 0 rgba(0,49,120,0.08)"),
+          boxShadow: scrolled ? "0 1px 0 rgba(0,49,120,0.08), 0 4px 24px rgba(0,0,0,0.06)" : "0 1px 0 rgba(0,49,120,0.08)",
           animation: "kl-nav-fade-in 0.45s ease both",
         }}
       >
