@@ -421,6 +421,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
         const revenueBody = filteredPayments.map(p => {
            const member = rawMembers.find(m => m.id === p.member_id);
            return [
+             member?.permanent_id || "N/A",
              member ? member.full_name : "Unknown",
              `Rs. ${p.amount}`,
              p.payment_mode || "Cash",
@@ -431,7 +432,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
         if (revenueBody.length > 0) {
           autoTable(doc, {
             startY: (doc as any).lastAutoTable.finalY + 15,
-            head: [["Member Name", "Received Amount", "Payment Mode", "Date"]],
+            head: [["Member ID", "Member Name", "Received Amount", "Payment Mode", "Date"]],
             body: revenueBody,
             theme: 'grid',
             headStyles: { fillColor: [21, 128, 61], textColor: [255, 255, 255], fontSize: 10, fontStyle: 'bold' },
@@ -469,8 +470,9 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
             }
           }
 
-          return { name: m.full_name, phone: m.phone || "N/A", upcoming };
+          return { id: m.permanent_id, name: m.full_name, phone: m.phone || "N/A", upcoming };
         }).filter(m => m.upcoming > 0).map(m => [
+          m.id || "N/A",
           m.name,
           `Rs. ${m.upcoming}`,
           m.phone
@@ -479,7 +481,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
         if (upcomingBody.length > 0) {
           autoTable(doc, {
             startY: (doc as any).lastAutoTable.finalY + 15,
-            head: [["Upcoming / Pending Member", "Due Amount", "Phone"]],
+            head: [["Member ID", "Upcoming / Pending Member", "Due Amount", "Phone"]],
             body: upcomingBody,
             theme: 'grid',
             headStyles: { fillColor: [245, 158, 11], textColor: [255, 255, 255], fontSize: 10, fontStyle: 'bold' },
