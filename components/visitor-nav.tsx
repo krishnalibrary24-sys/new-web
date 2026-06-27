@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import ThemeSwitch from "@/components/ui/theme-switch";
 
 const NAV_LINKS = [
   { id: "about",      label: "About"      },
@@ -149,8 +148,6 @@ export default function VisitorNav() {
 
           {/* CTA group */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
-            {/* Playful BB8 Theme Toggle */}
-            <ThemeSwitch />
 
             <a href="#contact" onClick={e => scrollTo("contact", e)} className="kl-enroll-btn">
               <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>person_add</span>
