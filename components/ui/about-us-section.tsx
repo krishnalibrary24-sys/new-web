@@ -130,11 +130,9 @@ export default function AboutUsSection() {
       {/* Decorative background elements */}
       <motion.div
         className="absolute top-20 left-10 w-64 h-64 rounded-full bg-v-primary/5 blur-3xl"
-        style={{ y: y1, rotate: rotate1 }}
       />
       <motion.div
         className="absolute bottom-20 right-10 w-80 h-80 rounded-full bg-v-secondary/5 blur-3xl"
-        style={{ y: y2, rotate: rotate2 }}
       />
       <motion.div
         className="absolute top-1/2 left-1/4 w-4 h-4 rounded-full bg-v-primary/30"
@@ -277,14 +275,12 @@ export default function AboutUsSection() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1, delay: 0.9 }}
-                style={{ y: y1 }}
               ></motion.div>
               <motion.div
                 className="absolute -bottom-6 -left-10 w-20 h-20 rounded-full bg-v-secondary/20 backdrop-blur-md"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1, delay: 1.1 }}
-                style={{ y: y2 }}
               ></motion.div>
 
               {/* Additional decorative elements */}

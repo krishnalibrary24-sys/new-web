@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import SmoothScroll from "@/components/ui/smooth-scroll";
 
 export const metadata: Metadata = {
   title: "Krishna Library | Community Hub for Lifelong Learning",
@@ -24,7 +23,6 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
-          <SmoothScroll />
           <div className="relative z-0">
             {children}
           </div>
