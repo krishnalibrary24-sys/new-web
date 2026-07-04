@@ -33,6 +33,7 @@ export default function InvoicesPage() {
   const filtered = invoices.filter(inv =>
     inv.member?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     inv.member?.permanent_id?.toLowerCase().includes(search.toLowerCase()) ||
+    (inv.member?.student_no && inv.member?.student_no.toLowerCase().includes(search.toLowerCase())) ||
     inv.member?.mobile?.includes(search)
   );
 
@@ -148,7 +149,12 @@ export default function InvoicesPage() {
                           </div>
                           <div>
                             <div className="text-slate-800 font-bold font-montserrat text-sm">{inv.member?.full_name || 'Deleted Student'}</div>
-                            <div className="text-[10px] text-[#003178] font-mono font-medium">{inv.member?.permanent_id || 'N/A'}</div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <div className="text-[10px] text-[#003178] font-mono font-medium">{inv.member?.permanent_id || 'N/A'}</div>
+                              {inv.member?.student_no && (
+                                <span className="text-[9px] bg-purple-500/10 text-purple-600 border border-purple-500/20 px-1.5 py-0.5 rounded tracking-widest font-bold">#{inv.member.student_no}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
