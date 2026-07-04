@@ -751,6 +751,7 @@ export default function MembersPage() {
                     <div className="w-12 h-12 shrink-0 rounded-2xl bg-blue-100 border border-blue-200 flex items-center justify-center text-[#003178] font-black text-lg shadow-[inset_0_2px_4px_rgba(0,49,120,0.1)]">
                       {member.full_name.charAt(0)}
                     </div>
+                    <div className="flex-1 min-w-0">
                       <div className="text-white font-bold text-sm tracking-wide group-hover:text-primary transition-colors truncate pr-2">{member.full_name}</div>
                       <span className="badge badge-info text-[9px] mt-1 tracking-widest inline-block whitespace-nowrap">{member.permanent_id}</span>
                       {member.student_no && <span className="badge bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[9px] mt-1 ml-1 tracking-widest inline-block whitespace-nowrap">#{member.student_no}</span>}
