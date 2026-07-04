@@ -62,7 +62,8 @@ export default function SeatingPage() {
   const searchResults = globalSearch.trim().length > 0 
     ? assignedMembersList.filter(m => 
         m.full_name.toLowerCase().includes(globalSearch.toLowerCase()) || 
-        (m.permanent_id && m.permanent_id.toLowerCase().includes(globalSearch.toLowerCase()))
+        (m.permanent_id && m.permanent_id.toLowerCase().includes(globalSearch.toLowerCase())) ||
+        (m.student_no && m.student_no.toLowerCase().includes(globalSearch.toLowerCase()))
       )
     : [];
 
@@ -89,7 +90,7 @@ export default function SeatingPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from('members')
-      .select('id, seat_no, shift, is_active, full_name, permanent_id, mobile, subscription_end_date, outstanding_dues, payment_due_date')
+      .select('id, seat_no, shift, is_active, full_name, permanent_id, student_no, mobile, subscription_end_date, outstanding_dues, payment_due_date')
       .eq('branch', activeBranch)
       .eq('is_active', true);
     
@@ -463,7 +464,10 @@ export default function SeatingPage() {
                 >
                   <span className="text-sm font-bold text-slate-800">{m.full_name}</span>
                   <div className="flex justify-between items-center mt-0.5">
-                    <span className="text-[10px] text-slate-500 font-mono">{m.permanent_id}</span>
+                    <div className="flex gap-2 items-center">
+                      <span className="text-[10px] text-slate-500 font-mono">{m.permanent_id}</span>
+                      {m.student_no && <span className="text-[9px] bg-purple-500/10 text-purple-600 px-1 py-0.5 rounded tracking-widest font-bold">#{m.student_no}</span>}
+                    </div>
                     <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-black">Seat {m.seat_no}</span>
                   </div>
                 </button>
