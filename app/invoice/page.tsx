@@ -300,7 +300,13 @@ function InvoiceContent() {
             <h3 className="text-[10px] font-montserrat font-black uppercase text-[#737783] mb-2.5 border-b border-[#efecff] pb-1.5 tracking-wider">Billed To</h3>
             <p className="font-montserrat font-black text-base text-[#1a1a2e]">{member.full_name}</p>
             <p className="text-xs text-[#434652] mt-1.5 font-lexend">Library ID: <span className="font-mono font-bold text-[#003178] bg-[#f5f7ff] px-2 py-0.5 rounded">{member.permanent_id}</span></p>
-            {member.student_no && <p className="text-xs text-[#434652] mt-1 font-lexend">Student/Allotment No: <span className="font-mono font-bold text-[#003178] bg-[#f5f7ff] px-2 py-0.5 rounded">#{member.student_no}</span></p>}
+            {member.student_no && (
+              <div className="mt-2.5 inline-flex items-center gap-1.5 bg-[#f5f3ff] border border-[#ddd6fe] text-[#6d28d9] px-2.5 py-1 rounded-lg">
+                <span className="material-symbols-outlined text-[13px]">badge</span>
+                <span className="text-[10px] font-montserrat font-bold uppercase tracking-wider">Allotment No:</span>
+                <span className="font-mono font-black text-xs">#{member.student_no}</span>
+              </div>
+            )}
             <p className="text-xs text-[#434652] mt-1 font-lexend">Phone: {member.mobile}</p>
           </div>
           <div>

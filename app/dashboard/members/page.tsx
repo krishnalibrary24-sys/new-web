@@ -894,7 +894,14 @@ export default function MembersPage() {
                   <div className="flex justify-between items-start gap-4">
                     <div>
                       <h3 className="text-xl font-bold text-white">{selectedMember.full_name}</h3>
-                      <p className="text-primary font-semibold text-sm mt-0.5">{selectedMember.permanent_id}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-primary font-semibold text-sm">{selectedMember.permanent_id}</p>
+                        {selectedMember.student_no && (
+                          <span className="badge bg-purple-500/15 text-purple-400 border border-purple-500/30 text-[10px] tracking-widest px-2 py-0.5 shadow-sm">
+                            #{selectedMember.student_no}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       {(() => {
