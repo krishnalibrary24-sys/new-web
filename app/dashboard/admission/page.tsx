@@ -277,7 +277,7 @@ export default function AdmissionPage() {
         if (insErr) throw new Error(insErr.message);
         if (insertedMember) {
           memberId = insertedMember.id;
-          logActivity(activeBranch, "admission_create", `Registered new student: ${fullName} (${finalId})`);
+          logActivity(activeBranch, "admission_create", `Registered new student: ${fullName} (${finalId}${studentNo ? ` [#${studentNo}]` : ''})`);
         }
       }
 

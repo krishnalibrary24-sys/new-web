@@ -127,7 +127,7 @@ export default function SeatingPage() {
     
     const member = unassignedMembers.find(m => m.id === memberId);
     if (member) {
-      logActivity(activeBranch, "seating", `Allocated Seat #${selectedSeat} to ${member.full_name} (${member.permanent_id})`);
+      logActivity(activeBranch, "seating", `Allocated Seat #${selectedSeat} to ${member.full_name} (${member.permanent_id}${member.student_no ? ` [#${member.student_no}]` : ''})`);
       
       // Update seat number in database and clear previous seat
       await supabase.from('members').update({ seat_no: selectedSeat, previous_seat_no: null }).eq('id', memberId);
@@ -241,7 +241,7 @@ export default function SeatingPage() {
     const member = currentOccupants.find(m => m.id === memberId);
     
     if (member) {
-      logActivity(activeBranch, "seating", `Unassigned Seat #${seatNo} from ${member.full_name} (${member.permanent_id})`);
+      logActivity(activeBranch, "seating", `Unassigned Seat #${seatNo} from ${member.full_name} (${member.permanent_id}${member.student_no ? ` [#${member.student_no}]` : ''})`);
     }
 
     // Update database - save vacated seat in previous_seat_no

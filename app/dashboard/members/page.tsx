@@ -216,7 +216,7 @@ export default function MembersPage() {
     const member = members.find(m => m.id === id);
     await supabase.from('members').delete().eq('id', id);
     if (member) {
-      logActivity(activeBranch, "student_delete", `Permanently deleted member: ${member.full_name} (${member.permanent_id})`);
+      logActivity(activeBranch, "student_delete", `Permanently deleted member: ${member.full_name} (${member.permanent_id}${member.student_no ? ` [#${member.student_no}]` : ''})`);
     }
     setMembers(prev => prev.filter(m => m.id !== id));
     setSelectedMember(null);
@@ -315,7 +315,7 @@ export default function MembersPage() {
       notes: `Subscription Renewal — Joining: ${new Date(joiningDateStr).toLocaleDateString()}, Expiry: ${newEnd.toLocaleDateString()}. Duration: ${durationStr}. Base Price: ₹${renewPrice}/${isDays ? "day" : "mo"}, Discount: ₹${renewDiscount}`
     }]);
 
-    logActivity(activeBranch, "student_renew", `Renewed subscription for ${member.full_name} (${member.permanent_id}) by ${durationStr}`);
+    logActivity(activeBranch, "student_renew", `Renewed subscription for ${member.full_name} (${member.permanent_id}${member.student_no ? ` [#${member.student_no}]` : ''}) by ${durationStr}`);
 
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...updatedData } : m));
     setSelectedMember({ ...member, ...updatedData });
@@ -369,7 +369,7 @@ export default function MembersPage() {
       logActivity(
         activeBranch, 
         "student_left", 
-        `Student ${member.permanent_id} marked as LEFT. Active outstanding dues converted to bad-debt loss of ₹${leftWithDues ? leftLossAmount : 0}. Reason: ${leftReason || "Member left the library"}`
+        `Student ${member.full_name} (${member.permanent_id}${member.student_no ? ` [#${member.student_no}]` : ''}) marked as LEFT. Active outstanding dues converted to bad-debt loss of ₹${leftWithDues ? leftLossAmount : 0}. Reason: ${leftReason || "Member left the library"}`
       );
 
       setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...leftPayload } : m));
@@ -433,7 +433,7 @@ export default function MembersPage() {
 
       if (error) throw error;
 
-      logActivity(activeBranch, "student_update", `Updated profile/subscription for ${editFullName} (${selectedMember.permanent_id})`);
+      logActivity(activeBranch, "student_update", `Updated profile/subscription for ${editFullName} (${selectedMember.permanent_id}${editStudentNo ? ` [#${editStudentNo}]` : ''})`);
 
       setMembers(prev => prev.map(m => m.id === selectedMember.id ? { ...m, ...updatedFields } : m));
       setSelectedMember((prev: any) => ({ ...prev, ...updatedFields }));
@@ -457,7 +457,7 @@ export default function MembersPage() {
         };
         const { error } = await supabase.from('members').update(payload).eq('id', member.id);
         if (error) throw error;
-        logActivity(activeBranch, "student_deactivate", `Deactivated membership of ${member.full_name} (${member.permanent_id})`);
+        logActivity(activeBranch, "student_deactivate", `Deactivated membership of ${member.full_name} (${member.permanent_id}${member.student_no ? ` [#${member.student_no}]` : ''})`);
         setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...payload } : m));
         setSelectedMember({ ...member, ...payload });
       } else {
@@ -488,7 +488,7 @@ export default function MembersPage() {
         };
         const { error } = await supabase.from('members').update(payload).eq('id', member.id);
         if (error) throw error;
-        logActivity(activeBranch, "student_activate", `Re-activated membership of ${member.full_name} (${member.permanent_id})`);
+        logActivity(activeBranch, "student_activate", `Re-activated membership of ${member.full_name} (${member.permanent_id}${member.student_no ? ` [#${member.student_no}]` : ''})`);
         setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...payload } : m));
         setSelectedMember({ ...member, ...payload });
       }

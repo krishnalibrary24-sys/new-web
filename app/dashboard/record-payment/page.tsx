@@ -465,13 +465,14 @@ function RecordPaymentInner() {
       if (memberErr) throw new Error(memberErr.message);
 
       // 3. Log Activity
+      const studentRef = `${selectedMember.permanent_id}${selectedMember.student_no ? ` [#${selectedMember.student_no}]` : ''}`;
       const logDetails = isDuesCollection
-        ? `Recorded dues payment of ₹${amountVal} for ${selectedMember.full_name} (${selectedMember.permanent_id}). Remaining dues: ₹${remainingDues}.`
+        ? `Recorded dues payment of ₹${amountVal} for ${selectedMember.full_name} (${studentRef}). Remaining dues: ₹${remainingDues}.`
         : (purpose === "renewal"
-          ? `Recorded full payment of ₹${amountVal} for ${selectedMember.full_name} (${selectedMember.permanent_id}). Expiry: ${finalNewEnd!.toLocaleDateString()}.`
+          ? `Recorded full payment of ₹${amountVal} for ${selectedMember.full_name} (${studentRef}). Expiry: ${finalNewEnd!.toLocaleDateString()}.`
           : (payLater
-            ? `Deferred payment (Pay Later) set up for ${selectedMember.full_name} (${selectedMember.permanent_id}). Due: ${new Date(dueDate).toLocaleDateString()}, Expiry: ${finalNewEnd!.toLocaleDateString()}.`
-            : `Recorded partial payment of ₹${amountVal} (Dues: ₹${calculatedTotal - amountVal}) for ${selectedMember.full_name} (${selectedMember.permanent_id}). Due: ${new Date(dueDate).toLocaleDateString()}, Expiry: ${finalNewEnd!.toLocaleDateString()}.`
+            ? `Deferred payment (Pay Later) set up for ${selectedMember.full_name} (${studentRef}). Due: ${new Date(dueDate).toLocaleDateString()}, Expiry: ${finalNewEnd!.toLocaleDateString()}.`
+            : `Recorded partial payment of ₹${amountVal} (Dues: ₹${calculatedTotal - amountVal}) for ${selectedMember.full_name} (${studentRef}). Due: ${new Date(dueDate).toLocaleDateString()}, Expiry: ${finalNewEnd!.toLocaleDateString()}.`
           )
         );
 
