@@ -145,7 +145,7 @@ export default function MembersPage() {
     const statusInfo = getMemberStatus(m);
     let matchesFilter = false;
     if (filterStatus === 'all') {
-      matchesFilter = true;
+      matchesFilter = statusInfo.type !== 'left';
     } else if (filterStatus === 'active') {
       matchesFilter = statusInfo.type === 'active-paid' || statusInfo.type === 'unassigned';
     } else if (filterStatus === 'inactive') {
@@ -651,7 +651,7 @@ export default function MembersPage() {
 
       {/* Filter Tabs & Sorting */}
       <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 border-b border-white/[0.04] pb-4">
-        <div className="flex gap-2 overflow-x-auto w-full xl:w-auto pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="flex gap-2 overflow-x-auto w-full xl:w-auto pb-3 custom-scrollbar">
           {[
             {key: 'active' as const, label: `Active (Paid) (${activeCount})` },
             { key: 'inactive' as const, label: `Inactive (${inactiveCount})` },
@@ -660,7 +660,7 @@ export default function MembersPage() {
             { key: 'overdue' as const, label: `Overdue (${overdueCount})` },
             { key: 'due-soon' as const, label: `Due Soon (${dueSoonCount})` },
             { key: 'left' as const, label: `Left (${leftCount})` },
-            { key: 'all' as const, label: `All (${members.length})` },
+            { key: 'all' as const, label: `All (${members.length - leftCount})` },
           ].map(tab => (
             <button
               key={tab.key}
