@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.members (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   permanent_id          TEXT UNIQUE,                         -- e.g. #KL26B001
   full_name             TEXT NOT NULL,
+  student_no            TEXT,
   father_name           TEXT,
   dob                   DATE,
   gender                TEXT CHECK (gender IN ('Male', 'Female', 'Other')),
