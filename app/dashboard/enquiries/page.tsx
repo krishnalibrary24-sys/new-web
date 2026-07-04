@@ -243,7 +243,7 @@ export default function EnquiriesPage() {
                       </span>
                     </td>
                     <td className="text-on-surface-variant">
-                      {new Date(lead.created_at).toLocaleDateString()}
+                      {new Date(lead.created_at).toLocaleDateString('en-GB')}
                     </td>
                     <td className="text-right">
                       <div className="flex gap-2 justify-end items-center">
@@ -328,7 +328,7 @@ export default function EnquiriesPage() {
                   </div>
                   <div className="flex items-center gap-1.5 text-on-surface-variant">
                     <span className="material-symbols-outlined text-[14px]">calendar_today</span>
-                    {new Date(lead.created_at).toLocaleDateString()}
+                    {new Date(lead.created_at).toLocaleDateString('en-GB')}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className={`badge text-[9px] ${lead.branch === 'namnakala' ? 'badge-info' : 'bg-purple-500/15 text-purple-400 border border-purple-500/20'}`}>

@@ -137,15 +137,13 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
             .select('member_id, amount, paid_at, payment_mode, invoice_id, notes')
             .eq('branch', activeBranch),
           supabase
-            .from('members')
-            .select('plan_amount')
-            .eq('branch', 'bengali-chowk')
-            .eq('is_active', true),
+            .from('payments')
+            .select('amount, paid_at')
+            .eq('branch', 'bengali-chowk'),
           supabase
-            .from('members')
-            .select('plan_amount')
+            .from('payments')
+            .select('amount, paid_at')
             .eq('branch', 'namnakala')
-            .eq('is_active', true)
         ]);
 
         if (!active) return;
@@ -278,12 +276,22 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           const lossRevenueVal = lossMembers.reduce((sum, m) => sum + (m.loss_amount || 0), 0);
           const leftMembersCount = lossMembers.length;
 
-          // Branch-wise Active Revenues
-          const bcData = bcRes.data;
-          const nmData = nmRes.data;
+          // Branch-wise Received Revenues
+          const bcData = bcRes.data || [];
+          const nmData = nmRes.data || [];
 
-          const bcRevenue = bcData?.reduce((sum, m) => sum + (m.plan_amount || 0), 0) || 0;
-          const nmRevenue = nmData?.reduce((sum, m) => sum + (m.plan_amount || 0), 0) || 0;
+          const bcRevenue = bcData.reduce((sum, p) => {
+             const amt = Number(p.amount || 0);
+             const paidDate = p.paid_at ? new Date(p.paid_at) : null;
+             const matchesMonth = !isFiltered || (paidDate && paidDate >= startDate! && paidDate <= endDate!);
+             return matchesMonth ? sum + amt : sum;
+          }, 0);
+          const nmRevenue = nmData.reduce((sum, p) => {
+             const amt = Number(p.amount || 0);
+             const paidDate = p.paid_at ? new Date(p.paid_at) : null;
+             const matchesMonth = !isFiltered || (paidDate && paidDate >= startDate! && paidDate <= endDate!);
+             return matchesMonth ? sum + amt : sum;
+          }, 0);
 
           const fullDayCount = activeMembers.filter(m => m.plan_amount >= 1000).length;
           const halfDayCount = activeMembers.filter(m => m.plan_amount && m.plan_amount < 1000).length;

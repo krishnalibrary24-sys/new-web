@@ -207,7 +207,7 @@ function InvoiceContent() {
       name: member.full_name,
       lib_name: libName,
       receipt_no: receiptNo,
-      date: new Date(invoice.created_at).toLocaleDateString(),
+      date: new Date(invoice.created_at).toLocaleDateString('en-GB'),
       permanent_id: member.permanent_id || 'N/A',
       seat: member.permanent_id && member.permanent_id.includes('U') ? 'Unreserved' : `Seat ${member.seat_no || 'Unassigned'}`,
       shift: member.shift || 'N/A',
@@ -226,8 +226,8 @@ function InvoiceContent() {
   if (loading) return <div className="p-10 text-center text-slate-400">Loading Invoice...</div>;
   if (!member || !invoice) return <div className="p-10 text-center text-red-500">Invoice Data Not Found</div>;
 
-  const displayJoiningDate = parsedInfo.joiningDate || (member.joining_date ? new Date(member.joining_date).toLocaleDateString() : 'N/A');
-  const displayExpiryDate = parsedInfo.expiryDate || (member.subscription_end_date ? new Date(member.subscription_end_date).toLocaleDateString() : 'N/A');
+  const displayJoiningDate = parsedInfo.joiningDate || (member.joining_date ? new Date(member.joining_date).toLocaleDateString('en-GB') : 'N/A');
+  const displayExpiryDate = parsedInfo.expiryDate || (member.subscription_end_date ? new Date(member.subscription_end_date).toLocaleDateString('en-GB') : 'N/A');
 
   return (
     <div className="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-12 font-sans">
@@ -300,7 +300,7 @@ function InvoiceContent() {
               <div className="text-[9px] font-lexend text-slate-500 font-bold uppercase tracking-wider mb-0.5">Receipt No</div>
               <div className="font-lexend font-bold text-sm text-[#003178] mb-2">{receiptNo}</div>
               <div className="text-[9px] font-lexend text-slate-500 font-bold uppercase tracking-wider mb-0.5">Date</div>
-              <div className="font-lexend font-bold text-xs text-slate-700">{new Date(invoice.created_at).toLocaleDateString()}</div>
+              <div className="font-lexend font-bold text-xs text-slate-700">{new Date(invoice.created_at).toLocaleDateString('en-GB')}</div>
             </div>
           </div>
         </div>
@@ -317,7 +317,7 @@ function InvoiceContent() {
             <h3 className="text-[10px] font-montserrat font-black uppercase text-[#737783] mb-2.5 border-b border-[#efecff] pb-1.5 tracking-wider">Subscription details</h3>
             <p className="text-xs mb-1 font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Shift:</span> <span className="font-bold text-[#1a1a2e]">{member.shift}</span></p>
             <p className="text-xs mb-1 font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Seat No:</span> <span className="font-bold text-[#1a1a2e]">{member.permanent_id && member.permanent_id.includes('U') ? 'Unreserved' : (member.seat_no || 'Unassigned')}</span></p>
-            <p className="text-xs mb-1 font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Join Date:</span> <span className="font-bold text-[#1a1a2e]">{displayJoiningDate}</span></p>
+            <p className="text-xs mb-1 font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Join/Start Date:</span> <span className="font-bold text-[#1a1a2e]">{displayJoiningDate}</span></p>
             <p className="text-xs font-lexend"><span className="text-[#737783] w-24 inline-block font-medium">Valid Till:</span> <span className="font-bold text-[#003178]">{displayExpiryDate}</span></p>
           </div>
         </div>
