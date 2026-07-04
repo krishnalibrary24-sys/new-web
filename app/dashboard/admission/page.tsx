@@ -25,6 +25,7 @@ export default function AdmissionPage() {
   
   const [recordFound, setRecordFound] = useState(false);
   const [permanentId, setPermanentId] = useState("");
+  const [studentNo, setStudentNo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -67,6 +68,7 @@ export default function AdmissionPage() {
         setShift(data.shift || "Full Day");
         setIsReserved(!data.permanent_id?.includes('U'));
         setPermanentId(data.permanent_id || "");
+        setStudentNo(data.student_no || "");
         setRecordFound(true);
         setExistingMemberState(data);
         if (data.plan_amount !== undefined && data.plan_amount !== null) {
@@ -96,6 +98,7 @@ export default function AdmissionPage() {
         setGender(data.gender || "");
         setAddress(data.address || "");
         setPermanentId(data.permanent_id || "");
+        setStudentNo(data.student_no || "");
         setIsReserved(!data.permanent_id?.includes('U'));
         setRecordFound(true);
         setShowRecordPopup(true);
@@ -128,6 +131,7 @@ export default function AdmissionPage() {
     setIsReserved(true);
     setRecordFound(false);
     setPermanentId("");
+    setStudentNo("");
     setExistingMemberState(null);
     setShowRecordPopup(false);
     setErrorMsg(null);
@@ -139,7 +143,7 @@ export default function AdmissionPage() {
     try {
       let finalId = permanentId;
       const branchCode = activeBranch === 'namnakala' ? 'N' : 'B';
-      const prefix = isReserved ? `#KL26${branchCode}` : `#KL26${branchCode}U`;
+      const prefix = isReserved ? `KL${branchCode}` : `KL${branchCode}U`;
       
       const needsNewPermanentId = !recordFound || (existingMemberState && (existingMemberState.permanent_id.includes('U') !== !isReserved));
       
@@ -147,32 +151,28 @@ export default function AdmissionPage() {
         const { data: allIds } = await supabase
           .from('members')
           .select('permanent_id')
-          .like('permanent_id', `#KL26${branchCode}%`);
+          .eq('branch', activeBranch);
           
         let maxSeq = 0;
         if (allIds && allIds.length > 0) {
           allIds.forEach(record => {
             if (record.permanent_id) {
-              if (isReserved) {
-                // Must not contain 'U'
-                if (!record.permanent_id.includes('U') && record.permanent_id.startsWith(prefix)) {
-                  const suffix = record.permanent_id.replace(prefix, '');
-                  const num = parseInt(suffix);
-                  if (!isNaN(num) && num > maxSeq) maxSeq = num;
-                }
-              } else {
-                // Must start with prefix (which contains 'U')
-                if (record.permanent_id.startsWith(prefix)) {
-                  const suffix = record.permanent_id.replace(prefix, '');
-                  const num = parseInt(suffix);
-                  if (!isNaN(num) && num > maxSeq) maxSeq = num;
+              const match = record.permanent_id.match(/^(?:#?KL26[BN]|KL[BN])U?(\d+)$/);
+              if (match) {
+                const num = parseInt(match[1]);
+                if (!isNaN(num)) {
+                  if (isReserved && !record.permanent_id.includes('U')) {
+                    if (num > maxSeq) maxSeq = num;
+                  } else if (!isReserved && record.permanent_id.includes('U')) {
+                    if (num > maxSeq) maxSeq = num;
+                  }
                 }
               }
             }
           });
         }
         const seq = maxSeq + 1;
-        finalId = `${prefix}${seq.toString().padStart(4, '0')}`;
+        finalId = `${prefix}${seq.toString()}`;
         setPermanentId(finalId);
       }
 
@@ -231,6 +231,7 @@ export default function AdmissionPage() {
         address: address,
         shift: shift,
         plan_amount: basePriceVal,
+        student_no: studentNo,
       };
 
       if (!existingMemberState) {
@@ -284,7 +285,7 @@ export default function AdmissionPage() {
       setErrorMsg(null);
 
       // Reset profile states
-      setMobile(""); setFullName(""); setFatherName(""); setDob(""); setGender(""); setAddress("");
+      setMobile(""); setFullName(""); setFatherName(""); setDob(""); setGender(""); setAddress(""); setStudentNo("");
 
       if (!existingMemberState) {
         if (memberId) {
@@ -378,6 +379,9 @@ export default function AdmissionPage() {
                 </FormField>
                 <FormField label="Full Name" required>
                   <input required type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="input-premium" placeholder="e.g. Rahul Sharma" />
+                </FormField>
+                <FormField label="Allotment / Student No." icon="tag">
+                  <input type="text" value={studentNo} onChange={(e) => setStudentNo(e.target.value)} className="input-premium" placeholder="e.g. STU-1001" />
                 </FormField>
                 <FormField label="Father's Name">
                   <input type="text" value={fatherName} onChange={(e) => setFatherName(e.target.value)} className="input-premium" placeholder="Required for records" />

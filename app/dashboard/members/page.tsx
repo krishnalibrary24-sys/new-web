@@ -56,9 +56,9 @@ export default function MembersPage() {
   // Display style toggler (tiles vs list)
   const [viewMode, setViewMode] = useState<'tiles' | 'list'>('tiles');
 
-  // Edit Profile States
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
   const [editFullName, setEditFullName] = useState("");
+  const [editStudentNo, setEditStudentNo] = useState("");
   const [editMobile, setEditMobile] = useState("");
   const [editFatherName, setEditFatherName] = useState("");
   const [editDob, setEditDob] = useState("");
@@ -114,6 +114,7 @@ export default function MembersPage() {
       // Initialize Edit Profile states
       setIsEditingProfile(false);
       setEditFullName(selectedMember.full_name || "");
+      setEditStudentNo(selectedMember.student_no || "");
       setEditMobile(selectedMember.mobile || "");
       setEditFatherName(selectedMember.father_name || "");
       setEditDob(selectedMember.dob ? selectedMember.dob.split('T')[0] : "");
@@ -138,6 +139,7 @@ export default function MembersPage() {
   const filteredMembers = members.filter(m => {
     const matchesSearch = m.full_name.toLowerCase().includes(search.toLowerCase()) || 
       m.permanent_id.toLowerCase().includes(search.toLowerCase()) ||
+      (m.student_no && m.student_no.toLowerCase().includes(search.toLowerCase())) ||
       m.mobile.includes(search);
       
     const statusInfo = getMemberStatus(m);
@@ -412,6 +414,7 @@ export default function MembersPage() {
 
       const updatedFields = {
         full_name: editFullName.trim(),
+        student_no: editStudentNo.trim(),
         mobile: editMobile.trim(),
         father_name: editFatherName.trim(),
         dob: editDob ? new Date(editDob).toISOString() : null,
@@ -748,9 +751,9 @@ export default function MembersPage() {
                     <div className="w-12 h-12 shrink-0 rounded-2xl bg-blue-100 border border-blue-200 flex items-center justify-center text-[#003178] font-black text-lg shadow-[inset_0_2px_4px_rgba(0,49,120,0.1)]">
                       {member.full_name.charAt(0)}
                     </div>
-                    <div className="flex-1 min-w-0">
                       <div className="text-white font-bold text-sm tracking-wide group-hover:text-primary transition-colors truncate pr-2">{member.full_name}</div>
                       <span className="badge badge-info text-[9px] mt-1 tracking-widest inline-block whitespace-nowrap">{member.permanent_id}</span>
+                      {member.student_no && <span className="badge bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[9px] mt-1 ml-1 tracking-widest inline-block whitespace-nowrap">#{member.student_no}</span>}
                     </div>
                   </div>
                   {(() => {
@@ -813,6 +816,7 @@ export default function MembersPage() {
                     <tr key={member.id} onClick={() => setSelectedMember(member)} className="cursor-pointer hover:bg-slate-50 transition-colors group animate-fade-in-fast">
                       <td className="px-6 py-4 border-b border-[#f1f5f9]">
                         <span className="badge badge-info">{member.permanent_id}</span>
+                        {member.student_no && <div className="mt-1"><span className="badge bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] tracking-widest">#{member.student_no}</span></div>}
                       </td>
                       <td className="px-6 py-4 border-b border-[#f1f5f9]">
                         <div className="font-bold text-slate-800">{member.full_name}</div>
@@ -982,6 +986,16 @@ export default function MembersPage() {
                           value={editFullName}
                           onChange={(e) => setEditFullName(e.target.value)}
                           className="input-premium !py-1.5 !text-xs w-full"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Student/Allotment No</label>
+                        <input
+                          type="text"
+                          value={editStudentNo}
+                          onChange={(e) => setEditStudentNo(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                          placeholder="e.g. STU-101"
                         />
                       </div>
                       <div className="space-y-1">
