@@ -609,6 +609,7 @@ function RecordPaymentInner() {
     const matchesSearch = !query || (
       m.full_name?.toLowerCase().includes(query) ||
       m.permanent_id?.toLowerCase().includes(query) ||
+      (m.student_no && m.student_no.toLowerCase().includes(query)) ||
       m.mobile?.includes(query)
     );
 
@@ -769,7 +770,14 @@ function RecordPaymentInner() {
                   </div>
                   <div>
                     <h3 className="text-white font-bold text-sm tracking-wide">{selectedMember.full_name}</h3>
-                    <span className="badge badge-info text-[9px] mt-1 tracking-widest">{selectedMember.permanent_id}</span>
+                    <div className="flex gap-2">
+                      <span className="badge badge-info text-[9px] mt-1 tracking-widest">{selectedMember.permanent_id}</span>
+                      {selectedMember.student_no && (
+                        <span className="badge bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[9px] mt-1 tracking-widest">
+                          #{selectedMember.student_no}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

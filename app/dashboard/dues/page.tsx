@@ -122,7 +122,8 @@ export default function DuesPage() {
 
   const sortedDueSoon = [...dueSoon].filter(m => 
     m.full_name.toLowerCase().includes(searchDueSoon.toLowerCase()) || 
-    m.permanent_id?.toLowerCase().includes(searchDueSoon.toLowerCase())
+    m.permanent_id?.toLowerCase().includes(searchDueSoon.toLowerCase()) ||
+    (m.student_no && m.student_no.toLowerCase().includes(searchDueSoon.toLowerCase()))
   ).sort((a, b) => {
     if (sortDueSoonBy === 'name-asc') return a.full_name.localeCompare(b.full_name);
     return new Date(a.subscription_end_date).getTime() - new Date(b.subscription_end_date).getTime();
@@ -130,7 +131,8 @@ export default function DuesPage() {
 
   const sortedDefaulters = [...defaulters].filter(m => 
     m.full_name.toLowerCase().includes(searchDefaulters.toLowerCase()) || 
-    m.permanent_id?.toLowerCase().includes(searchDefaulters.toLowerCase())
+    m.permanent_id?.toLowerCase().includes(searchDefaulters.toLowerCase()) ||
+    (m.student_no && m.student_no.toLowerCase().includes(searchDefaulters.toLowerCase()))
   ).sort((a, b) => {
     if (sortDefaultersBy === 'name-asc') return a.full_name.localeCompare(b.full_name);
     return new Date(a.subscription_end_date).getTime() - new Date(b.subscription_end_date).getTime();
@@ -138,7 +140,8 @@ export default function DuesPage() {
 
   const sortedPending = [...pending].filter(m => 
     m.full_name.toLowerCase().includes(searchPending.toLowerCase()) || 
-    m.permanent_id?.toLowerCase().includes(searchPending.toLowerCase())
+    m.permanent_id?.toLowerCase().includes(searchPending.toLowerCase()) ||
+    (m.student_no && m.student_no.toLowerCase().includes(searchPending.toLowerCase()))
   ).sort((a, b) => {
     if (sortPendingBy === 'name-asc') return a.full_name.localeCompare(b.full_name);
     const dateA = a.payment_due_date ? new Date(a.payment_due_date).getTime() : 0;
@@ -433,7 +436,14 @@ function DueMemberCard({ member, type, badgeText, badgeClass, dateLabel, seatWar
       <div className="flex justify-between items-start mb-3">
         <div>
           <div className="text-white font-semibold text-sm">{member.full_name}</div>
-          <div className="text-xs text-primary font-medium mt-0.5">{member.permanent_id}</div>
+          <div className="flex gap-2 items-center mt-0.5">
+            <div className="text-xs text-primary font-medium">{member.permanent_id}</div>
+            {member.student_no && (
+              <span className="badge bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[9px] px-1.5 py-0.5 tracking-widest">
+                #{member.student_no}
+              </span>
+            )}
+          </div>
           <div className="text-xs text-on-surface-variant mt-0.5">
             {member.mobile} · Seat {member.seat_no || member.previous_seat_no || 'N/A'} {seatWarning}
           </div>

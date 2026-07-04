@@ -283,6 +283,17 @@ function InvoiceContent() {
               </div>
             </div>
           </div>
+
+          {/* Middle: Student No Highlight */}
+          {member.student_no && (
+            <div className="flex-1 flex justify-center min-w-[140px] px-4">
+              <div className="bg-purple-500/10 border-2 border-purple-500/30 px-6 py-3 rounded-2xl text-center shadow-sm">
+                <div className="text-[9px] font-montserrat font-black text-purple-700 uppercase tracking-widest mb-1">Student / Allotment No.</div>
+                <div className="font-mono font-black text-2xl text-[#003178]">#{member.student_no}</div>
+              </div>
+            </div>
+          )}
+
           <div className="text-right min-w-[160px]">
             <h2 className="text-2xl font-montserrat font-black uppercase text-[#003178] mb-2 tracking-widest leading-none">Receipt</h2>
             <div className="bg-[#f8fafc] p-3.5 rounded-xl text-left border border-slate-100 w-full">
@@ -300,13 +311,6 @@ function InvoiceContent() {
             <h3 className="text-[10px] font-montserrat font-black uppercase text-[#737783] mb-2.5 border-b border-[#efecff] pb-1.5 tracking-wider">Billed To</h3>
             <p className="font-montserrat font-black text-base text-[#1a1a2e]">{member.full_name}</p>
             <p className="text-xs text-[#434652] mt-1.5 font-lexend">Library ID: <span className="font-mono font-bold text-[#003178] bg-[#f5f7ff] px-2 py-0.5 rounded">{member.permanent_id}</span></p>
-            {member.student_no && (
-              <div className="mt-2.5 inline-flex items-center gap-1.5 bg-[#f5f3ff] border border-[#ddd6fe] text-[#6d28d9] px-2.5 py-1 rounded-lg">
-                <span className="material-symbols-outlined text-[13px]">badge</span>
-                <span className="text-[10px] font-montserrat font-bold uppercase tracking-wider">Allotment No:</span>
-                <span className="font-mono font-black text-xs">#{member.student_no}</span>
-              </div>
-            )}
             <p className="text-xs text-[#434652] mt-1 font-lexend">Phone: {member.mobile}</p>
           </div>
           <div>
