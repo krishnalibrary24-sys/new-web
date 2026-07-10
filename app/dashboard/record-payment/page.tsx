@@ -634,6 +634,70 @@ function RecordPaymentInner() {
     return matchesSearch && matchesFilter;
   });
 
+  const handleDeletePayment = async (payment: any) => {
+    if (!confirm(`Are you sure you want to permanently delete this payment of ₹${payment.amount}?\n\nThis will remove the transaction, adjust the student's dues back, and void the linked invoice if applicable.`)) return;
+    
+    try {
+      setIsSubmitting(true);
+      let duesAdjustment = 0;
+  
+      if (payment.invoice_id) {
+        const { data: inv } = await supabase.from('invoices').select('*').eq('id', payment.invoice_id).single();
+        if (inv) {
+          if (inv.paid_amount <= payment.amount) {
+             await supabase.from('invoices').delete().eq('id', inv.id);
+             const invTime = new Date(inv.created_at).getTime();
+             const payTime = new Date(payment.created_at || payment.paid_at).getTime();
+             const isSameTransaction = Math.abs(invTime - payTime) < 60000;
+             if (isSameTransaction) {
+               duesAdjustment = -inv.due_amount;
+             } else {
+               duesAdjustment = payment.amount;
+             }
+          } else {
+             const newPaid = inv.paid_amount - payment.amount;
+             const newDue = inv.due_amount + payment.amount;
+             const newStatus = newDue > 0 ? 'partially_paid' : 'paid';
+             await supabase.from('invoices').update({
+               paid_amount: newPaid,
+               due_amount: newDue,
+               status: newStatus
+             }).eq('id', inv.id);
+             duesAdjustment = payment.amount;
+          }
+        } else {
+          duesAdjustment = payment.amount;
+        }
+      } else {
+        duesAdjustment = payment.amount;
+      }
+  
+      if (selectedMember) {
+        const newDues = Math.max(0, (selectedMember.outstanding_dues || 0) + duesAdjustment);
+        const memberUpdate: any = {
+          outstanding_dues: newDues,
+          payment_status: newDues > 0 ? 'PENDING' : 'PAID',
+          left_with_dues: newDues > 0 ? selectedMember.left_with_dues : false,
+        };
+        if (newDues > 0) memberUpdate.pay_later = true;
+        await supabase.from('members').update(memberUpdate).eq('id', selectedMember.id);
+        setSelectedMember({ ...selectedMember, ...memberUpdate });
+        setMembers(prev => prev.map(m => m.id === selectedMember.id ? { ...m, ...memberUpdate } : m));
+      }
+  
+      await supabase.from('payments').delete().eq('id', payment.id);
+      logActivity(activeBranch, "payment_deleted", `Deleted payment of ₹${payment.amount} for ${selectedMember?.full_name}.`);
+      if (selectedMember) {
+        fetchPaymentsHistory(selectedMember.id);
+      }
+  
+    } catch (err: any) {
+      alert("Failed to delete payment: " + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
@@ -1254,6 +1318,7 @@ function RecordPaymentInner() {
                         <th>Amount</th>
                         <th>Mode</th>
                         <th>Transaction details / Notes</th>
+                        <th className="text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1299,6 +1364,15 @@ function RecordPaymentInner() {
                               </td>
                               <td className="max-w-xs truncate text-on-surface-variant" title={p.notes}>
                                 {p.notes || "—"}
+                              </td>
+                              <td className="text-right">
+                                <button 
+                                  onClick={() => handleDeletePayment(p)}
+                                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors group"
+                                  title="Delete Payment"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                                </button>
                               </td>
                             </tr>
                           ));
