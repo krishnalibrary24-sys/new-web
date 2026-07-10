@@ -640,6 +640,7 @@ function RecordPaymentInner() {
     try {
       setIsSubmitting(true);
       let duesAdjustment = 0;
+      let memberUpdate: any = {};
   
       if (payment.invoice_id) {
         const { data: inv } = await supabase.from('invoices').select('*').eq('id', payment.invoice_id).single();
@@ -651,6 +652,25 @@ function RecordPaymentInner() {
              const isSameTransaction = Math.abs(invTime - payTime) < 60000;
              if (isSameTransaction) {
                duesAdjustment = -inv.due_amount;
+               
+               if (selectedMember?.subscription_end_date) {
+                 if (paymentsHistory.length <= 1) {
+                   memberUpdate.subscription_end_date = null;
+                   memberUpdate.joining_date = null;
+                 } else {
+                   const matchMonths = payment.notes?.match(/Duration: (\d+) month/);
+                   const matchDays = payment.notes?.match(/Duration: (\d+) day/);
+                   const currentEnd = new Date(selectedMember.subscription_end_date);
+                   
+                   if (matchMonths && matchMonths[1]) {
+                     currentEnd.setMonth(currentEnd.getMonth() - parseInt(matchMonths[1], 10));
+                     memberUpdate.subscription_end_date = currentEnd.toISOString();
+                   } else if (matchDays && matchDays[1]) {
+                     currentEnd.setDate(currentEnd.getDate() - parseInt(matchDays[1], 10));
+                     memberUpdate.subscription_end_date = currentEnd.toISOString();
+                   }
+                 }
+               }
              } else {
                duesAdjustment = payment.amount;
              }
@@ -674,7 +694,8 @@ function RecordPaymentInner() {
   
       if (selectedMember) {
         const newDues = Math.max(0, (selectedMember.outstanding_dues || 0) + duesAdjustment);
-        const memberUpdate: any = {
+        memberUpdate = {
+          ...memberUpdate,
           outstanding_dues: newDues,
           payment_status: newDues > 0 ? 'PENDING' : 'PAID',
           left_with_dues: newDues > 0 ? selectedMember.left_with_dues : false,
