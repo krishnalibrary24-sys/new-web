@@ -682,7 +682,7 @@ function RecordPaymentInner() {
         if (newDues > 0) memberUpdate.pay_later = true;
         await supabase.from('members').update(memberUpdate).eq('id', selectedMember.id);
         setSelectedMember({ ...selectedMember, ...memberUpdate });
-        setMembers(prev => prev.map(m => m.id === selectedMember.id ? { ...m, ...memberUpdate } : m));
+        setAllMembers(prev => prev.map(m => m.id === selectedMember.id ? { ...m, ...memberUpdate } : m));
       }
   
       await supabase.from('payments').delete().eq('id', payment.id);
