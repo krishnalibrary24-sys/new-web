@@ -313,17 +313,26 @@ export default function SeatingPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
-      <div className="page-header">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="page-title">Seat Map</h1>
           <p className="page-subtitle">{branchName} Branch · {seats} Total Capacity</p>
         </div>
-        {unassignedMembers.length > 0 && (
-          <div className="card-premium !py-2 !px-4 flex items-center gap-2 border-orange-500/20 text-orange-500 bg-orange-500/5">
-            <span className="material-symbols-outlined text-sm animate-pulse">info</span>
-            <span className="text-xs font-bold font-manrope">{unassignedMembers.length} Student{unassignedMembers.length > 1 ? 's' : ''} Awaiting Seats</span>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-3 no-print">
+          <button 
+            onClick={() => window.print()} 
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#003178] hover:bg-[#002250] text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/10 transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-sm">print</span>
+            Print Seat Map (PDF)
+          </button>
+          {unassignedMembers.length > 0 && (
+            <div className="card-premium !py-2 !px-4 flex items-center gap-2 border-orange-500/20 text-orange-500 bg-orange-500/5">
+              <span className="material-symbols-outlined text-sm animate-pulse">info</span>
+              <span className="text-xs font-bold font-manrope">{unassignedMembers.length} Student{unassignedMembers.length > 1 ? 's' : ''} Awaiting Seats</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 📊 Seating Dynamic Stats Tiles Panel */}
@@ -406,7 +415,7 @@ export default function SeatingPage() {
         </div>
       </div>
 
-      {/* Custom Styles for Seat Blinking */}
+      {/* Custom Styles for Seat Blinking & Printing */}
       <style>{`
         @keyframes seatBlink {
           0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
@@ -416,6 +425,68 @@ export default function SeatingPage() {
           animation: seatBlink 0.5s ease-in-out 2;
           z-index: 40;
           position: relative;
+        }
+        @media print {
+          /* 1. Hide non-printable layout sections and siblings */
+          aside, 
+          header, 
+          nav, 
+          .page-header, 
+          .no-print,
+          .fixed.inset-0.pointer-events-none,
+          main > div > div > div.grid,
+          main > div > div > div.flex {
+            display: none !important;
+          }
+
+          /* 2. Reset ancestor containers to natural block flow */
+          body,
+          body > div,
+          main,
+          main > div,
+          main > div > div {
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            max-width: none !important;
+            overflow: visible !important;
+            background: transparent !important;
+          }
+
+          /* 3. Style printable area to be centered on the page */
+          .print-area {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            width: 100% !important;
+            min-height: 95vh !important;
+            padding: 10px !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+          }
+
+          /* 4. Zoom control based on page orientation */
+          .print-area .grid {
+            zoom: 0.9 !important;
+            margin: 0 auto !important;
+          }
+          
+          @media (orientation: landscape) {
+            .print-area .grid {
+              zoom: 1.22 !important;
+            }
+          }
+
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
         }
       `}</style>
 
@@ -483,7 +554,7 @@ export default function SeatingPage() {
       </div>
       
       {/* Seat Grid */}
-      <div className="card-premium overflow-x-auto relative">
+      <div className="card-premium overflow-x-auto relative print-area">
         {loading && (
           <div className="absolute inset-0 z-10 bg-surface/60 backdrop-blur-sm flex items-center justify-center rounded-2xl">
             <div className="flex items-center gap-3">
@@ -502,95 +573,99 @@ export default function SeatingPage() {
               }}
             >
               {/* Room Labels */}
-              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end whitespace-nowrap" style={{ gridRow: 1, gridColumn: '1 / 10' }}>
+              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end text-center w-full whitespace-nowrap" style={{ gridRow: 1, gridColumn: '1 / 18' }}>
                 DARK ROOM
               </div>
-              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end whitespace-nowrap" style={{ gridRow: 9, gridColumn: '1 / 10' }}>
+              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end text-center w-full whitespace-nowrap" style={{ gridRow: 9, gridColumn: '1 / 18' }}>
                 LIGHT ROOM
               </div>
 
-              {/* Row 3 Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 3, gridColumn: '2 / 6' }}>
-                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
+              {/* Horizontal Walkways for Namnakala */}
+              {/* Row 3 */}
+              <div style={{ gridRow: 3, gridColumn: '2 / 10' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 3, gridColumn: '6 / 10' }}>
-                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
-              </div>
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 3, gridColumn: '11 / 14' }}>
-                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
-              </div>
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 3, gridColumn: '14 / 18' }}>
-                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
+              <div style={{ gridRow: 3, gridColumn: '11 / 18' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
-              {/* Row 6 Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 6, gridColumn: '1 / 5' }}>
-                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
+              {/* Row 6 */}
+              <div style={{ gridRow: 6, gridColumn: '1 / 10' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 6, gridColumn: '5 / 10' }}>
-                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
-              </div>
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 6, gridColumn: '11 / 14' }}>
-                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
-              </div>
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 6, gridColumn: '14 / 18' }}>
-                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
+              <div style={{ gridRow: 6, gridColumn: '11 / 18' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
               {/* Row 8 Divider Line */}
               <div className="h-[1.5px] bg-[#003178] opacity-30 w-full self-center" style={{ gridRow: 8, gridColumn: '1 / 10' }} />
               <div className="h-[1.5px] bg-[#003178] opacity-30 w-full self-center" style={{ gridRow: 8, gridColumn: '11 / 18' }} />
 
-              {/* Row 11 Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 11, gridColumn: '2 / 6' }}>
-                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
+              {/* Row 11 */}
+              <div style={{ gridRow: 11, gridColumn: '2 / 10' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 11, gridColumn: '6 / 10' }}>
-                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
-              </div>
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 11, gridColumn: '11 / 14' }}>
-                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
-              </div>
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 11, gridColumn: '14 / 17' }}>
-                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
+              <div style={{ gridRow: 11, gridColumn: '11 / 17' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
-              {/* Row 12 Long Left Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 12, gridColumn: '1 / 5' }}>
-                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
-              </div>
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 12, gridColumn: '5 / 10' }}>
-                <span className="material-symbols-outlined text-xl z-10" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span><div className="h-[1.5px] bg-[#003178] flex-grow -ml-3" />
-              </div>
-
-              {/* Row 16 Right Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 16, gridColumn: '14 / 16' }}>
-                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
-              </div>
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 16, gridColumn: '16 / 18' }}>
-                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
+              {/* Row 12 Left only */}
+              <div style={{ gridRow: 12, gridColumn: '1 / 10' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
-              {/* Row 19 Right Arrows */}
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 19, gridColumn: '14 / 16' }}>
-                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
-              </div>
-              <div className="flex items-center text-[#003178] opacity-70 w-full h-full" style={{ gridRow: 19, gridColumn: '16 / 18' }}>
-                <div className="h-[1.5px] bg-[#003178] flex-grow -mr-3" /><span className="material-symbols-outlined text-xl z-10">arrow_right_alt</span>
+              {/* Row 16 Right only */}
+              <div style={{ gridRow: 16, gridColumn: '14 / 18' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
-              {/* UP/DOWN Vertical Arrows */}
-              <div className="flex flex-col items-center justify-start text-[#003178] opacity-70 w-full h-full" style={{ gridRow: '2 / 8', gridColumn: 10 }}>
-                <span className="material-symbols-outlined text-xl z-10 bg-slate-50" style={{ transform: 'rotate(-90deg)', marginBottom: '-1px' }}>arrow_right_alt</span>
-                <div className="w-[1.5px] bg-[#003178] flex-grow -mt-3" />
+              {/* Row 19 Right only */}
+              <div style={{ gridRow: 19, gridColumn: '14 / 18' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
+                <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
+                <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
-              <div className="flex flex-col items-center justify-start text-[#003178] opacity-70 w-full h-full" style={{ gridRow: '13 / 21', gridColumn: 10 }}>
-                <span className="material-symbols-outlined text-xl z-10 bg-slate-50" style={{ transform: 'rotate(-90deg)', marginBottom: '-1px' }}>arrow_right_alt</span>
-                <div className="w-[1.5px] bg-[#003178] flex-grow -mt-3" />
+
+              {/* Vertical Walkways for Namnakala */}
+              <div style={{ gridColumn: 10, gridRow: '2 / 8' }} className="flex flex-col items-center justify-center text-[#003178] opacity-30 gap-8 h-full pointer-events-none">
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)' }}>arrow_right_alt</span>
+                <span className="tracking-[0.3em] font-black uppercase text-[10px]" style={{ writingMode: 'vertical-rl' }}>Walkway</span>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(90deg)' }}>arrow_right_alt</span>
               </div>
-              <div className="flex flex-col items-center justify-end text-[#003178] opacity-70 w-full h-full" style={{ gridRow: '14 / 21', gridColumn: 12 }}>
-                <div className="w-[1.5px] bg-[#003178] flex-grow -mb-3" />
-                <span className="material-symbols-outlined text-xl z-10 bg-slate-50" style={{ transform: 'rotate(90deg)', marginTop: '-1px' }}>arrow_right_alt</span>
+              <div style={{ gridColumn: 10, gridRow: '13 / 21' }} className="flex flex-col items-center justify-center text-[#003178] opacity-30 gap-8 h-full pointer-events-none">
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)' }}>arrow_right_alt</span>
+                <span className="tracking-[0.3em] font-black uppercase text-[10px]" style={{ writingMode: 'vertical-rl' }}>Walkway</span>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(90deg)' }}>arrow_right_alt</span>
+              </div>
+              <div style={{ gridColumn: 12, gridRow: '14 / 21' }} className="flex flex-col items-center justify-center text-[#003178] opacity-30 gap-8 h-full pointer-events-none">
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)' }}>arrow_right_alt</span>
+                <span className="tracking-[0.3em] font-black uppercase text-[10px]" style={{ writingMode: 'vertical-rl' }}>Walkway</span>
+                <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(90deg)' }}>arrow_right_alt</span>
+              </div>
+
+              {/* Office Space in Namnakala */}
+              <div 
+                style={{ gridRow: '15 / 22', gridColumn: '1 / 10' }} 
+                className="border-2 border-dashed border-[#003178]/20 rounded-2xl flex flex-col items-center justify-center bg-[#003178]/[0.02] text-[#003178]/60 font-black tracking-widest text-sm select-none"
+              >
+                <span className="material-symbols-outlined text-2xl mb-1 text-[#003178]/40">meeting_room</span>
+                OFFICE
               </div>
 
               {[...Array(seats)].map((_, i) => {
@@ -671,17 +746,17 @@ export default function SeatingPage() {
               <div 
                 className="grid gap-1.5 relative w-max mx-auto px-4"
                 style={{ 
-                  gridTemplateColumns: 'repeat(16, minmax(30px, 36px))',
+                  gridTemplateColumns: 'repeat(17, minmax(30px, 36px))',
                   gridAutoRows: 'minmax(30px, 36px)'
                 }}
               >
                 {/* Vertical Room Divider (Red Line) */}
-                <div className="flex justify-center pointer-events-none" style={{ gridRow: '1 / 18', gridColumn: 10, zIndex: 0 }}>
+                <div className="flex justify-center pointer-events-none" style={{ gridRow: '1 / 18', gridColumn: 11, zIndex: 0 }}>
                   <div className="w-[1.5px] bg-[#003178]/30 h-full" />
                 </div>
 
                 {/* Walkway Labels */}
-                {[2, 5, 12, 15].map(col => (
+                {[2, 5, 10, 13, 16].map(col => (
                   <div key={`walkway-${col}`} style={{ gridColumn: col, gridRow: '2 / 18' }} className="flex flex-col items-center justify-center text-[#003178] opacity-30 gap-8 h-full pointer-events-none">
                     <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)' }}>arrow_right_alt</span>
                     <span className="tracking-[0.3em] font-black uppercase text-[10px]" style={{ writingMode: 'vertical-rl' }}>Walkway</span>
@@ -691,7 +766,7 @@ export default function SeatingPage() {
 
                 {/* Horizontal Walkways */}
                 {[5, 8, 11, 15].map(row => (
-                  <div key={`h-walkway-${row}`} style={{ gridRow: row, gridColumn: '7 / 10' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+                  <div key={`h-walkway-${row}`} style={{ gridRow: row, gridColumn: '7 / 11' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
                     <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
                     <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
                     <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
@@ -713,7 +788,7 @@ export default function SeatingPage() {
                     const topLight = { 9: 1, 8: 2, 7: 3, 6: 4, 5: 5, 4: 6, 3: 7, 2: 8, 1: 9 };
                     r = 1; c = topLight[seatNum as keyof typeof topLight];
                   } else if (seatNum >= 150 && seatNum <= 153) {
-                    const topDark = { 153: 11, 152: 12, 151: 13, 150: 14 };
+                    const topDark = { 153: 12, 152: 13, 151: 14, 150: 15 };
                     r = 1; c = topDark[seatNum as keyof typeof topDark];
                   }
                   // Light Room Main Grid
@@ -731,10 +806,10 @@ export default function SeatingPage() {
                   else if (seatNum >= 86 && seatNum <= 88) { r = 17; c = seatNum - 79; }
                   
                   // Dark Room Main Grid
-                  else if (seatNum >= 89 && seatNum <= 103) { r = seatNum - 86; c = 11; }
-                  else if (seatNum >= 104 && seatNum <= 118) { r = 121 - seatNum; c = 13; }
-                  else if (seatNum >= 119 && seatNum <= 133) { r = seatNum - 116; c = 14; }
-                  else if (seatNum >= 134 && seatNum <= 149) { r = 150 - seatNum; c = 16; }
+                  else if (seatNum >= 89 && seatNum <= 103) { r = seatNum - 86; c = 12; }
+                  else if (seatNum >= 104 && seatNum <= 118) { r = 121 - seatNum; c = 14; }
+                  else if (seatNum >= 119 && seatNum <= 133) { r = seatNum - 116; c = 15; }
+                  else if (seatNum >= 134 && seatNum <= 149) { r = 150 - seatNum; c = 17; }
 
                   return (
                     <button

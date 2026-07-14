@@ -166,13 +166,13 @@ export default function Home() {
           <div className="max-w-[1280px] mx-auto px-6 mb-8 text-center relative z-50">
             <ScrollReveal className="relative z-50 pointer-events-auto">
               <a 
-                href="https://maps.app.goo.gl/qe5inarf97yZfRvG9" 
+                href="https://maps.app.goo.gl/9M9ZBrWmjnewHZut9" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  window.open('https://maps.app.goo.gl/qe5inarf97yZfRvG9', '_blank');
+                  window.open('https://maps.app.goo.gl/9M9ZBrWmjnewHZut9', '_blank');
                 }}
                 className="flex flex-col items-center gap-2 hover:opacity-80 transition-all cursor-pointer group relative z-[9999] pointer-events-auto w-fit mx-auto"
               >
@@ -194,7 +194,12 @@ export default function Home() {
               </a>
             </ScrollReveal>
           </div>
-          <div className="marquee-container">
+          <a 
+            href="https://maps.app.goo.gl/9M9ZBrWmjnewHZut9" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="marquee-container block hover:opacity-95 transition-opacity cursor-pointer relative z-50"
+          >
             <div className="marquee-content">
               {[
                 { initials: "CS", name: "CA Siddharth Jaiswal", time: "4 months ago", text: "I cleared my CA Final exam while studying at this library, and it truly deserves appreciation. This library provides wide study cabins, which are extremely suitable for CA students as we need sufficient space to use calculators, books...", color: "bg-v-primary/8 text-v-primary" },
@@ -217,7 +222,7 @@ export default function Home() {
                 <ReviewCard key={`dup-${i}`} {...review} />
               ))}
             </div>
-          </div>
+          </a>
         </section>
 
         {/* ═══ 7. PRICING ═══ */}
@@ -354,7 +359,7 @@ function ReviewCard({ initials, name, time, text, color }: {
   initials: string; name: string; time: string; text: string; color: string;
 }) {
   return (
-    <div className="review-card bg-white p-5 rounded-2xl border border-v-outline-variant/10 min-w-[300px] max-w-[340px] flex flex-col shadow-[0_2px_12px_rgba(0,49,120,0.03)] cursor-default select-none"
+    <div className="review-card bg-white p-5 rounded-2xl border border-v-outline-variant/10 min-w-[300px] max-w-[340px] flex flex-col shadow-[0_2px_12px_rgba(0,49,120,0.03)] cursor-pointer select-none"
       style={{ borderLeft: '3px solid rgba(0,49,120,0.08)' }}
     >
       {/* Header: avatar + name + Google logo */}

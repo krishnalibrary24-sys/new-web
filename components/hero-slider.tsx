@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 
 /* ── Slide data ── */
 const SLIDES = [
@@ -34,37 +35,59 @@ const INTERVAL = 5000; // auto-advance ms
 type SlideState = "idle" | "exit-left" | "exit-right" | "enter-left" | "enter-right";
 
 export default function HeroSlider() {
+  const [slides, setSlides] = useState<any[]>(SLIDES);
   const [current,  setCurrent]  = useState(0);
   const [prevIdx,  setPrevIdx]  = useState<number | null>(null);
   const [dir,      setDir]      = useState<"next" | "prev">("next");
   const [phase,    setPhase]    = useState<"idle" | "transition">("idle");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    async function loadSlides() {
+      try {
+        const { data, error } = await supabase
+          .from("library_settings")
+          .select("value")
+          .eq("id", "hero_slides")
+          .maybeSingle();
+        if (error) throw error;
+        if (data?.value) {
+          const parsed = JSON.parse(data.value);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSlides(parsed);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load custom slides", err);
+      }
+    }
+    loadSlides();
+  }, []);
+
   const goTo = useCallback((nextIdx: number, direction: "next" | "prev") => {
     if (phase === "transition") return;
     
-    // Immediately update the slides so the new image enters and the old image exits
     setDir(direction);
     setPrevIdx(current);
     setCurrent(nextIdx);
     setPhase("transition");
 
-    // After animation finishes, clean up the exiting slide
     setTimeout(() => {
       setPrevIdx(null);
       setPhase("idle");
     }, 550);
   }, [current, phase]);
 
-  const next   = useCallback(() => goTo((current + 1) % SLIDES.length, "next"),  [current, goTo]);
-  const goPrev = useCallback(() => goTo((current - 1 + SLIDES.length) % SLIDES.length, "prev"), [current, goTo]);
+  const next   = useCallback(() => goTo((current + 1) % slides.length, "next"),  [current, goTo, slides.length]);
+  const goPrev = useCallback(() => goTo((current - 1 + slides.length) % slides.length, "prev"), [current, goTo, slides.length]);
 
 
   /* ── Auto-play ── */
   useEffect(() => {
+    if (slides.length <= 1) return;
     timerRef.current = setTimeout(next, INTERVAL);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [current, next]);
+  }, [current, next, slides.length]);
 
   /* ── Keyboard ── */
   useEffect(() => {
@@ -85,8 +108,8 @@ export default function HeroSlider() {
     }
   };
 
-  const slide     = SLIDES[current];
-  const prevSlide  = prevIdx !== null ? SLIDES[prevIdx] : null;
+  const slide     = slides[current] || slides[0] || SLIDES[0];
+  const prevSlide  = prevIdx !== null ? (slides[prevIdx] || slides[0] || SLIDES[0]) : null;
 
   return (
     <>
@@ -387,70 +410,76 @@ export default function HeroSlider() {
         </div>
 
         {/* ── Prev / Next Arrows ── */}
-        <button
-          className="hs-nav-btn"
-          style={{ left: "30px" }}
-          onClick={goPrev}
-          aria-label="Previous slide"
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: "24px" }}>chevron_left</span>
-        </button>
-        <button
-          className="hs-nav-btn"
-          style={{ right: "30px" }}
-          onClick={next}
-          aria-label="Next slide"
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: "24px" }}>chevron_right</span>
-        </button>
+        {slides.length > 1 && (
+          <>
+            <button
+              className="hs-nav-btn"
+              style={{ left: "30px" }}
+              onClick={goPrev}
+              aria-label="Previous slide"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: "24px" }}>chevron_left</span>
+            </button>
+            <button
+              className="hs-nav-btn"
+              style={{ right: "30px" }}
+              onClick={next}
+              aria-label="Next slide"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: "24px" }}>chevron_right</span>
+            </button>
+          </>
+        )}
 
         {/* ── Slide counter + dots + progress ── */}
-        <div style={{
-          position: "absolute", bottom: "36px", left: 0, right: 0,
-          zIndex: 20,
-          display: "flex", flexDirection: "column",
-          alignItems: "center", gap: "18px",
-        }}>
-          {/* Progress bar */}
+        {slides.length > 1 && (
           <div style={{
-            width: "min(360px, 70vw)", height: "3px",
-            background: "rgba(255,255,255,0.2)",
-            borderRadius: "3px", overflow: "hidden",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+            position: "absolute", bottom: "36px", left: 0, right: 0,
+            zIndex: 20,
+            display: "flex", flexDirection: "column",
+            alignItems: "center", gap: "18px",
           }}>
-            <div
-              key={`progress-${current}`}
-              className="hs-progress-bar"
-              style={{
-                height: "100%",
-                background: "#ffffff",
-                borderRadius: "3px",
-                animationDuration: `${INTERVAL}ms`,
-              }}
-            />
-          </div>
-
-          {/* Dots + counter */}
-          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-            <span style={{
-              fontFamily: "Montserrat, sans-serif", fontSize: "13px",
-              fontWeight: 700, color: "rgba(255,255,255,0.7)",
-              letterSpacing: "0.1em", textShadow: "0 2px 4px rgba(0,0,0,0.5)",
+            {/* Progress bar */}
+            <div style={{
+              width: "min(360px, 70vw)", height: "3px",
+              background: "rgba(255,255,255,0.2)",
+              borderRadius: "3px", overflow: "hidden",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
             }}>
-              {String(current + 1).padStart(2, "0")} / {String(SLIDES.length).padStart(2, "0")}
-            </span>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              {SLIDES.map((_, i) => (
-                <button
-                  key={i}
-                  className={`hs-dot${i === current ? " hs-dot--active" : ""}`}
-                  onClick={() => goTo(i, i > current ? "next" : "prev")}
-                  aria-label={`Go to slide ${i + 1}`}
-                />
-              ))}
+              <div
+                key={`progress-${current}`}
+                className="hs-progress-bar"
+                style={{
+                  height: "100%",
+                  background: "#ffffff",
+                  borderRadius: "3px",
+                  animationDuration: `${INTERVAL}ms`,
+                }}
+              />
+            </div>
+
+            {/* Dots + counter */}
+            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+              <span style={{
+                fontFamily: "Montserrat, sans-serif", fontSize: "13px",
+                fontWeight: 700, color: "rgba(255,255,255,0.7)",
+                letterSpacing: "0.1em", textShadow: "0 2px 4px rgba(0,0,0,0.5)",
+              }}>
+                {String(current + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
+              </span>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                {slides.map((_, i) => (
+                  <button
+                    key={i}
+                    className={`hs-dot${i === current ? " hs-dot--active" : ""}`}
+                    onClick={() => goTo(i, i > current ? "next" : "prev")}
+                    aria-label={`Go to slide ${i + 1}`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* ── Slide label bottom-right ── */}
         <div style={{

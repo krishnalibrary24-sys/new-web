@@ -94,6 +94,135 @@ export default function ExpensesPage() {
       return 0;
     });
 
+  const handleExportPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
+      
+      const doc = new jsPDF();
+      
+      let logoImg: HTMLImageElement | null = null;
+      try {
+        logoImg = await loadImage('/assets/logo.png');
+      } catch (err) {
+        console.error("Logo failed to load", err);
+      }
+      
+      const cleanPDFText = (val: any) => {
+        if (val === undefined || val === null) return '';
+        return String(val)
+          .replace(/₹/g, 'Rs. ')
+          .replace(/—/g, '-')
+          .replace(/–/g, '-');
+      };
+
+      // Header Banner
+      if (logoImg) {
+        doc.addImage(logoImg, 'PNG', 178, 10, 18, 18);
+      }
+      
+      doc.setTextColor(0, 49, 120); // #003178 Krishna Blue
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.text("KRISHNA LIBRARY", 14, 18);
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      doc.setTextColor(71, 85, 105); // Slate 600
+      doc.text("EXPENSES & OPERATIONAL COST REPORT", 14, 24);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(100, 116, 139); // Slate 500
+      const nowStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+      doc.text(`Branch: ${branchName} Branch  |  Generated: ${nowStr}`, 14, 29);
+      
+      doc.setDrawColor(203, 213, 225); // Slate 300
+      doc.setLineWidth(0.5);
+      doc.line(14, 33, 196, 33);
+      
+      // Summary Metrics Row
+      doc.setTextColor(51, 65, 85); // Slate 700
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.text("REPORT SUMMARY", 14, 41);
+      
+      autoTable(doc, {
+        startY: 45,
+        body: [
+          ["Total Outflow Amount", `Rs. ${totalExpenses.toLocaleString('en-IN')}`, "Total Records / Entries", `${filteredAndSorted.length} items`]
+        ],
+        theme: 'grid',
+        bodyStyles: { fontSize: 9.5, textColor: [30, 41, 59] },
+        columnStyles: {
+          0: { fontStyle: 'bold', fillColor: [254, 242, 242], width: 45 },
+          1: { fontStyle: 'bold', textColor: [220, 38, 38], width: 55 },
+          2: { fontStyle: 'bold', fillColor: [248, 250, 252], width: 45 },
+          3: { width: 45 }
+        },
+        margin: { left: 14, right: 14 }
+      });
+      
+      const currentY = (doc as any).lastAutoTable.finalY + 10;
+      doc.setTextColor(51, 65, 85); // Slate 700
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.text("EXPENSE OUTFLOW DETAILS", 14, currentY);
+      
+      const tableHeaders = [["S No.", "Date", "Category", "Description", "Outflow Amount"]];
+      const tableRows = filteredAndSorted.map((exp, index) => {
+        return [
+          String(index + 1),
+          new Date(exp.expense_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'}),
+          cleanPDFText(exp.category),
+          cleanPDFText(exp.description || 'No description provided'),
+          cleanPDFText(`Rs. ${exp.amount?.toLocaleString('en-IN')}`)
+        ];
+      });
+      
+      autoTable(doc, {
+        startY: currentY + 4,
+        head: tableHeaders,
+        body: tableRows.length > 0 ? tableRows : [["—", "—", "No records found", "—", "—"]],
+        theme: 'striped',
+        headStyles: { fillColor: [185, 28, 28], textColor: [255, 255, 255], fontSize: 9.5, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 9, textColor: [51, 65, 85] },
+        columnStyles: {
+          0: { width: 15 },
+          1: { width: 35 },
+          2: { width: 35 },
+          3: { width: 75 },
+          4: { fontStyle: 'bold', textColor: [220, 38, 38], width: 30, halign: 'right' }
+        },
+        margin: { left: 14, right: 14 },
+        didDrawPage: (data) => {
+          const pageCount = (doc as any).internal.getNumberOfPages();
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184); // Slate 400
+          doc.text(
+            `Page ${data.pageNumber} of ${pageCount}`,
+            14,
+            doc.internal.pageSize.height - 10
+          );
+          doc.text(
+            "Confidential - Krishna Library Management System",
+            doc.internal.pageSize.width - 90,
+            doc.internal.pageSize.height - 10
+          );
+        }
+      });
+      
+      const fileName = `Expenses_Report_${activeBranch}_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      
+      logActivity(activeBranch, "expense_export_pdf", `Exported expenses report to PDF (${filteredAndSorted.length} items)`);
+    } catch (error) {
+      console.error("Expenses PDF export failed:", error);
+      alert("Failed to export PDF. Please check console for details.");
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
@@ -102,13 +231,22 @@ export default function ExpensesPage() {
           <h1 className="page-title">Expenses</h1>
           <p className="page-subtitle">Operational cost tracking for {branchName}</p>
         </div>
-        <button 
-          onClick={() => setIsAdding(!isAdding)}
-          className="btn-primary"
-        >
-          <span className="material-symbols-outlined text-sm">{isAdding ? 'close' : 'add'}</span>
-          {isAdding ? 'Cancel' : 'Add Expense'}
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={handleExportPDF}
+            className="btn-ghost px-4 py-2.5 text-sm flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-base">download</span>
+            Export PDF
+          </button>
+          <button 
+            onClick={() => setIsAdding(!isAdding)}
+            className="btn-primary"
+          >
+            <span className="material-symbols-outlined text-sm">{isAdding ? 'close' : 'add'}</span>
+            {isAdding ? 'Cancel' : 'Add Expense'}
+          </button>
+        </div>
       </div>
 
       {isAdding && (
@@ -293,4 +431,13 @@ export default function ExpensesPage() {
       </div>
     </div>
   );
+}
+
+const loadImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = url;
+    img.onload = () => resolve(img);
+    img.onerror = (err) => reject(err);
+  });
 }

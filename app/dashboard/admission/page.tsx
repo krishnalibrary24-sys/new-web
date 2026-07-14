@@ -22,6 +22,8 @@ export default function AdmissionPage() {
   const [shift, setShift] = useState("Full Day");
   const [isReserved, setIsReserved] = useState<boolean>(true);
   const [customPrice, setCustomPrice] = useState<string>("1000");
+  const [aadharNo, setAadharNo] = useState("");
+  const [targetingExam, setTargetingExam] = useState("");
   
   const [recordFound, setRecordFound] = useState(false);
   const [permanentId, setPermanentId] = useState("");
@@ -71,6 +73,8 @@ export default function AdmissionPage() {
         setStudentNo(data.student_no || "");
         setRecordFound(true);
         setExistingMemberState(data);
+        setAadharNo(data.aadhar_no || "");
+        setTargetingExam(data.targeting_exam || "");
         if (data.plan_amount !== undefined && data.plan_amount !== null) {
           setCustomPrice(String(data.plan_amount));
         }
@@ -102,6 +106,8 @@ export default function AdmissionPage() {
         setIsReserved(!data.permanent_id?.includes('U'));
         setRecordFound(true);
         setShowRecordPopup(true);
+        setAadharNo(data.aadhar_no || "");
+        setTargetingExam(data.targeting_exam || "");
         if (data.plan_amount !== undefined && data.plan_amount !== null) {
           setCustomPrice(String(data.plan_amount));
         }
@@ -132,6 +138,8 @@ export default function AdmissionPage() {
     setRecordFound(false);
     setPermanentId("");
     setStudentNo("");
+    setAadharNo("");
+    setTargetingExam("");
     setExistingMemberState(null);
     setShowRecordPopup(false);
     setErrorMsg(null);
@@ -232,6 +240,8 @@ export default function AdmissionPage() {
         shift: shift,
         plan_amount: basePriceVal,
         student_no: studentNo,
+        aadhar_no: aadharNo || null,
+        targeting_exam: targetingExam || null,
       };
 
       if (!existingMemberState) {
@@ -285,7 +295,7 @@ export default function AdmissionPage() {
       setErrorMsg(null);
 
       // Reset profile states
-      setMobile(""); setFullName(""); setFatherName(""); setDob(""); setGender(""); setAddress(""); setStudentNo("");
+      setMobile(""); setFullName(""); setFatherName(""); setDob(""); setGender(""); setAddress(""); setStudentNo(""); setAadharNo(""); setTargetingExam("");
 
       if (!existingMemberState) {
         if (memberId) {
@@ -399,6 +409,12 @@ export default function AdmissionPage() {
                     </select>
                   </FormField>
                 </div>
+                <FormField label="Aadhar Number" icon="fingerprint">
+                  <input type="text" value={aadharNo} onChange={(e) => setAadharNo(e.target.value)} className="input-premium !pl-11" placeholder="12-digit Aadhar Number" maxLength={12} />
+                </FormField>
+                <FormField label="Targeting Exam" icon="school">
+                  <input type="text" value={targetingExam} onChange={(e) => setTargetingExam(e.target.value)} className="input-premium !pl-11" placeholder="e.g. UPSC, NEET, JEE" />
+                </FormField>
                 <div className="md:col-span-2">
                   <FormField label="Address">
                     <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="input-premium" placeholder="Full residential address" />

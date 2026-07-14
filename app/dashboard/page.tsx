@@ -82,6 +82,13 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
     lossPayments: '—', leftMembers: '—',
     cashRevenue: '—', onlineRevenue: '—'
   });
+  const [todayStats, setTodayStats] = useState({
+    cash: 0,
+    online: 0,
+    total: 0,
+    newMembers: [] as any[],
+    todayPayments: [] as any[]
+  });
   const [loading, setLoading] = useState(true);
 
   // Month and custom selector states
@@ -296,6 +303,47 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           const fullDayCount = activeMembers.filter(m => m.plan_amount >= 1000).length;
           const halfDayCount = activeMembers.filter(m => m.plan_amount && m.plan_amount < 1000).length;
           const totalActive = activeMembers.length || 1; // Prevent div by 0
+
+          // Calculate Today's Activity (Resets Everyday)
+          const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+          const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+          let todayCashVal = 0;
+          let todayOnlineVal = 0;
+          const todayPaymentsList: any[] = [];
+          (payments || []).forEach(p => {
+            if (!p.paid_at) return;
+            const paidDate = new Date(p.paid_at);
+            if (paidDate >= startOfToday && paidDate <= endOfToday) {
+              const amt = Number(p.amount || 0);
+              if (p.payment_mode === 'Cash') {
+                todayCashVal += amt;
+              } else {
+                todayOnlineVal += amt;
+              }
+              // Find matching member
+              const matchedMember = (members || []).find(m => m.id === p.member_id);
+              todayPaymentsList.push({
+                ...p,
+                memberName: matchedMember ? matchedMember.full_name : 'Unknown Student',
+                permanentId: matchedMember ? matchedMember.permanent_id : 'N/A'
+              });
+            }
+          });
+
+          const todayNewMembersList = (members || []).filter(m => {
+            if (!m.created_at) return false;
+            const createdDate = new Date(m.created_at);
+            return createdDate >= startOfToday && createdDate <= endOfToday;
+          });
+
+          setTodayStats({
+            cash: todayCashVal,
+            online: todayOnlineVal,
+            total: todayCashVal + todayOnlineVal,
+            newMembers: todayNewMembersList,
+            todayPayments: todayPaymentsList
+          });
 
           setStats({
             totalRevenue: `₹${totalRevenueVal.toLocaleString('en-IN')}`,
@@ -892,6 +940,174 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           progressValue={stats.occupancy}
           onClick={() => { setInspectCategory("Occupancy"); setInspectSearch(""); }}
         />
+      </div>
+
+      {/* ─── Today's Activity Section (Admin Only) ─── */}
+      <div className="glass-pane-elevated !p-6 space-y-6">
+        <div className="flex items-center gap-3 border-b border-white/[0.06] pb-4">
+          <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500">
+            <span className="material-symbols-outlined text-lg animate-pulse">bolt</span>
+          </div>
+          <div>
+            <h3 className="text-base font-black text-slate-800 font-manrope">Today's Activity</h3>
+            <p className="text-[10px] text-slate-500 font-semibold">Real-time daily operations (Resets everyday)</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Today's Collections Donut Chart */}
+          <div className="bg-white/[0.02] border border-white/[0.04] p-5 rounded-2xl flex flex-col md:flex-row items-center justify-around gap-6">
+            <div className="flex flex-col items-center md:items-start text-center md:text-left">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">Today's Collections</h4>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500">Cash Collection</span>
+                    <div className="text-sm font-black text-slate-800">₹{todayStats.cash.toLocaleString('en-IN')}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500">Online Collection</span>
+                    <div className="text-sm font-black text-slate-800">₹{todayStats.online.toLocaleString('en-IN')}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Circular Donut Chart */}
+            <div className="relative w-36 h-36 flex-shrink-0">
+              {todayStats.total > 0 ? (
+                <>
+                  <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                    {/* Background Circle */}
+                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(0,0,0,0.03)" strokeWidth="3.5" />
+                    {/* Cash Segment */}
+                    <circle 
+                      cx="18" 
+                      cy="18" 
+                      r="15.9" 
+                      fill="none" 
+                      stroke="#10b981" 
+                      strokeWidth="3.5" 
+                      strokeDasharray={`${Math.round((todayStats.cash / todayStats.total) * 100)} ${100 - Math.round((todayStats.cash / todayStats.total) * 100)}`} 
+                      strokeLinecap="round" 
+                      className="transition-all duration-700 drop-shadow-[0_0_4px_rgba(16,185,129,0.3)]" 
+                    />
+                    {/* Online Segment */}
+                    <circle 
+                      cx="18" 
+                      cy="18" 
+                      r="15.9" 
+                      fill="none" 
+                      stroke="#6366f1" 
+                      strokeWidth="3.5" 
+                      strokeDasharray={`${Math.round((todayStats.online / todayStats.total) * 100)} ${100 - Math.round((todayStats.online / todayStats.total) * 100)}`} 
+                      strokeDashoffset={`-${Math.round((todayStats.cash / todayStats.total) * 100)}`} 
+                      strokeLinecap="round" 
+                      className="transition-all duration-700 drop-shadow-[0_0_4px_rgba(99,102,241,0.3)]" 
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total</span>
+                    <span className="text-base font-black text-slate-800">₹{todayStats.total.toLocaleString('en-IN')}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="w-full h-full rounded-full border-4 border-dashed border-slate-200 flex flex-col items-center justify-center p-2 text-center">
+                  <span className="material-symbols-outlined text-slate-300 text-lg">payments</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mt-1">No Collection</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Today's New Members */}
+          <div className="bg-white/[0.02] border border-white/[0.04] p-5 rounded-2xl flex flex-col h-full min-h-[160px]">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-manrope">Today's New Members</h4>
+              <span className="badge badge-primary text-[10px] font-black px-2 py-0.5 shadow-sm">
+                {todayStats.newMembers.length} New
+              </span>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto max-h-[120px] pr-1 space-y-2 custom-scrollbar" data-lenis-prevent="true">
+              {todayStats.newMembers.length > 0 ? (
+                todayStats.newMembers.map((member) => (
+                  <div 
+                    key={member.id} 
+                    onClick={() => router.push(`/dashboard/members?search=${member.permanent_id}`)}
+                    className="flex justify-between items-center p-2.5 rounded-xl bg-white/40 border border-slate-100 hover:border-slate-200 hover:bg-white/80 transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-[#003178] font-black text-xs">
+                        {member.full_name.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-800 group-hover:text-primary transition-colors">{member.full_name}</div>
+                        <span className="text-[9px] text-[#003178] font-semibold">{member.permanent_id}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="badge badge-info text-[9px] tracking-wide uppercase">{member.shift}</span>
+                      <div className="text-[8px] text-slate-400 font-medium mt-0.5">{member.branch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk'}</div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center py-4">
+                  <span className="material-symbols-outlined text-slate-300 text-xl">group_add</span>
+                  <p className="text-xs text-slate-400 font-semibold mt-1">No new members registered today</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Today's Payments by Member */}
+          <div className="bg-white/[0.02] border border-white/[0.04] p-5 rounded-2xl flex flex-col h-full min-h-[160px]">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-manrope">Today's Payments</h4>
+              <span className="badge badge-success text-[10px] font-black px-2 py-0.5 shadow-sm">
+                {todayStats.todayPayments.length} Paid
+              </span>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto max-h-[120px] pr-1 space-y-2 custom-scrollbar" data-lenis-prevent="true">
+              {todayStats.todayPayments.length > 0 ? (
+                todayStats.todayPayments.map((pay) => (
+                  <div 
+                    key={pay.id || `${pay.member_id}-${pay.paid_at}-${pay.amount}`}
+                    onClick={() => router.push(`/dashboard/members?search=${pay.permanentId}`)}
+                    className="flex justify-between items-center p-2.5 rounded-xl bg-white/40 border border-slate-100 hover:border-slate-200 hover:bg-white/80 transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-black text-xs">
+                        {pay.memberName.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-800 group-hover:text-primary transition-colors">{pay.memberName}</div>
+                        <span className="text-[9px] text-[#003178] font-semibold">{pay.permanentId}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-black text-emerald-600">₹{pay.amount.toLocaleString('en-IN')}</div>
+                      <span className="badge bg-slate-100 text-slate-600 text-[8px] tracking-wide uppercase px-1.5 py-0.5 mt-0.5 rounded-md inline-block">
+                        {pay.payment_mode || 'Cash'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center py-4">
+                  <span className="material-symbols-outlined text-slate-300 text-xl">payments</span>
+                  <p className="text-xs text-slate-400 font-semibold mt-1">No payments received today</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ─── Charts Row ─── */}

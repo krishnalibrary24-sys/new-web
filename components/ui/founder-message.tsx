@@ -1,10 +1,31 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Quote, Sparkles, Trophy, ShieldCheck, Heart } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function FounderMessageSection() {
+  const [founderImg, setFounderImg] = useState("/assets/founder.png");
+
+  useEffect(() => {
+    async function loadFounderImg() {
+      try {
+        const { data, error } = await supabase
+          .from("library_settings")
+          .select("value")
+          .eq("id", "founder_image_url")
+          .maybeSingle();
+        if (error) throw error;
+        if (data?.value) {
+          setFounderImg(data.value);
+        }
+      } catch (err) {
+        console.warn("Failed to load founder image", err);
+      }
+    }
+    loadFounderImg();
+  }, []);
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -55,7 +76,7 @@ export default function FounderMessageSection() {
                 {/* Image Wrapper */}
                 <div className="relative aspect-[4/5] rounded-2xl overflow-hidden mb-5 bg-slate-100 dark:bg-slate-800">
                   <img
-                    src="/assets/founder.png"
+                    src={founderImg}
                     alt="Shivendra - Founder"
                     className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
                   />

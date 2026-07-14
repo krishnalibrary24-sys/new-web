@@ -68,6 +68,8 @@ export default function MembersPage() {
   const [editSeatNo, setEditSeatNo] = useState("");
   const [editJoiningDate, setEditJoiningDate] = useState("");
   const [editSubscriptionEndDate, setEditSubscriptionEndDate] = useState("");
+  const [editAadharNo, setEditAadharNo] = useState("");
+  const [editTargetingExam, setEditTargetingExam] = useState("");
 
   const [memberPayments, setMemberPayments] = useState<any[]>([]);
 
@@ -124,6 +126,8 @@ export default function MembersPage() {
       setEditSeatNo(selectedMember.seat_no || "");
       setEditJoiningDate(selectedMember.joining_date ? selectedMember.joining_date.split('T')[0] : "");
       setEditSubscriptionEndDate(selectedMember.subscription_end_date ? selectedMember.subscription_end_date.split('T')[0] : "");
+      setEditAadharNo(selectedMember.aadhar_no || "");
+      setEditTargetingExam(selectedMember.targeting_exam || "");
     }
 
     if (selectedMember) {
@@ -424,6 +428,8 @@ export default function MembersPage() {
         seat_no: seatVal,
         joining_date: editJoiningDate ? new Date(editJoiningDate).toISOString().split('T')[0] : null,
         subscription_end_date: editSubscriptionEndDate ? new Date(editSubscriptionEndDate).toISOString() : null,
+        aadhar_no: editAadharNo.trim() || null,
+        targeting_exam: editTargetingExam.trim() || null,
       };
 
       const { error } = await supabase
@@ -546,8 +552,8 @@ export default function MembersPage() {
       doc.text(`Report Category: ${activeFilterName} (${filteredMembers.length} records)`, 14, 45);
       
       // Table Generation
-      const tableHeaders = [["ID", "Name", "Mobile", "Seat", "Shift", "Status", "Validity Expiry"]];
-      const tableRows = filteredMembers.map(m => {
+      const tableHeaders = [["S No.", "ID", "Name", "Mobile", "Seat", "Shift", "Status", "Validity Expiry"]];
+      const tableRows = filteredMembers.map((m, index) => {
         const statusInfo = getMemberStatus(m);
         let statusText = "Active (Paid)";
         if (statusInfo.type === 'active-paid') statusText = "Active (Paid)";
@@ -562,6 +568,7 @@ export default function MembersPage() {
         }
         
         return [
+          String(index + 1),
           m.permanent_id || "N/A",
           m.full_name || "N/A",
           m.mobile || "N/A",
@@ -606,6 +613,152 @@ export default function MembersPage() {
       logActivity(activeBranch, "student_export_pdf", `Exported student directory (${activeFilterName}) to PDF`);
     } catch (error) {
       console.error("PDF export failed:", error);
+      alert("Failed to export PDF. Please check console for details.");
+    }
+  };
+
+  const handleExportMemberPDF = async (member: any) => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
+      
+      const doc = new jsPDF();
+      
+      // Try loading logo
+      let logoImg: HTMLImageElement | null = null;
+      try {
+        logoImg = await loadImage('/assets/logo.png');
+      } catch (err) {
+        console.error("Logo failed to load", err);
+      }
+      
+      // Clean up special characters for PDF rendering compatibility
+      const cleanPDFText = (val: any) => {
+        if (val === undefined || val === null) return '';
+        return String(val)
+          .replace(/₹/g, 'Rs. ')
+          .replace(/—/g, '-')
+          .replace(/–/g, '-');
+      };
+
+      // --- Minimalistic Header (Print-Optimized) ---
+      // Draw Logo at top right
+      if (logoImg) {
+        doc.addImage(logoImg, 'PNG', 178, 10, 18, 18);
+      }
+      
+      // Title
+      doc.setTextColor(0, 49, 120); // #003178 Krishna Blue
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.text("KRISHNA LIBRARY", 14, 18);
+      
+      // Subtitle
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      doc.setTextColor(71, 85, 105); // Slate 600
+      doc.text("OFFICIAL MEMBER PROFILE REPORT", 14, 24);
+      
+      // Metadata (Branch, Generation Date/Time)
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(100, 116, 139); // Slate 500
+      const branchLabel = member.branch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
+      const nowStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+      doc.text(`Branch: ${branchLabel} Branch  |  Generated: ${nowStr}`, 14, 29);
+      
+      // Elegant Divider Line
+      doc.setDrawColor(203, 213, 225); // Slate 300
+      doc.setLineWidth(0.5);
+      doc.line(14, 33, 196, 33);
+      
+      // Section 1: Personal Details
+      doc.setTextColor(51, 65, 85); // Slate 700
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("1. PERSONAL & ADMISSION DETAILS", 14, 41);
+      
+      const detailsRows = [
+        ["Full Name", cleanPDFText(member.full_name || 'N/A'), "Permanent ID", cleanPDFText(member.permanent_id || 'N/A')],
+        ["Student/Allotment No", cleanPDFText(member.student_no ? `#${member.student_no}` : 'N/A'), "Mobile Number", cleanPDFText(member.mobile || 'N/A')],
+        ["Father's Name", cleanPDFText(member.father_name || 'N/A'), "DOB", cleanPDFText(member.dob ? member.dob.split('T')[0] : 'N/A')],
+        ["Gender", cleanPDFText(member.gender || 'N/A'), "Aadhar Number", cleanPDFText(member.aadhar_no || 'N/A')],
+        ["Targeting Exam", cleanPDFText(member.targeting_exam || 'N/A'), "Shift Name", cleanPDFText(member.shift || 'N/A')],
+        ["Allocated Seat", cleanPDFText(member.seat_no ? `Seat ${member.seat_no}` : 'Not Allocated'), "Active Status", member.is_active ? 'Active' : 'Inactive'],
+        ["Joining Date", cleanPDFText(member.joining_date ? new Date(member.joining_date).toLocaleDateString('en-GB') : 'N/A'), "Validity Expiry", cleanPDFText(member.subscription_end_date ? new Date(member.subscription_end_date).toLocaleDateString('en-GB') : 'N/A')],
+        ["Residential Address", { content: cleanPDFText(member.address || 'N/A'), colSpan: 3 }]
+      ];
+      
+      autoTable(doc, {
+        startY: 45,
+        body: detailsRows,
+        theme: 'grid',
+        bodyStyles: { fontSize: 9, textColor: [51, 65, 85] },
+        columnStyles: {
+          0: { fontStyle: 'bold', fillColor: [248, 250, 252], width: 45 },
+          1: { width: 55 },
+          2: { fontStyle: 'bold', fillColor: [248, 250, 252], width: 45 },
+          3: { width: 45 }
+        },
+        margin: { left: 14, right: 14 }
+      });
+      
+      // Section 2: Payment Ledger
+      const currentY = (doc as any).lastAutoTable.finalY + 10;
+      doc.setTextColor(51, 65, 85); // Slate 700
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("2. PAYMENT & TRANSACTION LEDGER", 14, currentY);
+      
+      const tableHeaders = [["Receipt Date", "Amount Paid", "Payment Mode", "Ledger Description / Renewal Notes"]];
+      const tableRows = memberPayments.map(p => {
+        return [
+          new Date(p.paid_at || p.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'}),
+          cleanPDFText(`Rs. ${p.amount?.toLocaleString('en-IN')}`),
+          cleanPDFText(p.payment_mode || "Cash"),
+          cleanPDFText(p.notes || "Subscription fee payment")
+        ];
+      });
+      
+      autoTable(doc, {
+        startY: currentY + 4,
+        head: tableHeaders,
+        body: tableRows.length > 0 ? tableRows : [["—", "No payment history found", "—", "—"]],
+        theme: 'striped',
+        headStyles: { fillColor: [0, 49, 120], textColor: [255, 255, 255], fontSize: 9.5, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 9, textColor: [51, 65, 85] },
+        columnStyles: {
+          0: { width: 35 },
+          1: { fontStyle: 'bold', textColor: [21, 128, 61], width: 30 },
+          2: { width: 30 },
+          3: { width: 95 }
+        },
+        margin: { left: 14, right: 14 },
+        didDrawPage: (data) => {
+          // Footer
+          const pageCount = (doc as any).internal.getNumberOfPages();
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184); // Slate 400
+          doc.text(
+            `Page ${data.pageNumber} of ${pageCount}`,
+            14,
+            doc.internal.pageSize.height - 10
+          );
+          doc.text(
+            "Confidential - Krishna Library Management System",
+            doc.internal.pageSize.width - 90,
+            doc.internal.pageSize.height - 10
+          );
+        }
+      });
+      
+      const fileName = `Profile_${member.full_name.replace(/\s+/g, '_')}_${member.permanent_id}.pdf`;
+      doc.save(fileName);
+      
+      logActivity(activeBranch, "student_export_pdf", `Exported individual member profile PDF for: ${member.full_name} (${member.permanent_id})`);
+    } catch (error) {
+      console.error("Member PDF export failed:", error);
       alert("Failed to export PDF. Please check console for details.");
     }
   };
@@ -1095,12 +1248,34 @@ export default function MembersPage() {
                           className="input-premium !py-1.5 !text-xs w-full"
                         />
                       </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Aadhar Number</label>
+                        <input
+                          type="text"
+                          value={editAadharNo}
+                          onChange={(e) => setEditAadharNo(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                          maxLength={12}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Targeting Exam</label>
+                        <input
+                          type="text"
+                          value={editTargetingExam}
+                          onChange={(e) => setEditTargetingExam(e.target.value)}
+                          className="input-premium !py-1.5 !text-xs w-full"
+                          placeholder="e.g. UPSC, NEET"
+                        />
+                      </div>
                     </div>
                   ) : (
                     <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 text-sm">
                       <InfoField label="Father's Name" value={selectedMember.father_name || 'N/A'} />
                       <InfoField label="Mobile" value={selectedMember.mobile} />
                       <InfoField label="DOB / Gender" value={`${selectedMember.dob ? selectedMember.dob.split('T')[0] : 'N/A'} / ${selectedMember.gender || 'N/A'}`} />
+                      <InfoField label="Aadhar Number" value={selectedMember.aadhar_no || 'N/A'} />
+                      <InfoField label="Targeting Exam" value={selectedMember.targeting_exam || 'N/A'} />
                       <InfoField label="Address" value={selectedMember.address || 'N/A'} />
                       <InfoField label="Assigned Seat" value={selectedMember.seat_no ? `Seat ${selectedMember.seat_no}` : 'Not Allocated'} />
                       <InfoField label="Shift" value={selectedMember.shift || 'N/A'} />
@@ -1440,6 +1615,12 @@ export default function MembersPage() {
                     <span className="material-symbols-outlined text-sm sm:text-base">directions_run</span>
                     Mark Left
                   </button>
+                  {isAdmin && (
+                    <button disabled={isActionLoading} onClick={() => handleExportMemberPDF(selectedMember)} className="col-span-1 btn-ghost px-2 sm:px-4 py-2 disabled:opacity-50 text-indigo-500 border border-indigo-500/20 hover:bg-indigo-500/10 text-[11px] sm:text-xs font-bold flex justify-center items-center gap-1">
+                      <span className="material-symbols-outlined text-sm sm:text-base">picture_as_pdf</span>
+                      Print PDF
+                    </button>
+                  )}
                   <button disabled={isActionLoading} onClick={() => setIsEditingProfile(true)} className="col-span-1 btn-ghost px-2 sm:px-4 py-2 disabled:opacity-50 text-[11px] sm:text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1">
                     <span className="material-symbols-outlined text-sm sm:text-base">edit</span>
                     Edit Profile
@@ -1447,7 +1628,7 @@ export default function MembersPage() {
                   <button disabled={isActionLoading} onClick={() => {
                     setSelectedMember(null);
                     router.push(`/dashboard/admission?edit=${selectedMember.id}`);
-                  }} className="col-span-2 btn-ghost px-2 sm:px-4 py-2 disabled:opacity-50 text-[11px] sm:text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1">
+                  }} className="col-span-1 btn-ghost px-2 sm:px-4 py-2 disabled:opacity-50 text-[11px] sm:text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1">
                     <span className="material-symbols-outlined text-sm sm:text-base">app_registration</span>
                     Edit in Admission
                   </button>
@@ -1493,3 +1674,13 @@ function InfoField({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+const loadImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = url;
+    img.onload = () => resolve(img);
+    img.onerror = (err) => reject(err);
+  });
+}
+

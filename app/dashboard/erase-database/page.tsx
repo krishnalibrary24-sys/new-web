@@ -37,7 +37,7 @@ export default function EraseDatabasePage() {
 
   // Table Wipe states
   const [showWipeModal, setShowWipeModal] = useState(false);
-  const [wipeType, setWipeType] = useState<"students" | "leads" | "expenses" | "logs" | "full" | null>(null);
+  const [wipeType, setWipeType] = useState<"students" | "left_students" | "leads" | "expenses" | "logs" | "full" | null>(null);
   const [wipeConfirmText, setWipeConfirmText] = useState("");
   const [wiping, setWiping] = useState(false);
 
@@ -135,7 +135,57 @@ export default function EraseDatabasePage() {
 
     setWiping(true);
     try {
-      if (wipeType === "students" || wipeType === "full") {
+      if (wipeType === "left_students") {
+        // Fetch all members in the current branch
+        const { data: allMembers, error: fetchErr } = await supabase
+          .from("members")
+          .select("id, status, left_at")
+          .eq("branch", activeBranch);
+
+        if (fetchErr) throw fetchErr;
+
+        const leftMemberIds = (allMembers || [])
+          .filter(m => m.status === 'LEFT' || m.left_at)
+          .map(m => m.id);
+
+        if (leftMemberIds.length === 0) {
+          showToast("No left students found to erase.", "error");
+          setShowWipeModal(false);
+          setWipeConfirmText("");
+          return;
+        }
+
+        // 1. Delete associated payments
+        const { error: payErr } = await supabase
+          .from("payments")
+          .delete()
+          .in("member_id", leftMemberIds);
+        if (payErr) throw payErr;
+
+        // 2. Delete associated invoices
+        const { error: invErr } = await supabase
+          .from("invoices")
+          .delete()
+          .in("member_id", leftMemberIds);
+        if (invErr) throw invErr;
+
+        // 3. Delete members
+        const { error: memErr } = await supabase
+          .from("members")
+          .delete()
+          .in("id", leftMemberIds);
+        if (memErr) throw memErr;
+
+        // Log action to activity logs
+        await logActivity(
+          activeBranch,
+          "database_bulk_wipe",
+          `Permanently erased all ${leftMemberIds.length} left students and their billing/payment records in ${branchName}`
+        );
+
+        showToast(`Successfully erased all ${leftMemberIds.length} left students from database.`);
+      }
+      else if (wipeType === "students" || wipeType === "full") {
         // Cascade handles invoices and payments, but we erase invoices/payments manually first to be safe
         const { error: payErr } = await supabase.from("payments").delete().eq("branch", activeBranch);
         if (payErr) throw payErr;
@@ -365,6 +415,29 @@ export default function EraseDatabasePage() {
                 </button>
               </div>
 
+              {/* Erase Left Students */}
+              <div className="bg-orange-50/30 border border-orange-100 rounded-xl p-4 flex flex-col justify-between gap-3">
+                <div>
+                  <h4 className="text-xs font-bold text-orange-800 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-base">person_remove</span>
+                    Erase Left Students Only
+                  </h4>
+                  <p className="text-[10px] text-slate-600 mt-1">
+                    Permanently deletes all student profiles, payments, and invoices for students who have left the library in {branchName}.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setWipeType("left_students");
+                    setWipeConfirmText("");
+                    setShowWipeModal(true);
+                  }}
+                  className="bg-white hover:bg-orange-600 text-orange-600 hover:text-white border border-orange-200 transition-all text-xs font-bold py-2 rounded-lg text-center"
+                >
+                  Erase Left Students
+                </button>
+              </div>
+
               {/* Wipe Leads */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between gap-3">
                 <div>
@@ -529,6 +602,7 @@ export default function EraseDatabasePage() {
               You are executing a bulk erase operation:{" "}
               <strong className="text-slate-800">
                 {wipeType === "students" && "Wipe All Students & Payments"}
+                {wipeType === "left_students" && "Erase Left Students Only"}
                 {wipeType === "leads" && "Wipe Enquiries / Leads"}
                 {wipeType === "expenses" && "Wipe Library Expenses"}
                 {wipeType === "logs" && "Clear All Activity Logs"}

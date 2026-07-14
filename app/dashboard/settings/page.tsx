@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 
 interface ImageCropperProps {
   imageSrc: string;
-  type: 'gallery' | 'achiever';
+  type: 'gallery' | 'achiever' | 'founder' | 'hero';
   onClose: () => void;
   onCropComplete: (croppedBase64: string) => void;
 }
@@ -22,8 +22,18 @@ const ImageCropper = ({ imageSrc, type, onClose, onCropComplete }: ImageCropperP
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   // Crop viewport dimensions
-  const viewportWidth = type === 'gallery' ? 320 : 240;
-  const viewportHeight = 240;
+  let viewportWidth = 320;
+  let viewportHeight = 240;
+  if (type === 'achiever') {
+    viewportWidth = 240;
+    viewportHeight = 240;
+  } else if (type === 'founder') {
+    viewportWidth = 240;
+    viewportHeight = 300;
+  } else if (type === 'hero') {
+    viewportWidth = 320;
+    viewportHeight = 160;
+  }
 
   useEffect(() => {
     const image = new Image();
@@ -123,8 +133,18 @@ const ImageCropper = ({ imageSrc, type, onClose, onCropComplete }: ImageCropperP
 
   const handleApply = () => {
     if (!img) return;
-    const outputWidth = type === 'gallery' ? 640 : 400;
-    const outputHeight = type === 'gallery' ? 480 : 400;
+    let outputWidth = 640;
+    let outputHeight = 480;
+    if (type === 'achiever') {
+      outputWidth = 400;
+      outputHeight = 400;
+    } else if (type === 'founder') {
+      outputWidth = 400;
+      outputHeight = 500;
+    } else if (type === 'hero') {
+      outputWidth = 1200;
+      outputHeight = 600;
+    }
 
     const canvas = document.createElement('canvas');
     canvas.width = outputWidth;
@@ -246,7 +266,35 @@ const TEMPLATE_CONFIG = [
   { key: 'expired_msg', label: 'Membership Expired Warning', tags: '{name}, {permanent_id}, {expiry}, {branch}' },
   { key: 'released_msg', label: 'Seat Released Notification (>5 days expired)', tags: '{name}, {permanent_id}, {expiry}, {branch}' },
   { key: 'pending_dues_msg', label: 'Pending Dues/Overdue Reminder', tags: '{name}, {due_date}, {branch}' },
+  { key: 'overdue_dues_msg', label: 'Overdue Payment Warning (Defaulters)', tags: '{name}, {permanent_id}, {due_amount}, {due_date}, {branch}' },
   { key: 'invoice_share_msg', label: 'Invoice Share Button Message', tags: '{name}, {receipt_no}, {date}, {permanent_id}, {seat}, {shift}, {subtotal}, {discount}, {total_amount}, {paid_amount}, {due_amount}, {status}, {invoice_link}, {lib_name}' }
+];
+
+const DEFAULT_SLIDES = [
+  {
+    src: "/assets/images/hero/bengali_chowk.png",
+    tag: "Bengali Chowk Branch",
+    headline: "Where Knowledge\nMeets Community.",
+    sub: "A serene, fully-equipped study environment in the heart of the city — crafted for focus and excellence.",
+    cta: "Explore This Branch",
+    ctaHref: "#locations",
+  },
+  {
+    src: "/assets/images/hero/namnakala.jpg",
+    tag: "Namnakala Branch",
+    headline: "Quiet Spaces.\nBig Ambitions.",
+    sub: "Premium seating, high-speed Wi-Fi, and a culture of achievement — everything you need to succeed.",
+    cta: "View Seating",
+    ctaHref: "#seating",
+  },
+  {
+    src: "/assets/images/hero/amenities.png",
+    tag: "World-Class Amenities",
+    headline: "Explore, Learn,\nand Grow.",
+    sub: "A network of 2 branches dedicated to lifelong learning, digital literacy, and a safe space to thrive.",
+    cta: "Our Membership Plans",
+    ctaHref: "#pricing",
+  },
 ];
 
 export default function SettingsPage() {
@@ -265,7 +313,20 @@ export default function SettingsPage() {
   }, [router]);
 
   // Navigation tab state
-  const [activeTab, setActiveTab] = useState<'system' | 'gallery' | 'achievers'>('system');
+  const [activeTab, setActiveTab] = useState<'system' | 'gallery' | 'achievers' | 'visitor'>('system');
+
+  // Visitor page customizer states
+  const [founderImage, setFounderImage] = useState("/assets/founder.png");
+  const [heroSlides, setHeroSlides] = useState<any[]>(DEFAULT_SLIDES);
+
+  // Slide Form states
+  const [editingSlideIdx, setEditingSlideIdx] = useState<number | null>(null);
+  const [slideTag, setSlideTag] = useState("");
+  const [slideHeadline, setSlideHeadline] = useState("");
+  const [slideSub, setSlideSub] = useState("");
+  const [slideCta, setSlideCta] = useState("");
+  const [slideCtaHref, setSlideCtaHref] = useState("");
+  const [slideImage, setSlideImage] = useState("");
 
   // State for System settings
   const [libName, setLibName] = useState("Krishna Library");
@@ -299,7 +360,7 @@ export default function SettingsPage() {
   // Cropper states
   const [showCropper, setShowCropper] = useState(false);
   const [cropperImage, setCropperImage] = useState("");
-  const [cropperType, setCropperType] = useState<'gallery' | 'achiever'>('gallery');
+  const [cropperType, setCropperType] = useState<'gallery' | 'achiever' | 'founder' | 'hero'>('gallery');
 
   // Load all configurations from Supabase on mount
   useEffect(() => {
@@ -316,6 +377,17 @@ export default function SettingsPage() {
             if (item.id === 'lib_address') setLibAddress(item.value);
             if (item.id === 'upi_id') setUpiId(item.value);
             if (item.id === 'upi_name') setUpiName(item.value);
+            if (item.id === 'founder_image_url') setFounderImage(item.value);
+            if (item.id === 'hero_slides') {
+              try {
+                const parsed = JSON.parse(item.value);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  setHeroSlides(parsed);
+                }
+              } catch (e) {
+                console.error("Error parsing loaded hero slides", e);
+              }
+            }
             
             if (item.id in newTemplates) {
               newTemplates[item.id as keyof typeof defaultTemplates] = item.value;
@@ -484,6 +556,97 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveFounderImage = async () => {
+    setIsSaving(true);
+    try {
+      const payload = {
+        id: 'founder_image_url',
+        value: founderImage,
+        description: "Founder/Owner profile photo URL"
+      };
+      const { error } = await supabase.from('library_settings').upsert([payload]);
+      if (error) throw error;
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err) {
+      console.error("Error saving founder image", err);
+      alert("Error saving founder image to database.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveHeroSlides = async () => {
+    setIsSaving(true);
+    try {
+      const payload = {
+        id: 'hero_slides',
+        value: JSON.stringify(heroSlides),
+        description: "Hero slider slides list configuration"
+      };
+      const { error } = await supabase.from('library_settings').upsert([payload]);
+      if (error) throw error;
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err) {
+      console.error("Error saving hero slides", err);
+      alert("Error saving hero slides to database.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddEditSlide = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!slideImage.trim()) {
+      alert("Please enter a slide image URL or upload an image file!");
+      return;
+    }
+
+    const newSlide = {
+      src: slideImage.trim(),
+      tag: slideTag.trim() || "Krishna Library",
+      headline: slideHeadline.trim() || "Where Knowledge Meets Community",
+      sub: slideSub.trim() || "Serene environment crafted for focus and excellence.",
+      cta: slideCta.trim() || "Explore Details",
+      ctaHref: slideCtaHref.trim() || "#pricing"
+    };
+
+    if (editingSlideIdx !== null) {
+      const updated = [...heroSlides];
+      updated[editingSlideIdx] = newSlide;
+      setHeroSlides(updated);
+      setEditingSlideIdx(null);
+    } else {
+      setHeroSlides([...heroSlides, newSlide]);
+    }
+
+    // Reset fields
+    setSlideTag("");
+    setSlideHeadline("");
+    setSlideSub("");
+    setSlideCta("");
+    setSlideCtaHref("");
+    setSlideImage("");
+  };
+
+  const handleDeleteSlide = (index: number) => {
+    if (!confirm("Are you sure you want to remove this slide?")) return;
+    const updated = heroSlides.filter((_, idx) => idx !== index);
+    setHeroSlides(updated);
+  };
+
+  const handleEditSlideClick = (index: number) => {
+    const slide = heroSlides[index];
+    setEditingSlideIdx(index);
+    setSlideTag(slide.tag || "");
+    setSlideHeadline(slide.headline || "");
+    setSlideSub(slide.sub || "");
+    setSlideCta(slide.cta || "");
+    setSlideCtaHref(slide.ctaHref || "");
+    setSlideImage(slide.src || "");
+  };
+
   const handleExportBackup = async () => {
     setBackupLoading(true);
     try {
@@ -572,6 +735,17 @@ export default function SettingsPage() {
         >
           <span className="material-symbols-outlined text-base">military_tech</span>
           Achievers success cards ({achieversList.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('visitor')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
+            activeTab === 'visitor'
+              ? 'border-[#003178] text-[#003178] dark:border-cyan-400 dark:text-cyan-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'
+          }`}
+        >
+          <span className="material-symbols-outlined text-base">web</span>
+          Visitor Page (Hero & Founder)
         </button>
       </div>
 
@@ -1048,6 +1222,269 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {activeTab === 'visitor' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Founder Section */}
+          <div className="glass-pane-elevated h-fit flex flex-col">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-base">face</span>
+              Founder / Owner Photo
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <div className="relative group max-w-[200px] w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 aspect-[4/5] bg-slate-100 dark:bg-slate-950 shadow-md">
+                  <img src={founderImage} alt="Founder Preview" className="w-full h-full object-cover" />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider block">Replace Founder Photo</label>
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setCropperImage(reader.result as string);
+                          setCropperType('founder');
+                          setShowCropper(true);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer w-full"
+                  />
+                </div>
+                <div className="mt-2">
+                  <span className="text-[10px] text-slate-400 font-semibold block">Or paste image URL:</span>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={founderImage}
+                    onChange={(e) => setFounderImage(e.target.value)}
+                    className="input-premium w-full py-2 px-3 text-xs text-[#0f172a] dark:text-white mt-1"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSaveFounderImage}
+                disabled={isSaving}
+                className="btn-primary w-full py-2.5 text-xs rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg mt-2"
+              >
+                <span className="material-symbols-outlined text-sm">save</span>
+                Save Founder Photo
+              </button>
+            </div>
+          </div>
+
+          {/* Hero Slides Section */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Form for adding/editing hero slide */}
+            <div className="glass-pane-elevated">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">slideshow</span>
+                {editingSlideIdx !== null ? `Edit Slide #${editingSlideIdx + 1}` : "Add New Hero Slide"}
+              </h3>
+              
+              <form onSubmit={handleAddEditSlide} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Slide Tag / Badge</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Namnakala Branch"
+                      value={slideTag}
+                      onChange={(e) => setSlideTag(e.target.value)}
+                      className="input-premium w-full py-2 px-3 text-xs text-[#0f172a] dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">CTA Button Text</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. View Seating"
+                      value={slideCta}
+                      onChange={(e) => setSlideCta(e.target.value)}
+                      className="input-premium w-full py-2 px-3 text-xs text-[#0f172a] dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">CTA Target Link</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. #seating or #pricing"
+                      value={slideCtaHref}
+                      onChange={(e) => setSlideCtaHref(e.target.value)}
+                      className="input-premium w-full py-2 px-3 text-xs text-[#0f172a] dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Slide Main Headline</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Quiet Spaces.\nBig Ambitions."
+                      value={slideHeadline}
+                      onChange={(e) => setSlideHeadline(e.target.value)}
+                      className="input-premium w-full py-2 px-3 text-xs text-[#0f172a] dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Slide Subheading / Description</label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. Premium seating, high-speed Wi-Fi, and a culture of achievement..."
+                      value={slideSub}
+                      onChange={(e) => setSlideSub(e.target.value)}
+                      className="input-premium w-full py-2 px-3 text-xs text-[#0f172a] dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Slide Image (Aspect locked 2:1)</label>
+                    <div className="space-y-2">
+                      <input
+                        type="url"
+                        placeholder="Paste Image URL (https://...)"
+                        value={slideImage}
+                        onChange={(e) => setSlideImage(e.target.value)}
+                        className="input-premium w-full py-2 px-3 text-xs text-[#0f172a] dark:text-white"
+                      />
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">Or Upload from Computer:</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setCropperImage(reader.result as string);
+                                setCropperType('hero');
+                                setShowCropper(true);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                    {slideImage && (
+                      <div className="mt-2 relative w-36 h-18 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 aspect-[2/1] max-w-[200px]">
+                        <img src={slideImage} className="w-full h-full object-cover" alt="Slide Preview" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  {editingSlideIdx !== null && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingSlideIdx(null);
+                        setSlideTag("");
+                        setSlideHeadline("");
+                        setSlideSub("");
+                        setSlideCta("");
+                        setSlideCtaHref("");
+                        setSlideImage("");
+                      }}
+                      className="btn-ghost flex-1 py-2 text-xs rounded-xl font-bold flex items-center justify-center gap-2"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    className="btn-primary flex-1 py-2 text-xs rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    <span className="material-symbols-outlined text-sm">check</span>
+                    {editingSlideIdx !== null ? "Apply Slide Changes" : "Add Slide to List"}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* List of current slides */}
+            <div className="glass-pane-elevated">
+              <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 font-manrope flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-base">view_carousel</span>
+                  Current Hero Slides ({heroSlides.length})
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleSaveHeroSlides}
+                  disabled={isSaving || heroSlides.length === 0}
+                  className="btn-primary py-2 px-4 text-xs rounded-xl font-bold flex items-center gap-1.5 shadow-md"
+                >
+                  <span className="material-symbols-outlined text-sm">save</span>
+                  Save Slides Order & Changes
+                </button>
+              </div>
+
+              {heroSlides.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 text-xs">
+                  No slides defined. Default static slides will be rendered on the landing page.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {heroSlides.map((slide, idx) => (
+                    <div key={idx} className="flex flex-col md:flex-row gap-4 p-4 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02] items-start md:items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="w-24 h-12 rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 shrink-0 aspect-[2/1]">
+                          <img src={slide.src} alt="" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                              {slide.tag || "Krishna Library"}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-bold">Slide #{idx + 1}</span>
+                          </div>
+                          <h4 className="font-bold text-xs text-slate-800 dark:text-white truncate mt-1">{slide.headline}</h4>
+                          <p className="text-[10px] text-slate-400 truncate leading-relaxed">{slide.sub}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleEditSlideClick(idx)}
+                          className="btn-ghost !text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 border border-transparent hover:border-primary/20"
+                        >
+                          <span className="material-symbols-outlined text-sm">edit</span>
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSlide(idx)}
+                          className="btn-ghost !text-red-500 hover:bg-red-500/10 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 border border-transparent hover:border-red-500/20"
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Gallery Photo Selector Modal */}
       {showGallerySelector && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -1105,8 +1542,12 @@ export default function SettingsPage() {
           onCropComplete={(croppedBase64) => {
             if (cropperType === 'gallery') {
               setNewPhotoUrl(croppedBase64);
-            } else {
+            } else if (cropperType === 'achiever') {
               setNewAchieverPhoto(croppedBase64);
+            } else if (cropperType === 'founder') {
+              setFounderImage(croppedBase64);
+            } else if (cropperType === 'hero') {
+              setSlideImage(croppedBase64);
             }
             setShowCropper(false);
           }}

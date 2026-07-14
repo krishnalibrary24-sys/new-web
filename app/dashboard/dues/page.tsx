@@ -77,7 +77,7 @@ export default function DuesPage() {
     return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   };
 
-  const sendWhatsApp = async (member: any, type: 'reminder' | 'overdue' | 'pending') => {
+  const sendWhatsApp = async (member: any, type: 'reminder' | 'overdue' | 'pending' | 'overdue_dues') => {
     const mobile = formatWhatsAppNumber(member.mobile);
     const endDate = member.subscription_end_date ? new Date(member.subscription_end_date).toLocaleDateString() : 'N/A';
     const dueDate = member.payment_due_date ? new Date(member.payment_due_date).toLocaleDateString() : 'N/A';
@@ -98,6 +98,9 @@ export default function DuesPage() {
     } else if (type === 'pending') {
       templateStr = await getTemplate('pending_dues_msg');
       actionLabel = "pending payment reminder";
+    } else if (type === 'overdue_dues') {
+      templateStr = await getTemplate('overdue_dues_msg');
+      actionLabel = "overdue payment warning";
     }
 
     const templateVars = {
@@ -105,6 +108,7 @@ export default function DuesPage() {
       permanent_id: member.permanent_id || '',
       expiry: endDate,
       due_date: dueDate,
+      due_amount: String(member.outstanding_dues || 0),
       branch: branchName
     };
     const msg = parseTemplate(templateStr, templateVars);
@@ -351,7 +355,7 @@ export default function DuesPage() {
                   badgeClass="bg-red-500/15 text-red-400 border border-red-500/20"
                   dateLabel={dateTxt}
                   seatWarning={seatWarning}
-                  onMessage={() => sendWhatsApp(m, isDuesOverdue ? 'pending' : 'overdue')}
+                  onMessage={() => sendWhatsApp(m, isDuesOverdue ? 'overdue_dues' : 'overdue')}
                   onRenew={() => router.push(`/dashboard/record-payment?memberId=${m.id}`)}
                   messageLabel="Chase Up"
                   renewLabel={isDuesOverdue ? "Collect Payment" : "Re-activate"}

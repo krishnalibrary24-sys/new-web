@@ -6,27 +6,21 @@ import {
   BookOpen,
   Coffee,
   Sofa,
-  Wifi,
   Users,
   ShieldCheck,
-  Award,
-  BookMarked,
-  MapPin,
   CheckCircle,
   Sparkles,
   Star,
   ArrowRight,
   Zap,
-  TrendingUp,
 } from "lucide-react"
-import { motion, useScroll, useTransform, useInView, useSpring } from "framer-motion"
+import { motion, useScroll, useTransform, useInView } from "framer-motion"
 
 export default function AboutUsSection() {
   const [isVisible, setIsVisible] = useState(false)
   const sectionRef = useRef<HTMLDivElement>(null)
-  const statsRef = useRef<HTMLDivElement>(null)
   const isInView = useInView(sectionRef, { once: true, amount: 0.1 })
-  const isStatsInView = useInView(statsRef, { once: true, amount: 0.1 })
+  const isStatsInView = useInView(sectionRef, { once: true, amount: 0.1 })
 
   // Parallax effect for decorative elements
   const { scrollYProgress } = useScroll({
@@ -114,12 +108,7 @@ export default function AboutUsSection() {
     },
   ]
 
-  const stats = [
-    { icon: <Users />, value: 1500, label: "Students Guided", suffix: "+" },
-    { icon: <Award />, value: 50, label: "Top Selections", suffix: "+" },
-    { icon: <MapPin />, value: 2, label: "City Branches", suffix: "" },
-    { icon: <TrendingUp />, value: 99, label: "Satisfaction Rate", suffix: "%" },
-  ]
+
 
   return (
     <section
@@ -331,25 +320,7 @@ export default function AboutUsSection() {
           </div>
         </div>
 
-        {/* Stats Section */}
-        <motion.div
-          ref={statsRef}
-          className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
-          initial="hidden"
-          animate={isStatsInView ? "visible" : "hidden"}
-          variants={containerVariants}
-        >
-          {stats.map((stat, index) => (
-            <StatCounter
-              key={index}
-              icon={stat.icon}
-              value={stat.value}
-              label={stat.label}
-              suffix={stat.suffix}
-              delay={index * 0.1}
-            />
-          ))}
-        </motion.div>
+
 
         {/* CTA Section */}
         <motion.div
@@ -431,65 +402,6 @@ function ServiceItem({ icon, secondaryIcon, title, description, variants, delay,
           Learn more <ArrowRight className="w-3 h-3" />
         </span>
       </motion.div>
-    </motion.div>
-  )
-}
-
-interface StatCounterProps {
-  icon: React.ReactNode
-  value: number
-  label: string
-  suffix: string
-  delay: number
-}
-
-function StatCounter({ icon, value, label, suffix, delay }: StatCounterProps) {
-  const countRef = useRef(null)
-  const isInView = useInView(countRef, { once: false })
-  const [hasAnimated, setHasAnimated] = useState(false)
-
-  const springValue = useSpring(0, {
-    stiffness: 50,
-    damping: 10,
-  })
-
-  useEffect(() => {
-    if (isInView && !hasAnimated) {
-      springValue.set(value)
-      setHasAnimated(true)
-    } else if (!isInView && hasAnimated) {
-      springValue.set(0)
-      setHasAnimated(false)
-    }
-  }, [isInView, value, springValue, hasAnimated])
-
-  const displayValue = useTransform(springValue, (latest) => Math.floor(latest))
-
-  return (
-    <motion.div
-      className="bg-v-surface-container-low/50 backdrop-blur-md p-8 rounded-2xl flex flex-col items-center text-center group hover:bg-v-surface-container-high transition-colors duration-300 border border-v-outline-variant/20 shadow-sm hover:shadow-md"
-      variants={{
-        hidden: { opacity: 0, y: 20 },
-        visible: {
-          opacity: 1,
-          y: 0,
-          transition: { duration: 0.6, delay },
-        },
-      }}
-      whileHover={{ y: -5, transition: { duration: 0.2 } }}
-    >
-      <motion.div
-        className="w-16 h-16 rounded-full bg-v-primary/10 flex items-center justify-center mb-5 text-v-primary group-hover:bg-v-primary/20 transition-colors duration-300"
-        whileHover={{ rotate: 360, transition: { duration: 0.8 } }}
-      >
-        {icon}
-      </motion.div>
-      <motion.div ref={countRef} className="text-4xl font-extrabold text-v-on-surface flex items-center font-v-display">
-        <motion.span>{displayValue}</motion.span>
-        <span>{suffix}</span>
-      </motion.div>
-      <p className="text-v-on-surface-variant text-sm mt-2 font-medium">{label}</p>
-      <motion.div className="w-12 h-1 bg-v-primary rounded-full mt-4 group-hover:w-20 transition-all duration-300" />
     </motion.div>
   )
 }
