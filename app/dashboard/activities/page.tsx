@@ -123,8 +123,13 @@ export default function ActivitiesPage() {
   };
 
   const formatDate = (isoString: string) => {
+    if (!isoString) return '—';
     const d = new Date(isoString);
-    return d.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
+    if (isNaN(d.getTime())) return '—';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   // Get Action Badge Styles

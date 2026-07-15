@@ -7,7 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logActivity } from "@/lib/activity";
 import { getTemplate, parseTemplate, formatWhatsAppNumber } from "@/lib/whatsapp";
-import { getMemberStatus } from "@/lib/utils";
+import { getMemberStatus, formatDate } from "@/lib/utils";
 
 function RecordPaymentInner() {
   const { activeBranch } = useBranch();
@@ -314,14 +314,14 @@ function RecordPaymentInner() {
         }
       } else if (purpose === "renewal") {
         if (!notesText) {
-          notesText = `Subscription Renewal — Joining: ${new Date(joiningDate).toLocaleDateString()}, Expiry: ${finalNewEnd!.toLocaleDateString()}. Duration: ${durationStr}. Base Plan: ₹${basePriceVal}/${finalDurationType === "Days" ? "day" : "mo"}. Discount: ₹${discountVal}. Amount Paid: ₹${amountVal}`;
+          notesText = `Subscription Renewal — Joining: ${formatDate(joiningDate)}, Expiry: ${formatDate(finalNewEnd!)}. Duration: ${durationStr}. Base Plan: ₹${basePriceVal}/${finalDurationType === "Days" ? "day" : "mo"}. Discount: ₹${discountVal}. Amount Paid: ₹${amountVal}`;
         }
       } else {
         // Dues / Partial Payment / Pay Later
         if (!notesText) {
           notesText = payLater
-            ? `Subscription Renewal (Deferred / Pay Later) — Joining: ${new Date(joiningDate).toLocaleDateString()}, Expiry: ${finalNewEnd!.toLocaleDateString()}. Duration: ${durationStr}. Base Plan: ₹${basePriceVal}/${finalDurationType === "Days" ? "day" : "mo"}. Discount: ₹${discountVal}. Due Date: ${new Date(dueDate).toLocaleDateString()}`
-            : `Subscription Renewal (Partial Payment) — Joining: ${new Date(joiningDate).toLocaleDateString()}, Expiry: ${finalNewEnd!.toLocaleDateString()}. Duration: ${durationStr}. Base Plan: ₹${basePriceVal}/${finalDurationType === "Days" ? "day" : "mo"}. Discount: ₹${discountVal}. Amount Paid: ₹${amountVal}, Dues: ₹${calculatedTotal - amountVal}. Due Date: ${new Date(dueDate).toLocaleDateString()}`;
+            ? `Subscription Renewal (Deferred / Pay Later) — Joining: ${formatDate(joiningDate)}, Expiry: ${formatDate(finalNewEnd!)}. Duration: ${durationStr}. Base Plan: ₹${basePriceVal}/${finalDurationType === "Days" ? "day" : "mo"}. Discount: ₹${discountVal}. Due Date: ${formatDate(dueDate)}`
+            : `Subscription Renewal (Partial Payment) — Joining: ${formatDate(joiningDate)}, Expiry: ${formatDate(finalNewEnd!)}. Duration: ${durationStr}. Base Plan: ₹${basePriceVal}/${finalDurationType === "Days" ? "day" : "mo"}. Discount: ₹${discountVal}. Amount Paid: ₹${amountVal}, Dues: ₹${calculatedTotal - amountVal}. Due Date: ${formatDate(dueDate)}`;
         }
       }
 
@@ -469,10 +469,10 @@ function RecordPaymentInner() {
       const logDetails = isDuesCollection
         ? `Recorded dues payment of ₹${amountVal} for ${selectedMember.full_name} (${studentRef}). Remaining dues: ₹${remainingDues}.`
         : (purpose === "renewal"
-          ? `Recorded full payment of ₹${amountVal} for ${selectedMember.full_name} (${studentRef}). Expiry: ${finalNewEnd!.toLocaleDateString()}.`
+          ? `Recorded full payment of ₹${amountVal} for ${selectedMember.full_name} (${studentRef}). Expiry: ${formatDate(finalNewEnd!)}.`
           : (payLater
-            ? `Deferred payment (Pay Later) set up for ${selectedMember.full_name} (${studentRef}). Due: ${new Date(dueDate).toLocaleDateString()}, Expiry: ${finalNewEnd!.toLocaleDateString()}.`
-            : `Recorded partial payment of ₹${amountVal} (Dues: ₹${calculatedTotal - amountVal}) for ${selectedMember.full_name} (${studentRef}). Due: ${new Date(dueDate).toLocaleDateString()}, Expiry: ${finalNewEnd!.toLocaleDateString()}.`
+            ? `Deferred payment (Pay Later) set up for ${selectedMember.full_name} (${studentRef}). Due: ${formatDate(dueDate)}, Expiry: ${formatDate(finalNewEnd!)}.`
+            : `Recorded partial payment of ₹${amountVal} (Dues: ₹${calculatedTotal - amountVal}) for ${selectedMember.full_name} (${studentRef}). Due: ${formatDate(dueDate)}, Expiry: ${formatDate(finalNewEnd!)}.`
           )
         );
 
@@ -523,12 +523,12 @@ function RecordPaymentInner() {
           const mobileClean = formatWhatsAppNumber(refreshedMember.mobile);
           const branchLabel = refreshedMember.branch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
           const seatText = refreshedMember.seat_no || 'Unreserved (No seat allotted)';
-          const expiryDate = refreshedMember.subscription_end_date ? new Date(refreshedMember.subscription_end_date).toLocaleDateString('en-IN') : 'N/A';
+          const expiryDate = refreshedMember.subscription_end_date ? formatDate(refreshedMember.subscription_end_date) : 'N/A';
           const statusText = targetInvoice.status === 'paid' ? '✅ FULLY PAID' : targetInvoice.status === 'partially_paid' ? '⚠️ PARTIALLY PAID (Dues Pending)' : '❌ UNPAID';
           
           let dueDateLine = "";
           if (targetInvoice.due_amount > 0 && targetInvoice.due_date) {
-            dueDateLine = `📅 *Payment Due Date:* ${new Date(targetInvoice.due_date).toLocaleDateString('en-IN')}\n`;
+            dueDateLine = `📅 *Payment Due Date:* ${formatDate(targetInvoice.due_date)}\n`;
           }
 
           // Count payments to detect if it is a new admission (first payment ever) or a renewal
@@ -892,7 +892,7 @@ function RecordPaymentInner() {
                     <div className="font-bold text-white mt-0.5 flex justify-between items-center">
                       <span>
                         {selectedMember.subscription_end_date
-                          ? new Date(selectedMember.subscription_end_date).toLocaleDateString()
+                          ? formatDate(selectedMember.subscription_end_date)
                           : "Pending setup / Unpaid"}
                       </span>
                       {(() => {
@@ -1375,7 +1375,7 @@ function RecordPaymentInner() {
                           return sorted.map(p => (
                             <tr key={p.id} className="hover:bg-white/[0.02]">
                               <td className="font-semibold text-white whitespace-nowrap">
-                                {new Date(p.paid_at).toLocaleDateString()}
+                                {formatDate(p.paid_at)}
                               </td>
                               <td className="font-bold text-emerald-400">
                                 ₹{p.amount?.toLocaleString('en-IN')}
@@ -1466,7 +1466,7 @@ function RecordPaymentInner() {
                   <div>
                     <div className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Date of Birth</div>
                     <div className="text-white font-semibold mt-0.5">
-                      {modalMember.dob ? new Date(modalMember.dob).toLocaleDateString() : "—"}
+                      {modalMember.dob ? formatDate(modalMember.dob) : "—"}
                     </div>
                   </div>
                   <div>
@@ -1492,7 +1492,7 @@ function RecordPaymentInner() {
                       <div className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Subscription Validity</div>
                       <div className="text-white font-bold mt-0.5">
                         {modalMember.subscription_end_date
-                          ? new Date(modalMember.subscription_end_date).toLocaleDateString()
+                          ? formatDate(modalMember.subscription_end_date)
                           : "Pending Initial Payment Setup"}
                       </div>
                     </div>

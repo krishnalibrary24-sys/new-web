@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
+import { formatDate } from "@/lib/utils";
 
 export default function ExpensesPage() {
   const { activeBranch } = useBranch();
@@ -173,7 +174,7 @@ export default function ExpensesPage() {
       const tableRows = filteredAndSorted.map((exp, index) => {
         return [
           String(index + 1),
-          new Date(exp.expense_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'}),
+          formatDate(exp.expense_date),
           cleanPDFText(exp.category),
           cleanPDFText(exp.description || 'No description provided'),
           cleanPDFText(`Rs. ${exp.amount?.toLocaleString('en-IN')}`)
@@ -402,7 +403,7 @@ export default function ExpensesPage() {
                 {filteredAndSorted.map((exp) => (
                   <tr key={exp.id} className="border-b border-white/[0.06] hover:bg-white/[0.02] transition-colors group">
                     <td className="p-4 text-on-surface-variant whitespace-nowrap">
-                      {new Date(exp.expense_date).toLocaleDateString()}
+                      {formatDate(exp.expense_date)}
                     </td>
                     <td className="p-4">
                       <span className="badge badge-info bg-blue-500/10 text-blue-400 border border-blue-500/20">{exp.category}</span>

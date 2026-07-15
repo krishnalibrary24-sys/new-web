@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { logActivity } from "@/lib/activity";
 import { getTemplate, parseTemplate, formatWhatsAppNumber } from "@/lib/whatsapp";
 import { getLibrarySetting } from "@/lib/settings";
-import { checkAndReleaseSeats } from "@/lib/utils";
+import { checkAndReleaseSeats, formatDate } from "@/lib/utils";
 
 export default function SeatingPage() {
   const { activeBranch } = useBranch();
@@ -159,14 +159,14 @@ export default function SeatingPage() {
       const branchLabel = activeBranch === 'namnakala' ? 'Namnakala' : 'Bengali Chowk';
       const mobileClean = formatWhatsAppNumber(memberToUse.mobile);
       const seatText = selectedSeat || 'Unassigned';
-      const expiryDate = memberToUse.subscription_end_date ? new Date(memberToUse.subscription_end_date).toLocaleDateString('en-IN') : 'N/A';
+      const expiryDate = memberToUse.subscription_end_date ? formatDate(memberToUse.subscription_end_date) : 'N/A';
       
       let paymentSection = "";
       if (latestInv) {
         const statusText = latestInv.status === 'paid' ? '✅ FULLY PAID' : latestInv.status === 'partially_paid' ? '⚠️ PARTIALLY PAID (Dues Pending)' : '❌ UNPAID';
         let dueDateLine = "";
         if (latestInv.due_amount > 0 && latestInv.due_date) {
-          dueDateLine = `📅 *Payment Due Date:* ${new Date(latestInv.due_date).toLocaleDateString('en-IN')}\n`;
+          dueDateLine = `📅 *Payment Due Date:* ${formatDate(latestInv.due_date)}\n`;
         }
         paymentSection = 
           `💳 *Payment Details:*\n` +
@@ -186,7 +186,7 @@ export default function SeatingPage() {
         : '';
       let dueDateLine = "";
       if (latestInv && latestInv.due_amount > 0 && latestInv.due_date) {
-        dueDateLine = `📅 *Payment Due Date:* ${new Date(latestInv.due_date).toLocaleDateString('en-IN')}\n`;
+        dueDateLine = `📅 *Payment Due Date:* ${formatDate(latestInv.due_date)}\n`;
       }
 
       const templateVars: Record<string, string> = {

@@ -5,7 +5,7 @@ import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { checkAndReleaseSeats } from "@/lib/utils";
+import { checkAndReleaseSeats, formatDate } from "@/lib/utils";
 
 export default function DashboardPage() {
   const [role, setRole] = useState<string | null>(null);
@@ -481,7 +481,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
              member ? member.full_name : "Unknown",
              `Rs. ${p.amount}`,
              p.payment_mode || "Cash",
-             p.paid_at ? new Date(p.paid_at).toLocaleDateString() : "N/A"
+             p.paid_at ? formatDate(p.paid_at) : "N/A"
            ];
         });
 
@@ -706,7 +706,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           } else {
             upcoming = Number(m.outstanding_dues || 0);
             if (upcoming > 0) {
-              reason = `Partial Payment Dues (Due: ${m.payment_due_date ? new Date(m.payment_due_date).toLocaleDateString() : 'N/A'})`;
+              reason = `Partial Payment Dues (Due: ${m.payment_due_date ? formatDate(m.payment_due_date) : 'N/A'})`;
             }
           }
         }
@@ -717,7 +717,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           const matchesRenewalRange = !isFiltered || (endDateObj >= startDate! && endDateObj <= endDate!);
           if (matchesRenewalRange && isExpired && !m.pay_later && upcoming === 0) {
             upcoming = m.plan_amount || 0;
-            reason = `Subscription Expired on ${endDateObj.toLocaleDateString()}`;
+            reason = `Subscription Expired on ${formatDate(m.subscription_end_date)}`;
           }
         }
 
@@ -737,14 +737,14 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
       }).map(m => ({
         ...m,
         inspectLabel: `Loss Amount: ₹${m.loss_amount}`,
-        inspectSub: `Left: ${new Date(m.left_at).toLocaleDateString()} · Reason: ${m.left_reason || 'N/A'}`,
+        inspectSub: `Left: ${formatDate(m.left_at)} · Reason: ${m.left_reason || 'N/A'}`,
         inspectSortVal: m.loss_amount
       }));
     } else if (inspectCategory === "Active") {
       filtered = rawMembers.filter(m => m.is_active && !m.left_at).map(m => ({
         ...m,
         inspectLabel: `Seat: ${m.seat_no || 'Unassigned'} · Shift: ${m.shift}`,
-        inspectSub: m.subscription_end_date ? `Expiry: ${new Date(m.subscription_end_date).toLocaleDateString()}` : 'No Expiry',
+        inspectSub: m.subscription_end_date ? `Expiry: ${formatDate(m.subscription_end_date)}` : 'No Expiry',
         inspectSortVal: m.full_name
       }));
     } else if (inspectCategory === "Occupancy") {
@@ -1242,7 +1242,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
                     </div>
                     <div className="text-[10px] text-slate-500 mt-1">
                       Mobile: {m.mobile} · Seat {m.seat_no || 'Unassigned'} ({m.shift})
-                      <span className="ml-2 font-medium text-slate-400">· {new Date(m.inspectDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'})}</span>
+                      <span className="ml-2 font-medium text-slate-400">· {formatDate(m.inspectDate)}</span>
                     </div>
                   </div>
                   <div className="text-right">
@@ -1328,7 +1328,7 @@ function OfficeDashboard({ branch }: { branch: string }) {
       filtered = rawMembers.filter(m => m.is_active && !(m.subscription_end_date && new Date(m.subscription_end_date) < today)).map(m => ({
         ...m,
         inspectLabel: `Seat: ${m.seat_no || 'Unassigned'}`,
-        inspectSub: m.subscription_end_date ? `Expiry: ${new Date(m.subscription_end_date).toLocaleDateString()}` : 'No Expiry'
+        inspectSub: m.subscription_end_date ? `Expiry: ${formatDate(m.subscription_end_date)}` : 'No Expiry'
       }));
     } else if (inspectCategory === "Due in 3 Days") {
       filtered = rawMembers.filter(m => {
@@ -1338,7 +1338,7 @@ function OfficeDashboard({ branch }: { branch: string }) {
       }).map(m => ({
         ...m,
         inspectLabel: `Due in ${Math.ceil((new Date(m.subscription_end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days`,
-        inspectSub: `Expires: ${new Date(m.subscription_end_date).toLocaleDateString()}`
+        inspectSub: `Expires: ${formatDate(m.subscription_end_date)}`
       }));
     } else if (inspectCategory === "Overdue / Inactive") {
       filtered = rawMembers.filter(m => !m.is_active || (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < today)).map(m => {
@@ -1346,7 +1346,7 @@ function OfficeDashboard({ branch }: { branch: string }) {
         return {
           ...m,
           inspectLabel: isExpired ? "Expired" : "Inactive",
-          inspectSub: m.subscription_end_date ? `Was Valid Till: ${new Date(m.subscription_end_date).toLocaleDateString()}` : 'No booking details'
+          inspectSub: m.subscription_end_date ? `Was Valid Till: ${formatDate(m.subscription_end_date)}` : 'No booking details'
         };
       });
     } else if (inspectCategory === "Available Seats") {

@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
-import { getMemberStatus, checkAndReleaseSeats } from "@/lib/utils";
+import { getMemberStatus, checkAndReleaseSeats, formatDate } from "@/lib/utils";
 import { logActivity } from "@/lib/activity";
 import { getTemplate, parseTemplate, formatWhatsAppNumber } from "@/lib/whatsapp";
 
@@ -79,8 +79,8 @@ export default function DuesPage() {
 
   const sendWhatsApp = async (member: any, type: 'reminder' | 'overdue' | 'pending' | 'overdue_dues') => {
     const mobile = formatWhatsAppNumber(member.mobile);
-    const endDate = member.subscription_end_date ? new Date(member.subscription_end_date).toLocaleDateString() : 'N/A';
-    const dueDate = member.payment_due_date ? new Date(member.payment_due_date).toLocaleDateString() : 'N/A';
+    const endDate = member.subscription_end_date ? formatDate(member.subscription_end_date) : 'N/A';
+    const dueDate = member.payment_due_date ? formatDate(member.payment_due_date) : 'N/A';
     
     let templateStr = "";
     let actionLabel = "";
@@ -270,7 +270,7 @@ export default function DuesPage() {
                 type="warning"
                 badgeText={`${getDaysLeft(m.subscription_end_date)}d left`}
                 badgeClass="bg-orange-500/15 text-orange-400 border border-orange-500/20"
-                dateLabel={new Date(m.subscription_end_date).toLocaleDateString()}
+                dateLabel={formatDate(m.subscription_end_date)}
                 onMessage={() => sendWhatsApp(m, 'reminder')}
                 onRenew={() => router.push(`/dashboard/record-payment?memberId=${m.id}`)}
                 messageLabel="Send Reminder"
@@ -333,8 +333,8 @@ export default function DuesPage() {
                 : (m.subscription_end_date ? `${overdueDays}d overdue` : 'Overdue');
               
               const dateTxt = isDuesOverdue
-                ? `Due was: ${new Date(m.payment_due_date).toLocaleDateString()}`
-                : (m.subscription_end_date ? `Expired: ${new Date(m.subscription_end_date).toLocaleDateString()}` : 'Expired');
+                ? `Due was: ${formatDate(m.payment_due_date)}`
+                : (m.subscription_end_date ? `Expired: ${formatDate(m.subscription_end_date)}` : 'Expired');
 
               let seatWarning = null;
               if (m.subscription_end_date) {
@@ -412,7 +412,7 @@ export default function DuesPage() {
                 type="pending"
                 badgeText={m.outstanding_dues > 0 ? `₹${m.outstanding_dues} Due` : "Pending"}
                 badgeClass="bg-amber-500/15 text-amber-400 border border-amber-500/20"
-                dateLabel={m.payment_due_date ? `Due: ${new Date(m.payment_due_date).toLocaleDateString()}` : 'No due date'}
+                dateLabel={m.payment_due_date ? `Due: ${formatDate(m.payment_due_date)}` : 'No due date'}
                 onMessage={() => sendWhatsApp(m, 'pending')}
                 onRenew={() => router.push(`/dashboard/record-payment?memberId=${m.id}`)}
                 messageLabel="Send Reminder"

@@ -7,6 +7,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function formatDate(dateInput: any): string {
+  if (!dateInput) return '—';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '—';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 export function getMemberStatus(member: any) {
   const today = new Date();
   const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());

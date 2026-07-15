@@ -5,6 +5,7 @@ import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 import { formatWhatsAppNumber } from "@/lib/whatsapp";
+import { formatDate } from "@/lib/utils";
 
 interface Lead {
   id: string;
@@ -124,8 +125,10 @@ export default function EnquiriesPage() {
   const getInterestColor = (interest: string) => {
     switch (interest) {
       case 'Full Day': return 'badge-info';
-      case 'Half Day': return 'badge-warning';
-      case 'Night Shift': return 'bg-blue-500/15 text-blue-400 border border-blue-500/20';
+      case 'Morning':
+      case 'Morning Shift': return 'badge-warning';
+      case 'Evening':
+      case 'Evening Shift': return 'bg-blue-500/15 text-blue-400 border border-blue-500/20';
       default: return 'bg-white/[0.06] text-on-surface-variant border border-white/[0.06]';
     }
   };
@@ -243,7 +246,7 @@ export default function EnquiriesPage() {
                       </span>
                     </td>
                     <td className="text-on-surface-variant">
-                      {new Date(lead.created_at).toLocaleDateString('en-GB')}
+                      {formatDate(lead.created_at)}
                     </td>
                     <td className="text-right">
                       <div className="flex gap-2 justify-end items-center">
@@ -256,7 +259,7 @@ export default function EnquiriesPage() {
                           {lead.admin_notes && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400" />}
                         </button>
                         <a 
-                          href={`/dashboard/admission?name=${encodeURIComponent(lead.full_name)}&mobile=${encodeURIComponent(lead.phone)}&shift=${encodeURIComponent(lead.interest === 'Half Day' ? 'Morning' : (lead.interest === 'Night Shift' ? 'Evening' : lead.interest))}&address=${encodeURIComponent(parseNotes(lead.notes).address)}`}
+                          href={`/dashboard/admission?name=${encodeURIComponent(lead.full_name)}&mobile=${encodeURIComponent(lead.phone)}&shift=${encodeURIComponent(lead.interest === 'Morning Shift' || lead.interest === 'Morning' ? 'Morning' : (lead.interest === 'Evening Shift' || lead.interest === 'Evening' ? 'Evening' : lead.interest))}&address=${encodeURIComponent(parseNotes(lead.notes).address)}`}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-all text-xs font-bold"
                           title="Convert to Admission"
                         >
@@ -328,7 +331,7 @@ export default function EnquiriesPage() {
                   </div>
                   <div className="flex items-center gap-1.5 text-on-surface-variant">
                     <span className="material-symbols-outlined text-[14px]">calendar_today</span>
-                    {new Date(lead.created_at).toLocaleDateString('en-GB')}
+                    {formatDate(lead.created_at)}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className={`badge text-[9px] ${lead.branch === 'namnakala' ? 'badge-info' : 'bg-purple-500/15 text-purple-400 border border-purple-500/20'}`}>
@@ -346,7 +349,7 @@ export default function EnquiriesPage() {
                 {/* Actions */}
                 <div className="flex gap-2 pt-1">
                   <a 
-                    href={`/dashboard/admission?name=${encodeURIComponent(lead.full_name)}&mobile=${encodeURIComponent(lead.phone)}&shift=${encodeURIComponent(lead.interest === 'Half Day' ? 'Morning' : (lead.interest === 'Night Shift' ? 'Evening' : lead.interest))}&address=${encodeURIComponent(parseNotes(lead.notes).address)}`}
+                    href={`/dashboard/admission?name=${encodeURIComponent(lead.full_name)}&mobile=${encodeURIComponent(lead.phone)}&shift=${encodeURIComponent(lead.interest === 'Morning Shift' || lead.interest === 'Morning' ? 'Morning' : (lead.interest === 'Evening Shift' || lead.interest === 'Evening' ? 'Evening' : lead.interest))}&address=${encodeURIComponent(parseNotes(lead.notes).address)}`}
                     className="flex-1 flex justify-center items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-all text-xs font-bold"
                   >
                     <span className="material-symbols-outlined text-[14px]">person_add</span>
@@ -436,8 +439,8 @@ export default function EnquiriesPage() {
                   className="input-premium appearance-none bg-[url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%23475569%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e')] bg-[position:right_0.75rem_center] bg-no-repeat bg-[size:1.25rem_1.25rem] pr-10 text-slate-800 font-medium"
                 >
                   <option value="Full Day" className="text-slate-800">Full Day</option>
-                  <option value="Half Day" className="text-slate-800">Half Day</option>
-                  <option value="Night Shift" className="text-slate-800">Night Shift</option>
+                  <option value="Morning" className="text-slate-800">Morning Shift</option>
+                  <option value="Evening" className="text-slate-800">Evening Shift</option>
                 </select>
               </div>
               <div className="flex gap-3 pt-4">

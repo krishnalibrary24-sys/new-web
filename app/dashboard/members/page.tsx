@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
 import { logActivity } from "@/lib/activity";
 import { getLibrarySetting } from "@/lib/settings";
-import { getMemberStatus, checkAndReleaseSeats } from "@/lib/utils";
+import { getMemberStatus, checkAndReleaseSeats, formatDate } from "@/lib/utils";
 import { formatWhatsAppNumber } from "@/lib/whatsapp";
 
 export default function MembersPage() {
@@ -316,7 +316,7 @@ export default function MembersPage() {
       amount: totalPayable,
       branch: member.branch,
       payment_mode: renewPaymentMode,
-      notes: `Subscription Renewal — Joining: ${new Date(joiningDateStr).toLocaleDateString()}, Expiry: ${newEnd.toLocaleDateString()}. Duration: ${durationStr}. Base Price: ₹${renewPrice}/${isDays ? "day" : "mo"}, Discount: ₹${renewDiscount}`
+      notes: `Subscription Renewal — Joining: ${formatDate(joiningDateStr)}, Expiry: ${formatDate(newEnd)}. Duration: ${durationStr}. Base Price: ₹${renewPrice}/${isDays ? "day" : "mo"}, Discount: ₹${renewDiscount}`
     }]);
 
     logActivity(activeBranch, "student_renew", `Renewed subscription for ${member.full_name} (${member.permanent_id}${member.student_no ? ` [#${member.student_no}]` : ''}) by ${durationStr}`);
@@ -340,7 +340,7 @@ export default function MembersPage() {
       .replace(/{branch}/g, branchLabel)
       .replace(/{seat}/g, member.seat_no || 'Unassigned')
       .replace(/{shift}/g, member.shift)
-      .replace(/{expiry}/g, newEnd.toLocaleDateString());
+      .replace(/{expiry}/g, formatDate(newEnd));
 
     window.open(`https://wa.me/${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
   };
@@ -575,7 +575,7 @@ export default function MembersPage() {
           m.seat_no || "—",
           m.shift || "N/A",
           statusText,
-          m.subscription_end_date ? new Date(m.subscription_end_date).toLocaleDateString('en-GB') : "N/A"
+          m.subscription_end_date ? formatDate(m.subscription_end_date) : "N/A"
         ];
       });
       
@@ -685,7 +685,7 @@ export default function MembersPage() {
         ["Gender", cleanPDFText(member.gender || 'N/A'), "Aadhar Number", cleanPDFText(member.aadhar_no || 'N/A')],
         ["Targeting Exam", cleanPDFText(member.targeting_exam || 'N/A'), "Shift Name", cleanPDFText(member.shift || 'N/A')],
         ["Allocated Seat", cleanPDFText(member.seat_no ? `Seat ${member.seat_no}` : 'Not Allocated'), "Active Status", member.is_active ? 'Active' : 'Inactive'],
-        ["Joining Date", cleanPDFText(member.joining_date ? new Date(member.joining_date).toLocaleDateString('en-GB') : 'N/A'), "Validity Expiry", cleanPDFText(member.subscription_end_date ? new Date(member.subscription_end_date).toLocaleDateString('en-GB') : 'N/A')],
+        ["Joining Date", cleanPDFText(member.joining_date ? formatDate(member.joining_date) : 'N/A'), "Validity Expiry", cleanPDFText(member.subscription_end_date ? formatDate(member.subscription_end_date) : 'N/A')],
         ["Residential Address", { content: cleanPDFText(member.address || 'N/A'), colSpan: 3 }]
       ];
       
@@ -713,7 +713,7 @@ export default function MembersPage() {
       const tableHeaders = [["Receipt Date", "Amount Paid", "Payment Mode", "Ledger Description / Renewal Notes"]];
       const tableRows = memberPayments.map(p => {
         return [
-          new Date(p.paid_at || p.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'}),
+          formatDate(p.paid_at || p.created_at),
           cleanPDFText(`Rs. ${p.amount?.toLocaleString('en-IN')}`),
           cleanPDFText(p.payment_mode || "Cash"),
           cleanPDFText(p.notes || "Subscription fee payment")
@@ -1003,7 +1003,7 @@ export default function MembersPage() {
                       </td>
                       <td className="px-6 py-4 border-b border-[#f1f5f9]">
                         <div className="text-xs font-bold text-[#003178]">
-                          {new Date(member.subscription_end_date).toLocaleDateString()}
+                          {formatDate(member.subscription_end_date)}
                         </div>
                       </td>
                       <td className="px-6 py-4 border-b border-[#f1f5f9] text-right">
@@ -1072,7 +1072,7 @@ export default function MembersPage() {
                       })()}
                       {/* Pay Later badge removed */}
                       <span className="text-[10px] text-on-surface-variant font-medium">
-                        Valid till: {new Date(selectedMember.subscription_end_date).toLocaleDateString()}
+                        Valid till: {formatDate(selectedMember.subscription_end_date)}
                       </span>
                     </div>
                   </div>
@@ -1279,7 +1279,7 @@ export default function MembersPage() {
                       <InfoField label="Address" value={selectedMember.address || 'N/A'} />
                       <InfoField label="Assigned Seat" value={selectedMember.seat_no ? `Seat ${selectedMember.seat_no}` : 'Not Allocated'} />
                       <InfoField label="Shift" value={selectedMember.shift || 'N/A'} />
-                      <InfoField label="Joining Date" value={selectedMember.joining_date ? new Date(selectedMember.joining_date).toLocaleDateString() : 'N/A'} />
+                      <InfoField label="Joining Date" value={selectedMember.joining_date ? formatDate(selectedMember.joining_date) : 'N/A'} />
                       {(() => {
                         let label = "";
                         let colorClass = "text-emerald-700 font-bold";
@@ -1338,7 +1338,7 @@ export default function MembersPage() {
                       memberPayments.map(p => (
                         <tr key={p.id} className="hover:bg-white/[0.02]">
                           <td className="px-4 py-3 whitespace-nowrap">
-                            {new Date(p.paid_at || p.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'})}
+                            {formatDate(p.paid_at || p.created_at)}
                           </td>
                           <td className="px-4 py-3 font-bold text-emerald-400">
                             ₹{p.amount?.toLocaleString('en-IN')}

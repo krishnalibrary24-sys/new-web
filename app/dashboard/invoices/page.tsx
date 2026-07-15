@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
+import { formatDate } from "@/lib/utils";
 
 export default function InvoicesPage() {
   const { activeBranch } = useBranch();
@@ -159,7 +160,7 @@ export default function InvoicesPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 font-lexend text-xs">
-                        {new Date(inv.created_at).toLocaleDateString()}
+                        {formatDate(inv.created_at)}
                       </td>
                       <td className="px-6 py-4 font-bold font-mono text-slate-800 text-xs">
                         ₹{inv.total_amount}

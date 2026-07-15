@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
+import { formatDate } from "@/lib/utils";
 
 export default function LossPaymentPage() {
   const { activeBranch } = useBranch();
@@ -91,7 +92,7 @@ export default function LossPaymentPage() {
         m.full_name || "N/A",
         m.father_name || "—",
         m.mobile || "N/A",
-        m.left_at ? new Date(m.left_at).toLocaleDateString('en-GB') : "—",
+        m.left_at ? formatDate(m.left_at) : "—",
         `INR ${(m.loss_amount || 0).toLocaleString('en-IN')}`,
         m.left_reason || "No notes recorded."
       ]);
@@ -255,7 +256,7 @@ export default function LossPaymentPage() {
                     </td>
                     <td className="px-6 py-4 text-slate-600 font-semibold">{member.mobile}</td>
                     <td className="px-6 py-4 text-slate-600 font-bold">
-                      {member.left_at ? new Date(member.left_at).toLocaleDateString() : '—'}
+                      {member.left_at ? formatDate(member.left_at) : '—'}
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-red-500 font-black text-sm">₹{(member.loss_amount || 0).toLocaleString('en-IN')}</span>
@@ -315,7 +316,7 @@ export default function LossPaymentPage() {
                 <InfoItem icon="schedule" label="Shift & Plan" value={`${selectedMember.shift} (₹${selectedMember.plan_amount}/mo)`} />
                 <InfoItem icon="event" label="DOB & Gender" value={`${selectedMember.dob ? selectedMember.dob.split('T')[0] : 'N/A'} · ${selectedMember.gender || 'N/A'}`} />
                 <InfoItem icon="money_off" label="Unpaid Loss Amount" value={`₹${(selectedMember.loss_amount || 0).toLocaleString('en-IN')}`} isDanger={true} />
-                <InfoItem icon="today" label="Date Marked Left" value={selectedMember.left_at ? new Date(selectedMember.left_at).toLocaleDateString() : 'N/A'} />
+                <InfoItem icon="today" label="Date Marked Left" value={selectedMember.left_at ? formatDate(selectedMember.left_at) : 'N/A'} />
                 <InfoItem icon="description" label="Notes / Reason" value={selectedMember.left_reason || 'N/A'} className="col-span-2" />
               </div>
             </div>

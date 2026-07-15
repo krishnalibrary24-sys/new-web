@@ -3,6 +3,24 @@ import React, { useEffect, useState, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getTemplate, parseTemplate, formatWhatsAppNumber } from '@/lib/whatsapp';
+import { formatDate } from '@/lib/utils';
+
+function ensureDDMMYYYY(str: string | null): string {
+  if (!str) return '—';
+  const parts = str.trim().split(/[\-\/]/);
+  if (parts.length === 3) {
+    const p0 = parts[0];
+    const p1 = parts[1];
+    const p2 = parts[2];
+    if (p0.length === 4) {
+      return `${p2.padStart(2, '0')}/${p1.padStart(2, '0')}/${p0}`;
+    }
+    if (p2.length === 4) {
+      return `${p0.padStart(2, '0')}/${p1.padStart(2, '0')}/${p2}`;
+    }
+  }
+  return str;
+}
 
 function parseInvoiceNotes(notes: string) {
   const info = {
@@ -207,7 +225,7 @@ function InvoiceContent() {
       name: member.full_name,
       lib_name: libName,
       receipt_no: receiptNo,
-      date: new Date(invoice.created_at).toLocaleDateString('en-GB'),
+      date: formatDate(invoice.created_at),
       permanent_id: member.permanent_id || 'N/A',
       seat: member.permanent_id && member.permanent_id.includes('U') ? 'Unreserved' : `Seat ${member.seat_no || 'Unassigned'}`,
       shift: member.shift || 'N/A',
@@ -226,8 +244,8 @@ function InvoiceContent() {
   if (loading) return <div className="p-10 text-center text-slate-400">Loading Invoice...</div>;
   if (!member || !invoice) return <div className="p-10 text-center text-red-500">Invoice Data Not Found</div>;
 
-  const displayJoiningDate = parsedInfo.joiningDate || (member.joining_date ? new Date(member.joining_date).toLocaleDateString('en-GB') : 'N/A');
-  const displayExpiryDate = parsedInfo.expiryDate || (member.subscription_end_date ? new Date(member.subscription_end_date).toLocaleDateString('en-GB') : 'N/A');
+  const displayJoiningDate = parsedInfo.joiningDate ? ensureDDMMYYYY(parsedInfo.joiningDate) : (member.joining_date ? formatDate(member.joining_date) : 'N/A');
+  const displayExpiryDate = parsedInfo.expiryDate ? ensureDDMMYYYY(parsedInfo.expiryDate) : (member.subscription_end_date ? formatDate(member.subscription_end_date) : 'N/A');
 
   return (
     <div className="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-12 font-sans">
@@ -300,7 +318,7 @@ function InvoiceContent() {
               <div className="text-[9px] font-lexend text-slate-500 font-bold uppercase tracking-wider mb-0.5">Receipt No</div>
               <div className="font-lexend font-bold text-sm text-[#003178] mb-2">{receiptNo}</div>
               <div className="text-[9px] font-lexend text-slate-500 font-bold uppercase tracking-wider mb-0.5">Date</div>
-              <div className="font-lexend font-bold text-xs text-slate-700">{new Date(invoice.created_at).toLocaleDateString('en-GB')}</div>
+              <div className="font-lexend font-bold text-xs text-slate-700">{formatDate(invoice.created_at)}</div>
             </div>
           </div>
         </div>
@@ -352,7 +370,7 @@ function InvoiceContent() {
                 <div key={p.id} className="flex justify-between items-center text-xs bg-[#f8fafc] border border-[#e2e8f0] px-4 py-2.5 rounded-xl font-lexend">
                   <div>
                     <span className="font-bold text-[#1a1a2e]">Installment #{idx + 1} ({p.payment_mode})</span>
-                    <span className="text-[#64748b] text-[10px] ml-2">on {new Date(p.paid_at).toLocaleDateString()} at {new Date(p.paid_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    <span className="text-[#64748b] text-[10px] ml-2">on {formatDate(p.paid_at)} at {new Date(p.paid_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                     {p.notes && (
                       <p className="text-[10px] text-[#64748b] mt-0.5 italic">{p.notes.split('—')[1] || p.notes}</p>
                     )}
