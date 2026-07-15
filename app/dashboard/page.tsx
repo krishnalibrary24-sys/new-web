@@ -386,7 +386,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
         // Month Formatting
         let displayPeriod = "All Time";
         if (selectedMonth === "custom") {
-          displayPeriod = `${new Date(customStartDate).toLocaleDateString()} to ${new Date(customEndDate).toLocaleDateString()}`;
+          displayPeriod = `${formatDate(customStartDate)} to ${formatDate(customEndDate)}`;
         } else if (selectedMonth !== "all") {
           const [y, m] = selectedMonth.split('-');
           const d = new Date(parseInt(y), parseInt(m) - 1, 1);

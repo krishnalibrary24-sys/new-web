@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS public.members (
   gender                TEXT CHECK (gender IN ('Male', 'Female', 'Other')),
   mobile                TEXT NOT NULL,
   address               TEXT,
+  aadhar_no             TEXT,
+  targeting_exam        TEXT,
   branch                TEXT NOT NULL CHECK (branch IN ('bengali-chowk', 'namnakala')),
   seat_no               TEXT,                               -- NULL = unassigned
   shift                 TEXT NOT NULL CHECK (shift IN ('Full Day', 'Morning', 'Evening')),

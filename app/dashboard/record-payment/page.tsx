@@ -7,7 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logActivity } from "@/lib/activity";
 import { getTemplate, parseTemplate, formatWhatsAppNumber } from "@/lib/whatsapp";
-import { getMemberStatus, formatDate } from "@/lib/utils";
+import { getMemberStatus, formatDate, formatDatesInText } from "@/lib/utils";
 
 function RecordPaymentInner() {
   const { activeBranch } = useBranch();
@@ -1383,8 +1383,8 @@ function RecordPaymentInner() {
                               <td>
                                 <span className="badge badge-info">{p.payment_mode}</span>
                               </td>
-                              <td className="max-w-xs truncate text-on-surface-variant" title={p.notes}>
-                                {p.notes || "—"}
+                              <td className="max-w-xs truncate text-on-surface-variant" title={formatDatesInText(p.notes || "")}>
+                                {p.notes ? formatDatesInText(p.notes) : "—"}
                               </td>
                               <td className="text-right">
                                 <button 

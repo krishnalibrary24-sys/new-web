@@ -17,6 +17,58 @@ export function formatDate(dateInput: any): string {
   return `${day}/${month}/${year}`;
 }
 
+export function ensureDDMMYYYY(str: string | null): string {
+  if (!str) return '—';
+  const cleaned = str.trim();
+  const parts = cleaned.split(/[\-\/]/);
+  if (parts.length === 3) {
+    const p0 = parts[0];
+    const p1 = parts[1];
+    const p2 = parts[2];
+    
+    // Case 1: YYYY-MM-DD
+    if (p0.length === 4) {
+      const year = p0;
+      const month = p1.padStart(2, '0');
+      const day = p2.padStart(2, '0');
+      return `${day}/${month}/${year}`;
+    }
+    
+    // Case 2: Year at the end
+    if (p2.length === 4) {
+      const v0 = parseInt(p0, 10);
+      const v1 = parseInt(p1, 10);
+      
+      if (!isNaN(v0) && !isNaN(v1)) {
+        // If first part is > 12, it must be the day (e.g. 15/07/2026)
+        if (v0 > 12) {
+          return `${p0.padStart(2, '0')}/${p1.padStart(2, '0')}/${p2}`;
+        }
+        
+        // If second part is > 12, it must be the day (e.g. 6/22/2026)
+        if (v1 > 12) {
+          return `${p1.padStart(2, '0')}/${p0.padStart(2, '0')}/${p2}`;
+        }
+        
+        // Ambiguous <= 12: if either lacks zero-padding (e.g., 5/6/2026), it's old code MM/DD/YYYY, swap it
+        if (p0.length === 1 || p1.length === 1) {
+          return `${p1.padStart(2, '0')}/${p0.padStart(2, '0')}/${p2}`;
+        }
+      }
+      
+      return `${p0.padStart(2, '0')}/${p1.padStart(2, '0')}/${p2}`;
+    }
+  }
+  return str;
+}
+
+export function formatDatesInText(text: string): string {
+  if (!text) return '';
+  return text.replace(/\b\d{1,4}[-\/]\d{1,2}[-\/]\d{1,4}\b/g, (match) => {
+    return ensureDDMMYYYY(match);
+  });
+}
+
 export function getMemberStatus(member: any) {
   const today = new Date();
   const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());

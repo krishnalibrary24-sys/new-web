@@ -3,24 +3,7 @@ import React, { useEffect, useState, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getTemplate, parseTemplate, formatWhatsAppNumber } from '@/lib/whatsapp';
-import { formatDate } from '@/lib/utils';
-
-function ensureDDMMYYYY(str: string | null): string {
-  if (!str) return '—';
-  const parts = str.trim().split(/[\-\/]/);
-  if (parts.length === 3) {
-    const p0 = parts[0];
-    const p1 = parts[1];
-    const p2 = parts[2];
-    if (p0.length === 4) {
-      return `${p2.padStart(2, '0')}/${p1.padStart(2, '0')}/${p0}`;
-    }
-    if (p2.length === 4) {
-      return `${p0.padStart(2, '0')}/${p1.padStart(2, '0')}/${p2}`;
-    }
-  }
-  return str;
-}
+import { formatDate, ensureDDMMYYYY, formatDatesInText } from '@/lib/utils';
 
 function parseInvoiceNotes(notes: string) {
   const info = {
@@ -372,7 +355,7 @@ function InvoiceContent() {
                     <span className="font-bold text-[#1a1a2e]">Installment #{idx + 1} ({p.payment_mode})</span>
                     <span className="text-[#64748b] text-[10px] ml-2">on {formatDate(p.paid_at)} at {new Date(p.paid_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                     {p.notes && (
-                      <p className="text-[10px] text-[#64748b] mt-0.5 italic">{p.notes.split('—')[1] || p.notes}</p>
+                      <p className="text-[10px] text-[#64748b] mt-0.5 italic">{formatDatesInText(p.notes.split('—')[1] || p.notes)}</p>
                     )}
                   </div>
                   <span className="font-bold font-mono text-[#003178] text-sm">₹{p.amount}.00</span>
