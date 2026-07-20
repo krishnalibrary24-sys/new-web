@@ -90,7 +90,7 @@ export default function SeatingPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from('members')
-      .select('id, seat_no, shift, is_active, full_name, permanent_id, student_no, mobile, subscription_end_date, outstanding_dues, payment_due_date')
+      .select('id, seat_no, shift, is_active, full_name, permanent_id, student_no, mobile, subscription_end_date, outstanding_dues, payment_due_date, updated_at')
       .eq('branch', activeBranch)
       .eq('is_active', true);
     

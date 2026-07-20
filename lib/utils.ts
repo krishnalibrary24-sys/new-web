@@ -169,8 +169,9 @@ export async function checkAndReleaseSeats(members: any[], activeBranch: string)
     if (m.seat_no) {
       const isSubExpired = m.subscription_end_date && new Date(m.subscription_end_date) < fifteenDaysAgo;
       const isDuesOverdue = m.outstanding_dues > 0 && m.payment_due_date && new Date(m.payment_due_date) < fifteenDaysAgo;
+      const isRecentlyUpdated = m.updated_at && (new Date().getTime() - new Date(m.updated_at).getTime()) < 24 * 60 * 60 * 1000;
 
-      if (isSubExpired || isDuesOverdue) {
+      if ((isSubExpired || isDuesOverdue) && !isRecentlyUpdated) {
         const oldSeat = m.seat_no;
         // Update local object immediately
         updatedMembers[i] = {
