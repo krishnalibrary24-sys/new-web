@@ -18,7 +18,7 @@ export default function MembersPage() {
   const [search, setSearch] = useState("");
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'unreserved' | 'pending' | 'overdue' | 'due-soon' | 'left'>('active');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'unreserved' | 'pending' | 'overdue' | 'due-soon' | 'left'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'seat-asc' | 'seat-desc'>('newest');
   const router = useRouter();
 
@@ -806,14 +806,14 @@ export default function MembersPage() {
       <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 border-b border-white/[0.04] pb-4">
         <div className="flex gap-2 overflow-x-auto w-full xl:w-auto pb-3 custom-scrollbar">
           {[
-            {key: 'active' as const, label: `Active (Paid) (${activeCount})` },
+            { key: 'all' as const, label: `All (${members.length - leftCount})` },
+            { key: 'active' as const, label: `Active (Paid) (${activeCount})` },
             { key: 'inactive' as const, label: `Inactive (${inactiveCount})` },
             { key: 'unreserved' as const, label: `Unreserved (${unreservedCount})` },
             { key: 'pending' as const, label: `Pending (${pendingCount})` },
             { key: 'overdue' as const, label: `Overdue (${overdueCount})` },
             { key: 'due-soon' as const, label: `Due Soon (${dueSoonCount})` },
             { key: 'left' as const, label: `Left (${leftCount})` },
-            { key: 'all' as const, label: `All (${members.length - leftCount})` },
           ].map(tab => (
             <button
               key={tab.key}
