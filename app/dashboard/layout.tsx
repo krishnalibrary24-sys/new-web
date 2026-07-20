@@ -26,15 +26,15 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
         const today = new Date();
         const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const in3Days = new Date(todayZero.getTime() + 3 * 24 * 60 * 60 * 1000);
-        const fiveDaysAgo = new Date(todayZero.getTime() - 5 * 24 * 60 * 60 * 1000);
+        const fifteenDaysAgo = new Date(todayZero.getTime() - 15 * 24 * 60 * 60 * 1000);
 
         for (const m of data) {
           if (m.status === 'LEFT' || m.left_at) continue;
 
           // Auto-Release Seat Logic
           if (m.seat_no) {
-            const isSubExpired = m.subscription_end_date && new Date(m.subscription_end_date) < fiveDaysAgo;
-            const isDuesOverdue = m.outstanding_dues > 0 && m.payment_due_date && new Date(m.payment_due_date) < fiveDaysAgo;
+            const isSubExpired = m.subscription_end_date && new Date(m.subscription_end_date) < fifteenDaysAgo;
+            const isDuesOverdue = m.outstanding_dues > 0 && m.payment_due_date && new Date(m.payment_due_date) < fifteenDaysAgo;
 
             if (isSubExpired || isDuesOverdue) {
               const oldSeat = m.seat_no;
@@ -43,7 +43,7 @@ function DashboardInner({ children, role }: { children: React.ReactNode, role: s
                 .update({ previous_seat_no: oldSeat, seat_no: null })
                 .eq('id', m.id)
                 .then(() => {
-                  const reason = isSubExpired ? 'subscription expired >5 days' : 'dues outstanding >5 days';
+                  const reason = isSubExpired ? 'subscription expired >15 days' : 'dues outstanding >15 days';
                   logActivity(activeBranch, "seating", `Auto-released Seat #${oldSeat} for ${m.full_name} (${m.permanent_id}) due to ${reason}.`);
                 });
             }

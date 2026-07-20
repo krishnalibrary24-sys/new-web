@@ -157,7 +157,7 @@ export function getMemberStatus(member: any) {
 export async function checkAndReleaseSeats(members: any[], activeBranch: string) {
   const today = new Date();
   const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const fiveDaysAgo = new Date(todayZero.getTime() - 5 * 24 * 60 * 60 * 1000);
+  const fifteenDaysAgo = new Date(todayZero.getTime() - 15 * 24 * 60 * 60 * 1000);
 
   const updatedMembers = [...members];
   let changed = false;
@@ -167,8 +167,8 @@ export async function checkAndReleaseSeats(members: any[], activeBranch: string)
     if (m.status === 'LEFT' || m.left_at) continue;
 
     if (m.seat_no) {
-      const isSubExpired = m.subscription_end_date && new Date(m.subscription_end_date) < fiveDaysAgo;
-      const isDuesOverdue = m.outstanding_dues > 0 && m.payment_due_date && new Date(m.payment_due_date) < fiveDaysAgo;
+      const isSubExpired = m.subscription_end_date && new Date(m.subscription_end_date) < fifteenDaysAgo;
+      const isDuesOverdue = m.outstanding_dues > 0 && m.payment_due_date && new Date(m.payment_due_date) < fifteenDaysAgo;
 
       if (isSubExpired || isDuesOverdue) {
         const oldSeat = m.seat_no;
@@ -185,7 +185,7 @@ export async function checkAndReleaseSeats(members: any[], activeBranch: string)
           .update({ previous_seat_no: oldSeat, seat_no: null })
           .eq('id', m.id)
           .then(() => {
-            const reason = isSubExpired ? 'subscription expired >5 days' : 'dues outstanding >5 days';
+            const reason = isSubExpired ? 'subscription expired >15 days' : 'dues outstanding >15 days';
             logActivity(activeBranch, "seating", `Auto-released Seat #${oldSeat} for ${m.full_name} (${m.permanent_id}) due to ${reason}.`);
           });
       }

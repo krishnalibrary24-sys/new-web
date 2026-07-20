@@ -264,7 +264,7 @@ const TEMPLATE_CONFIG = [
   { key: 'seat_assigned_msg', label: 'Seat Allocation Update', tags: '{name}, {branch}, {seat}, {shift}, {expiry}, {payment_section}' },
   { key: 'due_soon_msg', label: 'Due Soon Reminder (3 days prior)', tags: '{name}, {permanent_id}, {expiry}, {branch}' },
   { key: 'expired_msg', label: 'Membership Expired Warning', tags: '{name}, {permanent_id}, {expiry}, {branch}' },
-  { key: 'released_msg', label: 'Seat Released Notification (>5 days expired)', tags: '{name}, {permanent_id}, {expiry}, {branch}' },
+  { key: 'released_msg', label: 'Seat Released Notification (>15 days expired)', tags: '{name}, {permanent_id}, {expiry}, {branch}' },
   { key: 'pending_dues_msg', label: 'Pending Dues/Overdue Reminder', tags: '{name}, {due_date}, {branch}' },
   { key: 'overdue_dues_msg', label: 'Overdue Payment Warning (Defaulters)', tags: '{name}, {permanent_id}, {due_amount}, {due_date}, {branch}' },
   { key: 'invoice_share_msg', label: 'Invoice Share Button Message', tags: '{name}, {receipt_no}, {date}, {permanent_id}, {seat}, {shift}, {subtotal}, {discount}, {total_amount}, {paid_amount}, {due_amount}, {status}, {invoice_link}, {lib_name}' }

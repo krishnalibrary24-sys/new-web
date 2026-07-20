@@ -89,7 +89,7 @@ export default function DuesPage() {
       actionLabel = "expiring soon reminder";
     } else if (type === 'overdue') {
       const daysOverdue = getDaysOverdue(member.subscription_end_date);
-      if (daysOverdue > 5) {
+      if (daysOverdue > 15) {
         templateStr = await getTemplate('released_msg');
       } else {
         templateStr = await getTemplate('expired_msg');
@@ -339,10 +339,10 @@ export default function DuesPage() {
               let seatWarning = null;
               if (m.subscription_end_date) {
                 const subDays = getDaysOverdue(m.subscription_end_date);
-                if (subDays >= 5) {
+                if (subDays >= 15) {
                    seatWarning = <span className="text-red-400 font-bold ml-1">· Seat Released</span>;
                 } else if (subDays >= 0) {
-                   seatWarning = <span className="text-amber-400 font-semibold ml-1">· Releases in {5 - subDays}d</span>;
+                   seatWarning = <span className="text-amber-400 font-semibold ml-1">· Releases in {15 - subDays}d</span>;
                 }
               }
 
