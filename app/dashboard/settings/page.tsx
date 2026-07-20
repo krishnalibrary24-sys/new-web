@@ -463,8 +463,8 @@ export default function SettingsPage() {
         localStorage.setItem("krishna_address", libAddress);
         localStorage.setItem("krishna_upi_id", upiId);
         localStorage.setItem("krishna_upi_pn", upiName);
-        localStorage.setItem("krishna_welcome_msg", welcomeMsg);
-        localStorage.setItem("krishna_due_msg", dueMsg);
+        localStorage.setItem("krishna_welcome_msg", templates.welcome_msg || "");
+        localStorage.setItem("krishna_due_msg", templates.pending_dues_msg || "");
       }
 
       setShowToast(true);
