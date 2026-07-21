@@ -568,15 +568,15 @@ export default function SeatingPage() {
             <div 
               className="grid gap-1.5 min-w-[max-content] relative w-max mx-auto px-4"
               style={{ 
-                gridTemplateColumns: 'repeat(17, minmax(30px, 36px))',
+                gridTemplateColumns: 'repeat(18, minmax(30px, 36px))',
                 gridAutoRows: 'minmax(30px, 36px)'
               }}
             >
               {/* Room Labels */}
-              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end text-center w-full whitespace-nowrap" style={{ gridRow: 1, gridColumn: '1 / 18' }}>
+              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end text-center w-full whitespace-nowrap" style={{ gridRow: 1, gridColumn: '1 / 19' }}>
                 DARK ROOM
               </div>
-              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end text-center w-full whitespace-nowrap" style={{ gridRow: 9, gridColumn: '1 / 18' }}>
+              <div className="text-[11px] font-black tracking-widest text-slate-400/80 uppercase self-end text-center w-full whitespace-nowrap" style={{ gridRow: 9, gridColumn: '1 / 19' }}>
                 LIGHT ROOM
               </div>
 
@@ -587,7 +587,7 @@ export default function SeatingPage() {
                 <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
                 <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
-              <div style={{ gridRow: 3, gridColumn: '11 / 18' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+              <div style={{ gridRow: 3, gridColumn: '11 / 19' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
                 <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
                 <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
                 <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
@@ -599,7 +599,7 @@ export default function SeatingPage() {
                 <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
                 <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
-              <div style={{ gridRow: 6, gridColumn: '11 / 18' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+              <div style={{ gridRow: 6, gridColumn: '11 / 19' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
                 <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
                 <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
                 <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
@@ -607,7 +607,7 @@ export default function SeatingPage() {
 
               {/* Row 8 Divider Line */}
               <div className="h-[1.5px] bg-[#003178] opacity-30 w-full self-center" style={{ gridRow: 8, gridColumn: '1 / 10' }} />
-              <div className="h-[1.5px] bg-[#003178] opacity-30 w-full self-center" style={{ gridRow: 8, gridColumn: '11 / 18' }} />
+              <div className="h-[1.5px] bg-[#003178] opacity-30 w-full self-center" style={{ gridRow: 8, gridColumn: '11 / 19' }} />
 
               {/* Row 11 */}
               <div style={{ gridRow: 11, gridColumn: '2 / 10' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
@@ -615,7 +615,7 @@ export default function SeatingPage() {
                 <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
                 <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
-              <div style={{ gridRow: 11, gridColumn: '11 / 17' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+              <div style={{ gridRow: 11, gridColumn: '11 / 19' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
                 <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
                 <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
                 <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
@@ -629,14 +629,14 @@ export default function SeatingPage() {
               </div>
 
               {/* Row 16 Right only */}
-              <div style={{ gridRow: 16, gridColumn: '14 / 18' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+              <div style={{ gridRow: 16, gridColumn: '14 / 19' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
                 <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
                 <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
                 <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
               </div>
 
               {/* Row 19 Right only */}
-              <div style={{ gridRow: 19, gridColumn: '14 / 18' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
+              <div style={{ gridRow: 19, gridColumn: '14 / 19' }} className="flex flex-row items-center justify-center text-[#003178] opacity-30 gap-4 w-full pointer-events-none">
                 <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(180deg)' }}>arrow_right_alt</span>
                 <span className="tracking-[0.3em] font-black uppercase text-[9px]">Walkway</span>
                 <span className="material-symbols-outlined text-xl">arrow_right_alt</span>
@@ -653,7 +653,7 @@ export default function SeatingPage() {
                 <span className="tracking-[0.3em] font-black uppercase text-[10px]" style={{ writingMode: 'vertical-rl' }}>Walkway</span>
                 <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(90deg)' }}>arrow_right_alt</span>
               </div>
-              <div style={{ gridColumn: 12, gridRow: '14 / 21' }} className="flex flex-col items-center justify-center text-[#003178] opacity-30 gap-8 h-full pointer-events-none">
+              <div style={{ gridColumn: '12 / 15', gridRow: '14 / 21' }} className="flex flex-col items-center justify-center text-[#003178] opacity-30 gap-8 h-full pointer-events-none">
                 <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(-90deg)' }}>arrow_right_alt</span>
                 <span className="tracking-[0.3em] font-black uppercase text-[10px]" style={{ writingMode: 'vertical-rl' }}>Walkway</span>
                 <span className="material-symbols-outlined text-xl" style={{ transform: 'rotate(90deg)' }}>arrow_right_alt</span>
@@ -680,22 +680,22 @@ export default function SeatingPage() {
 
                 // Exact Coordinate Map for Namnakala
                 if (seatNum >= 1 && seatNum <= 8) { r = 2; c = seatNum + 1; }
-                else if (seatNum >= 9 && seatNum <= 16) { r = 2; c = seatNum === 16 ? 17 : seatNum + 2; }
-                else if (seatNum >= 17 && seatNum <= 23) { r = 4; c = 34 - seatNum; }
+                else if (seatNum >= 9 && seatNum <= 16) { r = 2; c = seatNum + 2; }
+                else if (seatNum >= 17 && seatNum <= 23) { r = 4; c = 35 - seatNum; }
                 else if (seatNum >= 24 && seatNum <= 32) { r = 4; c = 33 - seatNum; }
                 else if (seatNum >= 33 && seatNum <= 41) { r = 5; c = seatNum - 32; }
-                else if (seatNum >= 42 && seatNum <= 48) { r = 5; c = seatNum - 31; }
-                else if (seatNum >= 49 && seatNum <= 54) { r = 7; c = 65 - seatNum; }
+                else if (seatNum >= 42 && seatNum <= 48) { r = 5; c = seatNum - 30; }
+                else if (seatNum >= 49 && seatNum <= 54) { r = 7; c = 66 - seatNum; }
                 else if (seatNum >= 55 && seatNum <= 62) { r = 7; c = 64 - seatNum; }
                 else if (seatNum >= 63 && seatNum <= 70) { r = 10; c = seatNum - 61; }
                 else if (seatNum >= 71 && seatNum <= 79) { r = 13; c = 80 - seatNum; }
                 else if (seatNum >= 80 && seatNum <= 88) { r = 14; c = 89 - seatNum; }
-                else if (seatNum >= 89 && seatNum <= 94) { r = 10; c = seatNum - 78; }
-                else if (seatNum >= 95 && seatNum <= 98) { r = 14; c = 112 - seatNum; }
-                else if (seatNum >= 99 && seatNum <= 102) { r = 15; c = seatNum - 85; }
-                else if (seatNum >= 103 && seatNum <= 106) { r = 17; c = 120 - seatNum; }
-                else if (seatNum >= 107 && seatNum <= 110) { r = 18; c = seatNum - 93; }
-                else if (seatNum >= 111 && seatNum <= 114) { r = 20; c = 128 - seatNum; }
+                else if (seatNum >= 89 && seatNum <= 94) { r = 10; c = seatNum - 77; }
+                else if (seatNum >= 95 && seatNum <= 98) { r = 14; c = 113 - seatNum; }
+                else if (seatNum >= 99 && seatNum <= 102) { r = 15; c = seatNum - 84; }
+                else if (seatNum >= 103 && seatNum <= 106) { r = 17; c = 121 - seatNum; }
+                else if (seatNum >= 107 && seatNum <= 110) { r = 18; c = seatNum - 92; }
+                else if (seatNum >= 111 && seatNum <= 114) { r = 20; c = 129 - seatNum; }
                 else if (seatNum >= 115 && seatNum <= 121) { r = 13 + (121 - seatNum); c = 11; }
 
                 return (
