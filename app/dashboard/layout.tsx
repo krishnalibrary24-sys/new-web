@@ -8,8 +8,8 @@ import { logActivity } from "@/lib/activity";
 
 function DashboardInner({ children, role }: { children: React.ReactNode, role: string }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const isAdmin = role === "admin";
+  const staffId = typeof window !== 'undefined' ? (localStorage.getItem("krishna_staff_id") || "").toUpperCase() : "";
+  const isAdmin = role === "admin" && !staffId.includes('NAMNAKALA') && !staffId.includes('BENGALI');
   const { activeBranch, setActiveBranch } = useBranch();
   const [duesCount, setDuesCount] = useState<number>(0);
   const [enquiriesCount, setEnquiriesCount] = useState<number>(0);

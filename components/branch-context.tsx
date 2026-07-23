@@ -12,29 +12,55 @@ const BranchContext = createContext<BranchContextType>({
 });
 
 export function BranchProvider({ children }: { children: React.ReactNode }) {
-  const [activeBranch, setActiveBranch] = useState('bengali-chowk');
-  
-  useEffect(() => {
+  const [activeBranch, setActiveBranch] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'bengali-chowk';
     const role = localStorage.getItem("krishna_role");
-    if (role === 'bengali-chowk') setActiveBranch('bengali-chowk');
-    else if (role === 'namnakala') setActiveBranch('namnakala');
-    else {
-      // Admin defaults to bengali chowk, but can read from local storage
+    const staffId = (localStorage.getItem("krishna_staff_id") || "").toUpperCase();
+
+    // Strict branch binding for non-admin staff
+    if (role === 'bengali-chowk' || staffId.includes('BENGALI')) return 'bengali-chowk';
+    if (role === 'namnakala' || staffId.includes('NAMNAKALA')) return 'namnakala';
+
+    // Admin role: use saved branch preference or default to bengali-chowk
+    if (role === 'admin') {
       const saved = localStorage.getItem('krishna_admin_branch');
-      if (saved) setActiveBranch(saved);
-      else setActiveBranch('bengali-chowk');
+      if (saved === 'namnakala' || saved === 'bengali-chowk') return saved;
     }
-  }, []);
+
+    return 'bengali-chowk';
+  });
+
+  useEffect(() => {
+    // Continuously enforce authorized branch
+    const role = localStorage.getItem("krishna_role");
+    const staffId = (localStorage.getItem("krishna_staff_id") || "").toUpperCase();
+
+    if (role === 'bengali-chowk' || staffId.includes('BENGALI')) {
+      if (activeBranch !== 'bengali-chowk') setActiveBranch('bengali-chowk');
+    } else if (role === 'namnakala' || staffId.includes('NAMNAKALA')) {
+      if (activeBranch !== 'namnakala') setActiveBranch('namnakala');
+    }
+  }, [activeBranch]);
 
   const handleSetBranch = (val: string) => {
     const role = localStorage.getItem("krishna_role");
-    if (role === 'admin') {
-      setActiveBranch(val);
-      localStorage.setItem('krishna_admin_branch', val);
+    const staffId = (localStorage.getItem("krishna_staff_id") || "").toUpperCase();
+
+    // ONLY true admin account can switch branches
+    const isTrueAdmin = role === 'admin' && !staffId.includes('NAMNAKALA') && !staffId.includes('BENGALI');
+
+    if (isTrueAdmin) {
+      if (val === 'bengali-chowk' || val === 'namnakala') {
+        setActiveBranch(val);
+        localStorage.setItem('krishna_admin_branch', val);
+      }
     } else {
       // Security enforcement: Non-admins cannot switch branches
-      if (role === 'bengali-chowk') setActiveBranch('bengali-chowk');
-      else if (role === 'namnakala') setActiveBranch('namnakala');
+      if (role === 'namnakala' || staffId.includes('NAMNAKALA')) {
+        setActiveBranch('namnakala');
+      } else {
+        setActiveBranch('bengali-chowk');
+      }
     }
   };
 
