@@ -1301,7 +1301,7 @@ function OfficeDashboard({ branch }: { branch: string }) {
         }).length;
 
         const defaulterCount = updatedMembers.filter(m => !m.is_active || (m.is_active && m.subscription_end_date && new Date(m.subscription_end_date) < todayZero)).length;
-        const activeMembers = updatedMembers.filter(m => m.is_active && !(m.subscription_end_date && new Date(m.subscription_end_date) < todayZero));
+        const activeMembers = updatedMembers.filter(m => m.is_active && !m.left_at);
         
         setDueSoon(dueSoonCount);
         setOverdueCount(defaulterCount);
@@ -1325,7 +1325,7 @@ function OfficeDashboard({ branch }: { branch: string }) {
     let filtered: any[] = [];
 
     if (inspectCategory === "Active Members") {
-      filtered = rawMembers.filter(m => m.is_active && !(m.subscription_end_date && new Date(m.subscription_end_date) < today)).map(m => ({
+      filtered = rawMembers.filter(m => m.is_active && !m.left_at).map(m => ({
         ...m,
         inspectLabel: `Seat: ${m.seat_no || 'Unassigned'}`,
         inspectSub: m.subscription_end_date ? `Expiry: ${formatDate(m.subscription_end_date)}` : 'No Expiry'
@@ -1351,7 +1351,7 @@ function OfficeDashboard({ branch }: { branch: string }) {
       });
     } else if (inspectCategory === "Available Seats") {
       const totalSeats = branch === 'bengali-chowk' ? 153 : 121;
-      const occupiedSeats = new Set(rawMembers.filter(m => m.is_active && m.seat_no).map(m => m.seat_no.toString()));
+      const occupiedSeats = new Set(rawMembers.filter(m => m.is_active && !m.left_at && m.seat_no).map(m => m.seat_no.toString()));
       const available: any[] = [];
       for (let i = 1; i <= totalSeats; i++) {
         if (!occupiedSeats.has(i.toString())) {
@@ -1377,6 +1377,10 @@ function OfficeDashboard({ branch }: { branch: string }) {
     );
   };
 
+  const totalBranchSeats = branch === 'bengali-chowk' ? 153 : 121;
+  const occupiedUniqueSeats = new Set(rawMembers.filter(m => m.is_active && !m.left_at && m.seat_no).map(m => m.seat_no.toString())).size;
+  const availableSeatsCount = Math.max(0, totalBranchSeats - occupiedUniqueSeats);
+
   return (
     <div className="space-y-6">
       {/* ─── Stat Cards ─── */}
@@ -1389,7 +1393,7 @@ function OfficeDashboard({ branch }: { branch: string }) {
           badge={overdueCount > 0 ? "Action Required" : undefined} badgeClass="badge-danger"
           onClick={() => { setInspectCategory("Overdue / Inactive"); setInspectSearch(""); }}
         />
-        <StatCard icon="event_seat" iconClass="stat-icon-success" label="Available Seats" value={loading ? null : ((branch === 'bengali-chowk' ? 153 : 121) - activeCount).toString()} onClick={() => { setInspectCategory("Available Seats"); setInspectSearch(""); }} />
+        <StatCard icon="event_seat" iconClass="stat-icon-success" label="Available Seats" value={loading ? null : availableSeatsCount.toString()} onClick={() => { setInspectCategory("Available Seats"); setInspectSearch(""); }} />
       </div>
 
       {/* ─── Quick Actions ─── */}
