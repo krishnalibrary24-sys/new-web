@@ -130,7 +130,7 @@ export default function SeatingPage() {
       logActivity(activeBranch, "seating", `Allocated Seat #${selectedSeat} to ${member.full_name} (${member.permanent_id}${member.student_no ? ` [#${member.student_no}]` : ''})`);
       
       // Update seat number in database and clear previous seat
-      await supabase.from('members').update({ seat_no: selectedSeat, previous_seat_no: null }).eq('id', memberId);
+      await supabase.from('members').update({ seat_no: selectedSeat, previous_seat_no: null, updated_at: new Date().toISOString() }).eq('id', memberId);
       
       // Reload the seats from the database to keep UI state perfectly synced
       await fetchSeats();

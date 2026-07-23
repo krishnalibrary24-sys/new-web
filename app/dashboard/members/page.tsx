@@ -490,7 +490,8 @@ export default function MembersPage() {
           is_active: true,
           seat_no: seatToAllot,
           previous_seat_no: prevSeatVal,
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          updated_at: new Date().toISOString()
         };
         const { error } = await supabase.from('members').update(payload).eq('id', member.id);
         if (error) throw error;
