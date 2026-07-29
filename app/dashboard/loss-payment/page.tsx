@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useBranch } from "@/components/branch-context";
 import { supabase } from "@/lib/supabase";
 import { formatDate } from "@/lib/utils";
+import { logActivity } from "@/lib/activity";
 
 export default function LossPaymentPage() {
   const { activeBranch } = useBranch();
@@ -13,6 +14,15 @@ export default function LossPaymentPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
+
+  // Settle Loss Payment Modal States
+  const [settleMember, setSettleMember] = useState<any | null>(null);
+  const [settleAmount, setSettleAmount] = useState<number | "">("");
+  const [settlePaymentMode, setSettlePaymentMode] = useState<string>("Cash");
+  const [settleDate, setSettleDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [settleNotes, setSettleNotes] = useState<string>("");
+  const [settleReactivate, setSettleReactivate] = useState<boolean>(false);
+  const [isSettling, setIsSettling] = useState<boolean>(false);
 
   const fetchLeftMembers = useCallback(async () => {
     setLoading(true);
@@ -38,6 +48,86 @@ export default function LossPaymentPage() {
   useEffect(() => {
     fetchLeftMembers();
   }, [fetchLeftMembers]);
+
+  // Open Settle Modal
+  const openSettleModal = (member: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSettleMember(member);
+    setSettleAmount(member.loss_amount || 0);
+    setSettlePaymentMode("Cash");
+    setSettleDate(new Date().toISOString().split('T')[0]);
+    setSettleNotes(`Loss Payment Settlement — Cleared loss fee for ${member.full_name}`);
+    setSettleReactivate(false);
+  };
+
+  // Submit Loss Payment Settlement
+  const handleConfirmSettle = async () => {
+    if (!settleMember) return;
+    const paidAmt = Number(settleAmount);
+    if (isNaN(paidAmt) || paidAmt <= 0) {
+      alert("Please enter a valid payment amount greater than ₹0.");
+      return;
+    }
+
+    setIsSettling(true);
+    try {
+      // 1. Insert into payments table
+      const { error: payErr } = await supabase
+        .from('payments')
+        .insert([{
+          member_id: settleMember.id,
+          invoice_id: null,
+          amount: paidAmt,
+          branch: settleMember.branch || activeBranch,
+          payment_mode: settlePaymentMode,
+          paid_at: new Date(settleDate).toISOString(),
+          notes: settleNotes || `Loss Payment Clearance for ${settleMember.full_name}`
+        }]);
+
+      if (payErr) throw payErr;
+
+      // 2. Calculate remaining loss and update member
+      const remainingLoss = Math.max(0, (settleMember.loss_amount || 0) - paidAmt);
+      const memberPayload: any = {
+        loss_amount: remainingLoss,
+        left_with_dues: remainingLoss > 0,
+        payment_status: remainingLoss > 0 ? 'LOSS' : 'PAID',
+        updated_at: new Date().toISOString()
+      };
+
+      if (settleReactivate) {
+        memberPayload.is_active = true;
+        memberPayload.status = 'ACTIVE';
+        memberPayload.left_at = null;
+        memberPayload.left_reason = null;
+      }
+
+      const { error: memberErr } = await supabase
+        .from('members')
+        .update(memberPayload)
+        .eq('id', settleMember.id);
+
+      if (memberErr) throw memberErr;
+
+      // 3. Log Activity
+      await logActivity(
+        activeBranch,
+        "payment_recorded",
+        `Recorded Loss Payment clearance of ₹${paidAmt} (${settlePaymentMode}) for left member ${settleMember.full_name} (${settleMember.permanent_id}). Remaining Loss: ₹${remainingLoss}${settleReactivate ? ' (Student Reactivated)' : ''}`
+      );
+
+      alert(`Success! Loss payment of ₹${paidAmt.toLocaleString('en-IN')} recorded for ${settleMember.full_name}.`);
+
+      setSettleMember(null);
+      setSelectedMember(null);
+      fetchLeftMembers();
+    } catch (err: any) {
+      console.error("Failed to settle loss payment:", err);
+      alert("Error recording payment: " + (err.message || err));
+    } finally {
+      setIsSettling(false);
+    }
+  };
 
   // Filter list based on search term
   const filteredMembers = leftMembers.filter(m => {
@@ -132,6 +222,7 @@ export default function LossPaymentPage() {
       alert("Failed to export PDF. Please check console for details.");
     }
   };
+
   const [role, setRole] = useState<string | null>(null);
   useEffect(() => {
     setRole(localStorage.getItem("krishna_role"));
@@ -212,7 +303,7 @@ export default function LossPaymentPage() {
 
         <div className="px-6 py-4 border-b border-white/[0.06] bg-red-500/[0.02]">
           <h3 className="text-sm font-bold text-white font-manrope">
-            Double-click a member row to view full case details
+            Double-click a member row to view full details or click "Settle Loss" to collect payment
           </h3>
         </div>
 
@@ -226,12 +317,13 @@ export default function LossPaymentPage() {
                 <th className="px-6 py-4 font-bold text-xs uppercase text-slate-500">Left Date</th>
                 <th className="px-6 py-4 font-bold text-xs uppercase text-slate-500">Lost Fee Amount</th>
                 <th className="px-6 py-4 font-bold text-xs uppercase text-slate-500">Left Reason / Notes</th>
+                <th className="px-6 py-4 font-bold text-xs uppercase text-slate-500 text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {filteredMembers.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                       <span className="material-symbols-outlined text-4xl text-emerald-400 mb-2">check_circle</span>
                       <div className="text-white font-bold text-base">All Clear!</div>
@@ -263,6 +355,15 @@ export default function LossPaymentPage() {
                     </td>
                     <td className="px-6 py-4 text-slate-500 text-xs max-w-xs truncate font-medium">
                       {member.left_reason || 'No specific reason recorded.'}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={(e) => openSettleModal(member, e)}
+                        className="btn-primary !bg-emerald-600 hover:!bg-emerald-700 !text-white px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 ml-auto shadow-sm"
+                      >
+                        <span className="material-symbols-outlined text-sm">payments</span>
+                        Settle Loss
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -321,13 +422,157 @@ export default function LossPaymentPage() {
               </div>
             </div>
 
-            {/* Footer Close Action */}
-            <div className="px-6 py-4 border-t border-white/[0.06] flex justify-end bg-white/[0.02]">
+            {/* Footer Actions */}
+            <div className="px-6 py-4 border-t border-white/[0.06] flex justify-between items-center bg-white/[0.02]">
+              <button 
+                onClick={() => openSettleModal(selectedMember)}
+                className="btn-primary !bg-emerald-600 hover:!bg-emerald-700 !text-white px-5 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-base">payments</span>
+                Clear / Pay Loss Fee
+              </button>
               <button 
                 onClick={() => setSelectedMember(null)}
-                className="btn-primary !bg-red-500 hover:!bg-red-600 !text-white px-5 py-2 text-xs font-bold rounded-xl"
+                className="btn-ghost px-5 py-2 text-xs font-bold rounded-xl border border-slate-300 text-slate-700"
               >
-                Close Case Record
+                Close Record
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ═══ Settle Loss Payment Modal ═══ */}
+      {settleMember && typeof document !== 'undefined' && createPortal(
+        <div 
+          className="fixed inset-0 z-[10000] bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4 dashboard-light-theme" 
+          onClick={() => !isSettling && setSettleMember(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-in border border-emerald-500/20" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-emerald-50">
+              <h2 className="text-base font-black text-emerald-800 font-manrope flex items-center gap-2">
+                <span className="material-symbols-outlined text-emerald-600">price_check</span>
+                Clear Loss Payment
+              </h2>
+              <button 
+                disabled={isSettling}
+                onClick={() => setSettleMember(null)} 
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg transition-all"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4 text-xs">
+              <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex justify-between items-center">
+                <div>
+                  <div className="font-bold text-slate-800 text-sm">{settleMember.full_name}</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">ID: {settleMember.permanent_id} · Mobile: {settleMember.mobile}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] uppercase font-bold text-red-500">Unpaid Loss</div>
+                  <div className="text-base font-black text-red-600">₹{(settleMember.loss_amount || 0).toLocaleString('en-IN')}</div>
+                </div>
+              </div>
+
+              {/* Amount to collect */}
+              <div>
+                <label className="text-[10px] uppercase font-bold text-slate-600 mb-1 block">
+                  Payment Amount Received (₹)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={settleMember.loss_amount || undefined}
+                  value={settleAmount}
+                  onChange={(e) => setSettleAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  placeholder="Enter amount paid"
+                />
+              </div>
+
+              {/* Payment Mode & Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-slate-600 mb-1 block">
+                    Payment Mode
+                  </label>
+                  <select
+                    value={settlePaymentMode}
+                    onChange={(e) => setSettlePaymentMode(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Online">Online</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Card">Card</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-slate-600 mb-1 block">
+                    Payment Date
+                  </label>
+                  <input
+                    type="date"
+                    value={settleDate}
+                    onChange={(e) => setSettleDate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="text-[10px] uppercase font-bold text-slate-600 mb-1 block">
+                  Remarks / Payment Notes
+                </label>
+                <input
+                  type="text"
+                  value={settleNotes}
+                  onChange={(e) => setSettleNotes(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-emerald-500"
+                  placeholder="e.g. Cleared pending loss fee in cash"
+                />
+              </div>
+
+              {/* Reactivate checkbox */}
+              <div className="bg-emerald-50/50 border border-emerald-200/60 p-3 rounded-xl flex items-center gap-2.5 cursor-pointer select-none" onClick={() => setSettleReactivate(!settleReactivate)}>
+                <input 
+                  type="checkbox" 
+                  checked={settleReactivate} 
+                  onChange={(e) => setSettleReactivate(e.target.checked)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer" 
+                />
+                <div>
+                  <div className="text-xs font-bold text-emerald-900">Reactivate Student Membership</div>
+                  <div className="text-[9px] text-emerald-700">Re-enroll student into active members directory</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50">
+              <button 
+                disabled={isSettling}
+                onClick={() => setSettleMember(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 rounded-xl border border-slate-200"
+              >
+                Cancel
+              </button>
+              <button 
+                disabled={isSettling}
+                onClick={handleConfirmSettle}
+                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center gap-2 shadow-md shadow-emerald-600/20 disabled:opacity-50"
+              >
+                {isSettling ? <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span> : <span className="material-symbols-outlined text-sm">check_circle</span>}
+                Confirm Payment
               </button>
             </div>
           </div>

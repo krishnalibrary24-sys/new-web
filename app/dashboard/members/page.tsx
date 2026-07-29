@@ -95,13 +95,11 @@ export default function MembersPage() {
   // Reset renewal and left states when selectedMember changes
   useEffect(() => {
     if (selectedMember) {
-      const plan = selectedMember.plan_amount || (selectedMember.shift === 'Full Day' ? 1000 : 600);
-      setRenewPrice(plan);
-      setRenewDiscount(0);
-      setRenewPaymentMode("Cash");
       setIsRenewingInline(false);
-      
+      setRenewPrice(selectedMember.plan_amount || (selectedMember.shift === "Full Day" ? 1000 : 600));
+      setRenewDiscount(0);
       setRenewDuration(1);
+      setRenewPaymentMode("Cash");
       setRenewCustomMonths("");
       setRenewIsCustomDuration(false);
       setRenewDurationType(selectedMember.permanent_id?.includes('U') ? "Days" : "Months");
@@ -112,6 +110,13 @@ export default function MembersPage() {
       setLeftLossAmount(selectedMember.outstanding_dues || 0);
       setLeftDate(new Date().toISOString().split('T')[0]);
       setLeftReason("");
+
+      setIsSettlingLoss(false);
+      setSettleLossAmount(selectedMember.loss_amount || 0);
+      setSettleLossPaymentMode("Cash");
+      setSettleLossDate(new Date().toISOString().split('T')[0]);
+      setSettleLossNotes(`Loss Payment Settlement — Cleared loss fee for ${selectedMember.full_name}`);
+      setSettleLossReactivate(false);
 
       // Initialize Edit Profile states
       setIsEditingProfile(false);
@@ -381,6 +386,71 @@ export default function MembersPage() {
       setIsMarkingLeft(false);
     } catch (err: any) {
       alert(err.message || "Failed to mark member as left.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleSettleLossPayment = async (member: any) => {
+    const paidAmt = Number(settleLossAmount);
+    if (isNaN(paidAmt) || paidAmt <= 0) {
+      alert("Please enter a valid payment amount greater than ₹0.");
+      return;
+    }
+    setIsActionLoading(true);
+    try {
+      const { error: payErr } = await supabase
+        .from('payments')
+        .insert([{
+          member_id: member.id,
+          amount: paidAmt,
+          branch: member.branch || activeBranch,
+          payment_mode: settleLossPaymentMode,
+          paid_at: new Date(settleLossDate).toISOString(),
+          notes: settleLossNotes || `Loss Payment Settlement — Cleared loss fee for ${member.full_name}`
+        }]);
+
+      if (payErr) throw payErr;
+
+      const remainingLoss = Math.max(0, (member.loss_amount || 0) - paidAmt);
+      const memberPayload: any = {
+        loss_amount: remainingLoss,
+        left_with_dues: remainingLoss > 0,
+        payment_status: remainingLoss > 0 ? 'LOSS' : 'PAID',
+        updated_at: new Date().toISOString()
+      };
+
+      if (settleLossReactivate) {
+        memberPayload.is_active = true;
+        memberPayload.status = 'ACTIVE';
+        memberPayload.left_at = null;
+        memberPayload.left_reason = null;
+      }
+
+      const { error: memberErr } = await supabase
+        .from('members')
+        .update(memberPayload)
+        .eq('id', member.id);
+
+      if (memberErr) throw memberErr;
+
+      await logActivity(
+        activeBranch,
+        "payment_recorded",
+        `Recorded Loss Payment clearance of ₹${paidAmt} (${settleLossPaymentMode}) for left member ${member.full_name} (${member.permanent_id}). Remaining Loss: ₹${remainingLoss}${settleLossReactivate ? ' (Student Reactivated)' : ''}`
+      );
+
+      const updatedObj = { ...member, ...memberPayload };
+      setMembers(prev => prev.map(m => m.id === member.id ? updatedObj : m));
+      setSelectedMember(updatedObj);
+
+      const { data: pData } = await supabase.from('payments').select('*').eq('member_id', member.id).order('paid_at', { ascending: false });
+      if (pData) setMemberPayments(pData);
+
+      setIsSettlingLoss(false);
+      alert(`Success! Loss payment of ₹${paidAmt.toLocaleString('en-IN')} recorded for ${member.full_name}.`);
+    } catch (err: any) {
+      alert("Failed to settle loss payment: " + (err.message || err));
     } finally {
       setIsActionLoading(false);
     }
@@ -1588,6 +1658,73 @@ export default function MembersPage() {
                   </div>
                 </div>
               )}
+
+              {/* Settle Loss Payment sub-form */}
+              {isSettlingLoss && (
+                <div className="mt-5 p-5 rounded-2xl bg-emerald-50/50 border border-emerald-500/30 space-y-4 animate-fade-in-fast">
+                  <div className="flex items-center gap-2 text-emerald-700 text-xs font-bold uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-base">price_check</span>
+                    Settle Loss Fee (Unpaid Amount: ₹{(selectedMember.loss_amount || 0).toLocaleString('en-IN')})
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-slate-600 mb-1 block">Amount Paid (₹)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={settleLossAmount}
+                        onChange={(e) => setSettleLossAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="input-premium !py-2 !text-sm w-full font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-slate-600 mb-1 block">Payment Mode</label>
+                      <select
+                        value={settleLossPaymentMode}
+                        onChange={(e) => setSettleLossPaymentMode(e.target.value)}
+                        className="input-premium !py-2 !text-sm w-full"
+                      >
+                        <option value="Cash">Cash</option>
+                        <option value="Online">Online</option>
+                        <option value="UPI">UPI</option>
+                        <option value="Card">Card</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-slate-600 mb-1 block">Payment Date</label>
+                      <input
+                        type="date"
+                        value={settleLossDate}
+                        onChange={(e) => setSettleLossDate(e.target.value)}
+                        className="input-premium !py-2 !text-sm w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-slate-600 mb-1 block">Remarks / Notes</label>
+                    <input
+                      type="text"
+                      value={settleLossNotes}
+                      onChange={(e) => setSettleLossNotes(e.target.value)}
+                      className="input-premium !py-2 !text-sm w-full"
+                      placeholder="e.g. Cleared loss payment in cash"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => setSettleLossReactivate(!settleLossReactivate)}>
+                    <input
+                      type="checkbox"
+                      checked={settleLossReactivate}
+                      onChange={(e) => setSettleLossReactivate(e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-slate-800">Reactivate Student Membership</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Modal Actions */}
@@ -1602,7 +1739,7 @@ export default function MembersPage() {
                     Save
                   </button>
                 </>
-              ) : !isRenewingInline && !isMarkingLeft ? (
+              ) : !isRenewingInline && !isMarkingLeft && !isSettlingLoss ? (
                 <>
                   <button disabled={isActionLoading} onClick={() => handleDelete(selectedMember.id)} className="col-span-1 btn-danger px-2 sm:px-4 py-2 disabled:opacity-50 flex justify-center items-center gap-1 text-[11px] sm:text-xs font-bold">
                     <span className="material-symbols-outlined text-sm sm:text-base">delete</span>
@@ -1633,9 +1770,17 @@ export default function MembersPage() {
                     <span className="material-symbols-outlined text-sm sm:text-base">app_registration</span>
                     Edit in Admission
                   </button>
-                  <button disabled={isActionLoading} onClick={() => setIsRenewingInline(true)} className="col-span-2 btn-primary px-4 py-2.5 sm:flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold mt-1 sm:mt-0">
-                    Renew Subscription
-                  </button>
+
+                  {(selectedMember.left_with_dues || (selectedMember.loss_amount || 0) > 0) ? (
+                    <button disabled={isActionLoading} onClick={() => setIsSettlingLoss(true)} className="col-span-2 btn-primary !bg-emerald-600 hover:!bg-emerald-700 !text-white px-4 py-2.5 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold mt-1 sm:mt-0">
+                      <span className="material-symbols-outlined text-base">payments</span>
+                      Settle Loss Fee (₹{(selectedMember.loss_amount || 0).toLocaleString('en-IN')})
+                    </button>
+                  ) : (
+                    <button disabled={isActionLoading} onClick={() => setIsRenewingInline(true)} className="col-span-2 btn-primary px-4 py-2.5 sm:flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold mt-1 sm:mt-0">
+                      Renew Subscription
+                    </button>
+                  )}
                 </>
               ) : isRenewingInline ? (
                 <>
@@ -1645,6 +1790,16 @@ export default function MembersPage() {
                   <button disabled={isActionLoading} onClick={() => handleRenew(selectedMember)} className="btn-primary px-4 py-2.5 flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold">
                     {isActionLoading ? <span className="material-symbols-outlined animate-spin text-base">progress_activity</span> : null}
                     Confirm Renewal & Print
+                  </button>
+                </>
+              ) : isSettlingLoss ? (
+                <>
+                  <button disabled={isActionLoading} onClick={() => setIsSettlingLoss(false)} className="btn-ghost px-4 py-2.5 disabled:opacity-50 text-xs font-bold border border-slate-300 text-slate-700">
+                    Cancel
+                  </button>
+                  <button disabled={isActionLoading} onClick={() => handleSettleLossPayment(selectedMember)} className="btn-primary !bg-emerald-600 hover:!bg-emerald-700 !text-white px-4 py-2.5 flex-1 flex justify-center items-center gap-2 disabled:opacity-50 text-xs font-bold">
+                    {isActionLoading ? <span className="material-symbols-outlined animate-spin text-base">progress_activity</span> : null}
+                    Confirm Loss Settlement
                   </button>
                 </>
               ) : (
