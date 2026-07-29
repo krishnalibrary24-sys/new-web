@@ -53,6 +53,13 @@ export default function MembersPage() {
   const [leftDate, setLeftDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [leftReason, setLeftReason] = useState<string>("");
 
+  const [isSettlingLoss, setIsSettlingLoss] = useState<boolean>(false);
+  const [settleLossAmount, setSettleLossAmount] = useState<number | "">("");
+  const [settleLossPaymentMode, setSettleLossPaymentMode] = useState<string>("Cash");
+  const [settleLossDate, setSettleLossDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [settleLossNotes, setSettleLossNotes] = useState<string>("");
+  const [settleLossReactivate, setSettleLossReactivate] = useState<boolean>(false);
+
   // Display style toggler (tiles vs list)
   const [viewMode, setViewMode] = useState<'tiles' | 'list'>('tiles');
 
