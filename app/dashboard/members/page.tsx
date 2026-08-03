@@ -808,10 +808,10 @@ export default function MembersPage() {
         theme: 'grid',
         bodyStyles: { fontSize: 9, textColor: [51, 65, 85] },
         columnStyles: {
-          0: { fontStyle: 'bold', fillColor: [248, 250, 252], width: 45 },
-          1: { width: 55 },
-          2: { fontStyle: 'bold', fillColor: [248, 250, 252], width: 45 },
-          3: { width: 45 }
+          0: { fontStyle: 'bold', fillColor: [248, 250, 252], cellWidth: 45 },
+          1: { cellWidth: 55 },
+          2: { fontStyle: 'bold', fillColor: [248, 250, 252], cellWidth: 45 },
+          3: { cellWidth: 45 }
         },
         margin: { left: 14, right: 14 }
       });
@@ -841,10 +841,10 @@ export default function MembersPage() {
         headStyles: { fillColor: [0, 49, 120], textColor: [255, 255, 255], fontSize: 9.5, fontStyle: 'bold' },
         bodyStyles: { fontSize: 9, textColor: [51, 65, 85] },
         columnStyles: {
-          0: { width: 35 },
-          1: { fontStyle: 'bold', textColor: [21, 128, 61], width: 30 },
-          2: { width: 30 },
-          3: { width: 95 }
+          0: { cellWidth: 35 },
+          1: { fontStyle: 'bold', textColor: [21, 128, 61], cellWidth: 30 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 95 }
         },
         margin: { left: 14, right: 14 },
         didDrawPage: (data) => {

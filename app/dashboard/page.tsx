@@ -199,7 +199,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           let cashRevenueVal = 0;
           let onlineRevenueVal = 0;
           
-          (payments || []).forEach(p => {
+          (payments || []).forEach((p: any) => {
              const amt = Number(p.amount || 0);
              const paidDate = p.paid_at ? new Date(p.paid_at) : null;
              const matchesMonth = !isFiltered || (paidDate && paidDate >= startDate! && paidDate <= endDate!);
@@ -322,7 +322,7 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           let todayCashVal = 0;
           let todayOnlineVal = 0;
           const todayPaymentsList: any[] = [];
-          (payments || []).forEach(p => {
+          (payments || []).forEach((p: any) => {
             if (!p.paid_at) return;
             const paidDate = new Date(p.paid_at);
             if (paidDate >= startOfToday && paidDate <= endOfToday) {

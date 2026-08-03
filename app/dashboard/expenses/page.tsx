@@ -156,10 +156,10 @@ export default function ExpensesPage() {
         theme: 'grid',
         bodyStyles: { fontSize: 9.5, textColor: [30, 41, 59] },
         columnStyles: {
-          0: { fontStyle: 'bold', fillColor: [254, 242, 242], width: 45 },
-          1: { fontStyle: 'bold', textColor: [220, 38, 38], width: 55 },
-          2: { fontStyle: 'bold', fillColor: [248, 250, 252], width: 45 },
-          3: { width: 45 }
+          0: { fontStyle: 'bold', fillColor: [254, 242, 242], cellWidth: 45 },
+          1: { fontStyle: 'bold', textColor: [220, 38, 38], cellWidth: 55 },
+          2: { fontStyle: 'bold', fillColor: [248, 250, 252], cellWidth: 45 },
+          3: { cellWidth: 45 }
         },
         margin: { left: 14, right: 14 }
       });
@@ -189,11 +189,11 @@ export default function ExpensesPage() {
         headStyles: { fillColor: [185, 28, 28], textColor: [255, 255, 255], fontSize: 9.5, fontStyle: 'bold' },
         bodyStyles: { fontSize: 9, textColor: [51, 65, 85] },
         columnStyles: {
-          0: { width: 15 },
-          1: { width: 35 },
-          2: { width: 35 },
-          3: { width: 75 },
-          4: { fontStyle: 'bold', textColor: [220, 38, 38], width: 30, halign: 'right' }
+          0: { cellWidth: 15 },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 75 },
+          4: { fontStyle: 'bold', textColor: [220, 38, 38], cellWidth: 30, halign: 'right' }
         },
         margin: { left: 14, right: 14 },
         didDrawPage: (data) => {
