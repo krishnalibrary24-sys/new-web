@@ -263,21 +263,25 @@ export default function DuesPage() {
                 <span className="material-symbols-outlined text-4xl text-emerald-400/40 mb-3 block">check_circle</span>
                 <div className="text-sm font-medium text-emerald-400/70">All clear! No expiring subscriptions.</div>
               </div>
-            ) : sortedDueSoon.map(m => (
-              <DueMemberCard
-                key={m.id}
-                member={m}
-                type="warning"
-                badgeText={`${getDaysLeft(m.subscription_end_date)}d left`}
-                badgeClass="bg-orange-500/15 text-orange-400 border border-orange-500/20"
-                dateLabel={formatDate(m.subscription_end_date)}
-                onMessage={() => sendWhatsApp(m, 'reminder')}
-                onRenew={() => router.push(`/dashboard/record-payment?memberId=${m.id}`)}
-                messageLabel="Send Reminder"
-                renewLabel="Renew Now"
-                isLoading={actionId === m.id}
-              />
-            ))}
+            ) : sortedDueSoon.map(m => {
+              const expiringAmt = m.outstanding_dues > 0 ? m.outstanding_dues : (m.plan_amount || 1000);
+              const badgeLabel = `₹${expiringAmt} (${getDaysLeft(m.subscription_end_date)}d left)`;
+              return (
+                <DueMemberCard
+                  key={m.id}
+                  member={m}
+                  type="warning"
+                  badgeText={badgeLabel}
+                  badgeClass="bg-orange-500/15 text-orange-400 border border-orange-500/20"
+                  dateLabel={formatDate(m.subscription_end_date)}
+                  onMessage={() => sendWhatsApp(m, 'reminder')}
+                  onRenew={() => router.push(`/dashboard/record-payment?memberId=${m.id}`)}
+                  messageLabel="Send Reminder"
+                  renewLabel="Renew Now"
+                  isLoading={actionId === m.id}
+                />
+              );
+            })}
           </div>
         </div>
 
@@ -328,9 +332,10 @@ export default function DuesPage() {
                 ? getDaysOverdue(m.payment_due_date)
                 : (m.subscription_end_date ? getDaysOverdue(m.subscription_end_date) : 0);
               
+              const overdueAmt = m.outstanding_dues > 0 ? m.outstanding_dues : (m.plan_amount || 1000);
               const badgeLabel = isDuesOverdue
                 ? `₹${m.outstanding_dues || 0} Overdue (${overdueDays}d)`
-                : (m.subscription_end_date ? `${overdueDays}d overdue` : 'Overdue');
+                : (m.subscription_end_date ? `₹${overdueAmt} Overdue (${overdueDays}d)` : `₹${overdueAmt} Overdue`);
               
               const dateTxt = isDuesOverdue
                 ? `Due was: ${formatDate(m.payment_due_date)}`

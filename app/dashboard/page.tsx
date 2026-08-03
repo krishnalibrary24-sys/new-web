@@ -208,6 +208,17 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
                receivedRevenueVal += amt;
                if (p.payment_mode === 'Cash') {
                  cashRevenueVal += amt;
+               } else if (p.payment_mode === 'Split' || p.payment_mode === 'Cash + Online') {
+                 let cAmt = Number(p.cash_amount);
+                 let oAmt = Number(p.online_amount);
+                 if (isNaN(cAmt) || isNaN(oAmt) || (cAmt === 0 && oAmt === 0)) {
+                   const matchCash = p.notes?.match(/Cash:?\s*₹?\s*(\d+)/i);
+                   const matchOnline = p.notes?.match(/Online:?\s*₹?\s*(\d+)/i);
+                   cAmt = matchCash ? Number(matchCash[1]) : Math.round(amt / 2);
+                   oAmt = matchOnline ? Number(matchOnline[1]) : (amt - cAmt);
+                 }
+                 cashRevenueVal += cAmt;
+                 onlineRevenueVal += oAmt;
                } else {
                  onlineRevenueVal += amt;
                }
@@ -318,6 +329,17 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
               const amt = Number(p.amount || 0);
               if (p.payment_mode === 'Cash') {
                 todayCashVal += amt;
+              } else if (p.payment_mode === 'Split' || p.payment_mode === 'Cash + Online') {
+                let cAmt = Number(p.cash_amount);
+                let oAmt = Number(p.online_amount);
+                if (isNaN(cAmt) || isNaN(oAmt) || (cAmt === 0 && oAmt === 0)) {
+                  const matchCash = p.notes?.match(/Cash:?\s*₹?\s*(\d+)/i);
+                  const matchOnline = p.notes?.match(/Online:?\s*₹?\s*(\d+)/i);
+                  cAmt = matchCash ? Number(matchCash[1]) : Math.round(amt / 2);
+                  oAmt = matchOnline ? Number(matchOnline[1]) : (amt - cAmt);
+                }
+                todayCashVal += cAmt;
+                todayOnlineVal += oAmt;
               } else {
                 todayOnlineVal += amt;
               }
@@ -762,7 +784,19 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           const paidDate = p.paid_at ? new Date(p.paid_at) : null;
           return !!(paidDate && paidDate >= startDate! && paidDate <= endDate!);
         });
-        const paidCash = mPayments.filter(p => p.payment_mode === 'Cash').reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        const paidCash = mPayments.reduce((sum, p) => {
+          const amt = Number(p.amount || 0);
+          if (p.payment_mode === 'Cash') return sum + amt;
+          if (p.payment_mode === 'Split' || p.payment_mode === 'Cash + Online') {
+            let cAmt = Number(p.cash_amount);
+            if (isNaN(cAmt) || cAmt === 0) {
+              const matchCash = p.notes?.match(/Cash:?\s*₹?\s*(\d+)/i);
+              cAmt = matchCash ? Number(matchCash[1]) : Math.round(amt / 2);
+            }
+            return sum + cAmt;
+          }
+          return sum;
+        }, 0);
         return { ...m, paidCash };
       }).filter(m => m.paidCash > 0).map(m => ({
         ...m,
@@ -780,7 +814,22 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
           const paidDate = p.paid_at ? new Date(p.paid_at) : null;
           return !!(paidDate && paidDate >= startDate! && paidDate <= endDate!);
         });
-        const paidOnline = mPayments.filter(p => p.payment_mode !== 'Cash').reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        const paidOnline = mPayments.reduce((sum, p) => {
+          const amt = Number(p.amount || 0);
+          if (p.payment_mode === 'Cash') return sum;
+          if (p.payment_mode === 'Split' || p.payment_mode === 'Cash + Online') {
+            let cAmt = Number(p.cash_amount);
+            let oAmt = Number(p.online_amount);
+            if (isNaN(cAmt) || isNaN(oAmt) || (cAmt === 0 && oAmt === 0)) {
+              const matchCash = p.notes?.match(/Cash:?\s*₹?\s*(\d+)/i);
+              const matchOnline = p.notes?.match(/Online:?\s*₹?\s*(\d+)/i);
+              cAmt = matchCash ? Number(matchCash[1]) : Math.round(amt / 2);
+              oAmt = matchOnline ? Number(matchOnline[1]) : (amt - cAmt);
+            }
+            return sum + oAmt;
+          }
+          return sum + amt;
+        }, 0);
         return { ...m, paidOnline };
       }).filter(m => m.paidOnline > 0).map(m => ({
         ...m,

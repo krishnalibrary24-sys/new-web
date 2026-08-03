@@ -167,7 +167,7 @@ export default function MembersPage() {
     } else if (filterStatus === 'inactive') {
       matchesFilter = statusInfo.type === 'inactive';
     } else if (filterStatus === 'unreserved') {
-      matchesFilter = statusInfo.type === 'unreserved';
+      matchesFilter = (!m.seat_no || m.seat_no.trim() === '' || m.seat_no.trim() === '-') && statusInfo.type !== 'left';
     } else if (filterStatus === 'pending') {
       matchesFilter = statusInfo.type === 'pending';
     } else if (filterStatus === 'overdue') {
@@ -179,9 +179,32 @@ export default function MembersPage() {
     }
     return matchesSearch && matchesFilter;
   }).sort((a, b) => {
-    if (sortBy === 'name-asc') return a.full_name.localeCompare(b.full_name);
-    if (sortBy === 'name-desc') return b.full_name.localeCompare(a.full_name);
-    if (sortBy === 'oldest') return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+    // If viewing Left members (or sorting Left members), sort by latest left_at timestamp first!
+    if (filterStatus === 'left' || (a.status === 'LEFT' && b.status === 'LEFT')) {
+      const leftTimeA = a.left_at ? new Date(a.left_at).getTime() : (a.updated_at ? new Date(a.updated_at).getTime() : 0);
+      const leftTimeB = b.left_at ? new Date(b.left_at).getTime() : (b.updated_at ? new Date(b.updated_at).getTime() : 0);
+      if (leftTimeA !== leftTimeB && !isNaN(leftTimeA) && !isNaN(leftTimeB)) {
+        return leftTimeB - leftTimeA; // Latest left student comes at TOP!
+      }
+    }
+
+    if (sortBy === 'name-asc') {
+      return (a.full_name || '').localeCompare(b.full_name || '');
+    }
+    if (sortBy === 'name-desc') {
+      return (b.full_name || '').localeCompare(a.full_name || '');
+    }
+    if (sortBy === 'oldest') {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.joining_date ? new Date(a.joining_date).getTime() : 0);
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.joining_date ? new Date(b.joining_date).getTime() : 0);
+      if (timeA !== timeB && !isNaN(timeA) && !isNaN(timeB)) {
+        return timeA - timeB;
+      }
+      const numA = parseInt((a.permanent_id || '').replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt((b.permanent_id || '').replace(/\D/g, ''), 10) || 0;
+      if (numA !== numB) return numA - numB;
+      return (a.id || '').localeCompare(b.id || '');
+    }
     if (sortBy === 'seat-asc' || sortBy === 'seat-desc') {
       const rawA = a.seat_no;
       const rawB = b.seat_no;
@@ -211,7 +234,19 @@ export default function MembersPage() {
       // Secondary alphabetical tie-breaker (e.g. "12A" vs "12B")
       return sortBy === 'seat-asc' ? rawA.localeCompare(rawB) : rawB.localeCompare(rawA);
     }
-    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(); // newest
+
+    // Default: 'newest'
+    const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.joining_date ? new Date(a.joining_date).getTime() : 0);
+    const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.joining_date ? new Date(b.joining_date).getTime() : 0);
+    if (timeA !== timeB && !isNaN(timeA) && !isNaN(timeB)) {
+      return timeB - timeA;
+    }
+    const numA = parseInt((a.permanent_id || '').replace(/\D/g, ''), 10) || 0;
+    const numB = parseInt((b.permanent_id || '').replace(/\D/g, ''), 10) || 0;
+    if (numA !== numB) {
+      return numB - numA;
+    }
+    return (b.id || '').localeCompare(a.id || '');
   });
 
   const activeCount = members.filter(m => {
@@ -220,7 +255,7 @@ export default function MembersPage() {
   }).length;
 
   const inactiveCount = members.filter(m => getMemberStatus(m).type === 'inactive').length;
-  const unreservedCount = members.filter(m => getMemberStatus(m).type === 'unreserved').length;
+  const unreservedCount = members.filter(m => (!m.seat_no || m.seat_no.trim() === '' || m.seat_no.trim() === '-') && getMemberStatus(m).type !== 'left').length;
   const pendingCount = members.filter(m => getMemberStatus(m).type === 'pending').length;
   const overdueCount = members.filter(m => getMemberStatus(m).type === 'overdue').length;
   const dueSoonCount = members.filter(m => getMemberStatus(m).type === 'due-soon').length;

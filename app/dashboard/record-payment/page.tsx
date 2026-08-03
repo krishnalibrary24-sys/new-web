@@ -45,6 +45,8 @@ function RecordPaymentInner() {
   const [purpose, setPurpose] = useState<"dues" | "renewal" | "collect_dues">("renewal");
   const [amount, setAmount] = useState<number | "">("");
   const [paymentMode, setPaymentMode] = useState("Cash");
+  const [cashAmount, setCashAmount] = useState<number | "">("");
+  const [onlineAmount, setOnlineAmount] = useState<number | "">("");
   const [paidAtDate, setPaidAtDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState("");
   const [shift, setShift] = useState<string>("Morning");
@@ -244,6 +246,44 @@ function RecordPaymentInner() {
     }
   }, [purpose]);
 
+  // Handle Split Amount Auto-Calculations
+  const handleCashAmountChange = (val: number | "") => {
+    setCashAmount(val);
+    const total = Number(amount) || 0;
+    if (val === "") {
+      setOnlineAmount(total);
+    } else {
+      const numVal = Math.max(0, Number(val));
+      setOnlineAmount(Math.max(0, total - numVal));
+    }
+  };
+
+  const handleOnlineAmountChange = (val: number | "") => {
+    setOnlineAmount(val);
+    const total = Number(amount) || 0;
+    if (val === "") {
+      setCashAmount(total);
+    } else {
+      const numVal = Math.max(0, Number(val));
+      setCashAmount(Math.max(0, total - numVal));
+    }
+  };
+
+  // Sync split values when paymentMode or total amount changes
+  useEffect(() => {
+    if (paymentMode === "Split") {
+      const total = Number(amount) || 0;
+      const c = Number(cashAmount) || 0;
+      if (cashAmount !== "" && c <= total && c > 0) {
+        setOnlineAmount(total - c);
+      } else {
+        const half = Math.round(total / 2);
+        setCashAmount(half);
+        setOnlineAmount(total - half);
+      }
+    }
+  }, [amount, paymentMode]);
+
   // Sync customExpiryDate when student, purpose, duration type, or joiningDate changes
   useEffect(() => {
     if (!selectedMember) return;
@@ -405,14 +445,30 @@ function RecordPaymentInner() {
       }
 
       // 2. Insert Payment Record (linked to invoice)
+      const cashPart = payLater ? 0 : (paymentMode === 'Cash' ? amountVal : (paymentMode === 'Split' ? (Number(cashAmount) || 0) : 0));
+      const onlinePart = payLater ? 0 : ((paymentMode === 'Online' || paymentMode === 'UPI') ? amountVal : (paymentMode === 'Split' ? (Number(onlineAmount) || 0) : 0));
+
+      if (!payLater && paymentMode === 'Split') {
+        if (cashPart + onlinePart !== amountVal) {
+          throw new Error(`Split payment total (Cash ₹${cashPart} + Online ₹${onlinePart} = ₹${cashPart + onlinePart}) does not match total amount paid ₹${amountVal}`);
+        }
+      }
+
+      let finalNotes = notesText;
+      if (!payLater && paymentMode === 'Split') {
+        finalNotes += ` (Split Payment: Cash ₹${cashPart}, Online ₹${onlinePart})`;
+      }
+
       const { error: paymentErr } = await supabase.from('payments').insert([{
         member_id: selectedMember.id,
         invoice_id: invoiceIdToLink,
         amount: amountVal,
         branch: activeBranch,
         payment_mode: payLater ? "Cash" : paymentMode,
+        cash_amount: cashPart,
+        online_amount: onlinePart,
         paid_at: new Date(paidAtDate).toISOString(),
-        notes: notesText
+        notes: finalNotes
       }]);
 
       if (paymentErr) throw new Error(paymentErr.message);
@@ -1255,31 +1311,83 @@ function RecordPaymentInner() {
                   )}
 
                   {!payLater && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Payment Mode */}
-                      <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-on-surface-variant pl-0.5">Payment Mode</label>
-                        <select
-                          value={paymentMode}
-                          onChange={(e) => setPaymentMode(e.target.value)}
-                          className="input-premium appearance-none w-full"
-                        >
-                          <option value="Cash">Cash</option>
-                          <option value="Online">Online</option>
-                        </select>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Payment Mode */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold text-on-surface-variant pl-0.5">Payment Mode</label>
+                          <select
+                            value={paymentMode}
+                            onChange={(e) => setPaymentMode(e.target.value)}
+                            className="input-premium appearance-none w-full"
+                          >
+                            <option value="Cash">Cash (Full Cash)</option>
+                            <option value="Online">Online / UPI (Full Online)</option>
+                            <option value="Split">Split (Cash + Online)</option>
+                          </select>
+                        </div>
+
+                        {/* Paid At Date */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold text-on-surface-variant pl-0.5">Date Paid</label>
+                          <input
+                            type="date"
+                            required
+                            value={paidAtDate}
+                            onChange={(e) => setPaidAtDate(e.target.value)}
+                            className="input-premium w-full !py-2.5"
+                          />
+                        </div>
                       </div>
 
-                      {/* Paid At Date */}
-                      <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-on-surface-variant pl-0.5">Date Paid</label>
-                        <input
-                          type="date"
-                          required
-                          value={paidAtDate}
-                          onChange={(e) => setPaidAtDate(e.target.value)}
-                          className="input-premium w-full !py-2.5"
-                        />
-                      </div>
+                      {/* Split Payment Allocation Inputs */}
+                      {paymentMode === "Split" && (
+                        <div className="p-4 bg-primary/5 border border-primary/20 rounded-2xl space-y-3 animate-fade-in-fast">
+                          <div className="flex justify-between items-center text-xs font-bold text-primary">
+                            <span className="flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-sm">call_split</span>
+                              Split Payment Breakdown (Auto-Calculated)
+                            </span>
+                            <span className="text-[10px] text-on-surface-variant font-medium">Total Paid: ₹{(Number(amount) || 0).toLocaleString('en-IN')}</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] uppercase font-bold text-emerald-400 block pl-0.5">Cash Amount (₹)</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max={Number(amount) || 0}
+                                value={cashAmount}
+                                onChange={(e) => handleCashAmountChange(e.target.value === "" ? "" : Number(e.target.value))}
+                                placeholder="e.g. 500"
+                                className="input-premium w-full !py-2 border-emerald-500/30 focus:border-emerald-500 font-bold text-white"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[10px] uppercase font-bold text-blue-400 block pl-0.5">Online / UPI Amount (₹)</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max={Number(amount) || 0}
+                                value={onlineAmount}
+                                onChange={(e) => handleOnlineAmountChange(e.target.value === "" ? "" : Number(e.target.value))}
+                                placeholder="e.g. 500"
+                                className="input-premium w-full !py-2 border-blue-500/30 focus:border-blue-500 font-bold text-white"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="text-[11px] font-semibold text-slate-300 flex justify-between items-center pt-1 border-t border-white/[0.06]">
+                            <span>Cash: <strong className="text-emerald-400">₹{Number(cashAmount) || 0}</strong></span>
+                            <span>+</span>
+                            <span>Online: <strong className="text-blue-400">₹{Number(onlineAmount) || 0}</strong></span>
+                            <span>=</span>
+                            <span>Total: <strong className="text-white">₹{(Number(cashAmount) || 0) + (Number(onlineAmount) || 0)}</strong></span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1381,7 +1489,9 @@ function RecordPaymentInner() {
                                 ₹{p.amount?.toLocaleString('en-IN')}
                               </td>
                               <td>
-                                <span className="badge badge-info">{p.payment_mode}</span>
+                                <span className={`badge ${p.payment_mode === 'Split' ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' : 'badge-info'}`}>
+                                  {p.payment_mode === 'Split' ? `Split (Cash: ₹${p.cash_amount ?? (p.amount ? Math.round(p.amount/2) : 0)}, Online: ₹${p.online_amount ?? (p.amount ? Math.round(p.amount/2) : 0)})` : p.payment_mode}
+                                </span>
                               </td>
                               <td className="max-w-xs truncate text-on-surface-variant" title={formatDatesInText(p.notes || "")}>
                                 {p.notes ? formatDatesInText(p.notes) : "—"}
