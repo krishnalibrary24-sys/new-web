@@ -473,11 +473,29 @@ function RecordPaymentInner() {
 
       let { error: paymentErr } = await supabase.from('payments').insert([paymentPayload]);
 
-      if (paymentErr && (paymentErr.message?.includes('cash_amount') || paymentErr.message?.includes('schema cache') || paymentErr.message?.includes('column'))) {
-        delete paymentPayload.cash_amount;
-        delete paymentPayload.online_amount;
-        const fallbackRes = await supabase.from('payments').insert([paymentPayload]);
-        paymentErr = fallbackRes.error;
+      if (paymentErr) {
+        let needRetry = false;
+        if (paymentErr.message?.includes('payment_mode_check') || paymentErr.message?.includes('check constraint')) {
+          paymentPayload.payment_mode = 'Cash';
+          needRetry = true;
+        }
+        if (paymentErr.message?.includes('cash_amount') || paymentErr.message?.includes('schema cache') || paymentErr.message?.includes('column')) {
+          delete paymentPayload.cash_amount;
+          delete paymentPayload.online_amount;
+          needRetry = true;
+        }
+
+        if (needRetry) {
+          const fallbackRes = await supabase.from('payments').insert([paymentPayload]);
+          paymentErr = fallbackRes.error;
+
+          if (paymentErr && (paymentErr.message?.includes('cash_amount') || paymentErr.message?.includes('schema cache') || paymentErr.message?.includes('column'))) {
+            delete paymentPayload.cash_amount;
+            delete paymentPayload.online_amount;
+            const fallbackRes2 = await supabase.from('payments').insert([paymentPayload]);
+            paymentErr = fallbackRes2.error;
+          }
+        }
       }
 
       if (paymentErr) throw new Error(paymentErr.message);
