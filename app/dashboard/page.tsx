@@ -1143,7 +1143,9 @@ function AdminDashboard({ activeBranch }: { activeBranch: string }) {
                     <div className="text-right">
                       <div className="text-xs font-black text-emerald-600">₹{pay.amount.toLocaleString('en-IN')}</div>
                       <span className="badge bg-slate-100 text-slate-600 text-[8px] tracking-wide uppercase px-1.5 py-0.5 mt-0.5 rounded-md inline-block">
-                        {pay.payment_mode || 'Cash'}
+                        {pay.payment_mode === 'Split' 
+                          ? `SPLIT (C: ₹${pay.cash_amount ?? Math.round(pay.amount/2)} | O: ₹${pay.online_amount ?? (pay.amount - Math.round(pay.amount/2))})`
+                          : (pay.payment_mode || 'Cash')}
                       </span>
                     </div>
                   </div>
