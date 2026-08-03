@@ -459,7 +459,7 @@ function RecordPaymentInner() {
         finalNotes += ` (Split Payment: Cash ₹${cashPart}, Online ₹${onlinePart})`;
       }
 
-      const { error: paymentErr } = await supabase.from('payments').insert([{
+      const paymentPayload: any = {
         member_id: selectedMember.id,
         invoice_id: invoiceIdToLink,
         amount: amountVal,
@@ -469,7 +469,16 @@ function RecordPaymentInner() {
         online_amount: onlinePart,
         paid_at: new Date(paidAtDate).toISOString(),
         notes: finalNotes
-      }]);
+      };
+
+      let { error: paymentErr } = await supabase.from('payments').insert([paymentPayload]);
+
+      if (paymentErr && (paymentErr.message?.includes('cash_amount') || paymentErr.message?.includes('schema cache') || paymentErr.message?.includes('column'))) {
+        delete paymentPayload.cash_amount;
+        delete paymentPayload.online_amount;
+        const fallbackRes = await supabase.from('payments').insert([paymentPayload]);
+        paymentErr = fallbackRes.error;
+      }
 
       if (paymentErr) throw new Error(paymentErr.message);
 

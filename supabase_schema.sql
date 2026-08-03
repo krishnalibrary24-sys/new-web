@@ -96,10 +96,16 @@ CREATE TABLE IF NOT EXISTS public.payments (
   member_id    UUID NOT NULL REFERENCES public.members(id) ON DELETE CASCADE,
   amount       INTEGER NOT NULL,
   branch       TEXT NOT NULL CHECK (branch IN ('bengali-chowk', 'namnakala')),
-  payment_mode TEXT NOT NULL DEFAULT 'Cash' CHECK (payment_mode IN ('Cash', 'UPI', 'Card', 'Online')),
+  payment_mode TEXT NOT NULL DEFAULT 'Cash' CHECK (payment_mode IN ('Cash', 'UPI', 'Card', 'Online', 'Split')),
+  cash_amount  INTEGER DEFAULT 0,
+  online_amount INTEGER DEFAULT 0,
   paid_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   notes        TEXT
 );
+
+-- Ensure columns exist for existing tables
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS cash_amount INTEGER DEFAULT 0;
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS online_amount INTEGER DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS idx_payments_member_id ON public.payments (member_id);
 CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON public.payments (invoice_id);
