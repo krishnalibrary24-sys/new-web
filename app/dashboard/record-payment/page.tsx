@@ -7,7 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logActivity } from "@/lib/activity";
 import { getTemplate, parseTemplate, formatWhatsAppNumber } from "@/lib/whatsapp";
-import { getMemberStatus, formatDate, formatDatesInText } from "@/lib/utils";
+import { getMemberStatus, formatDate, formatDatesInText, calculateSubscriptionExpiryDate } from "@/lib/utils";
 
 function RecordPaymentInner() {
   const { activeBranch } = useBranch();
@@ -297,11 +297,17 @@ function RecordPaymentInner() {
 
     if (finalDurationType === "Days") {
       baseDate.setDate(baseDate.getDate() + durationDaysVal - 1);
+      const y = baseDate.getFullYear();
+      const m = String(baseDate.getMonth() + 1).padStart(2, '0');
+      const d = String(baseDate.getDate()).padStart(2, '0');
+      setCustomExpiryDate(`${y}-${m}-${d}`);
     } else {
-      // 1M = 30 days, so (durationMonths * 30) - 1
-      baseDate.setDate(baseDate.getDate() + (durationMonths * 30) - 1);
+      const expDate = calculateSubscriptionExpiryDate(joiningDate, durationMonths);
+      const y = expDate.getFullYear();
+      const m = String(expDate.getMonth() + 1).padStart(2, '0');
+      const d = String(expDate.getDate()).padStart(2, '0');
+      setCustomExpiryDate(`${y}-${m}-${d}`);
     }
-    setCustomExpiryDate(baseDate.toISOString().split('T')[0]);
   }, [selectedMember, finalDurationType, durationDaysVal, durationMonths, purpose, joiningDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -514,6 +520,13 @@ function RecordPaymentInner() {
           left_with_dues: remainingDues > 0,
           payment_status: remainingDues > 0 ? 'PENDING' : 'PAID',
         };
+        if (remainingDues === 0) {
+          memberUpdatePayload.loss_amount = 0;
+          memberUpdatePayload.left_at = null;
+          memberUpdatePayload.left_reason = null;
+          memberUpdatePayload.is_active = true;
+          memberUpdatePayload.status = 'ACTIVE';
+        }
         // Activate member if they were INACTIVE waiting for initial payment setup
         if (selectedMember.status === 'INACTIVE') {
           memberUpdatePayload.is_active = true;

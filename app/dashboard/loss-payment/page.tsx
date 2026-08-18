@@ -98,8 +98,12 @@ export default function LossPaymentPage() {
       if (settleReactivate) {
         memberPayload.is_active = true;
         memberPayload.status = 'ACTIVE';
+        memberPayload.seat_no = null;
+        memberPayload.previous_seat_no = null;
         memberPayload.left_at = null;
         memberPayload.left_reason = null;
+        memberPayload.left_with_dues = false;
+        memberPayload.loss_amount = 0;
       }
 
       const { error: memberErr } = await supabase

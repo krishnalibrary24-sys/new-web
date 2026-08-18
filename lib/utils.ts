@@ -69,6 +69,57 @@ export function formatDatesInText(text: string): string {
   });
 }
 
+/**
+ * Calculates subscription expiry date maintaining the same day of the month.
+ * Examples:
+ * - 15/09/2026 + 1 month => 15/10/2026
+ * - 31/08/2026 + 1 month => 30/09/2026 (Sept has 30 days)
+ * - 31/01/2026 + 1 month => 28/02/2026 (or 29/02 in leap year)
+ * - 30/01/2026 + 1 month => 28/02/2026 (or 29/02 in leap year)
+ * - 15/01/2026 + 3 months => 15/04/2026
+ */
+export function calculateSubscriptionExpiryDate(startDateInput: string | Date, months: number): Date {
+  if (!startDateInput) return new Date();
+  
+  let startYear: number;
+  let startMonth: number; // 0-indexed
+  let startDay: number;
+
+  if (typeof startDateInput === 'string') {
+    const parts = startDateInput.split('T')[0].split(/[\-\/]/);
+    if (parts.length === 3 && parts[0].length === 4) {
+      startYear = parseInt(parts[0], 10);
+      startMonth = parseInt(parts[1], 10) - 1;
+      startDay = parseInt(parts[2], 10);
+    } else {
+      const d = new Date(startDateInput);
+      if (isNaN(d.getTime())) return new Date();
+      startYear = d.getFullYear();
+      startMonth = d.getMonth();
+      startDay = d.getDate();
+    }
+  } else {
+    if (isNaN(startDateInput.getTime())) return new Date();
+    startYear = startDateInput.getFullYear();
+    startMonth = startDateInput.getMonth();
+    startDay = startDateInput.getDate();
+  }
+
+  // Target Year and Month
+  const targetTotalMonths = startMonth + months;
+  const targetYear = startYear + Math.floor(targetTotalMonths / 12);
+  const targetMonth = ((targetTotalMonths % 12) + 12) % 12;
+
+  // Total days in the target month (day 0 of targetMonth + 1 gives last day of targetMonth)
+  const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+
+  // Target day is same day or capped at the last day of the target month
+  const targetDay = Math.min(startDay, daysInTargetMonth);
+
+  return new Date(targetYear, targetMonth, targetDay);
+}
+
+
 export function getMemberStatus(member: any) {
   const today = new Date();
   const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());

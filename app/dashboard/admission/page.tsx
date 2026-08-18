@@ -95,7 +95,9 @@ export default function AdmissionPage() {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
+
       if (data) {
+        setExistingMemberState(data);
         setFullName(data.full_name || "");
         setFatherName(data.father_name || "");
         setDob(data.dob ? data.dob.split('T')[0] : "");
@@ -113,6 +115,7 @@ export default function AdmissionPage() {
         }
       } else {
         setRecordFound(false);
+        setExistingMemberState(null);
         setPermanentId("");
         setShowRecordPopup(false);
       }
@@ -193,37 +196,10 @@ export default function AdmissionPage() {
         }
       }
 
+      // For an active member edit, preserve their current seat_no; for new or left re-admission, seat is always null (manual assignment)
       let seatToAllot = null;
-      let prevSeatVal = null;
-
-      if (isReserved && recordFound && permanentId) {
-        const { data: currentMember } = await supabase
-          .from('members')
-          .select('seat_no, previous_seat_no')
-          .eq('permanent_id', permanentId)
-          .eq('branch', activeBranch)
-          .maybeSingle();
-
-        if (currentMember) {
-          seatToAllot = currentMember.seat_no || null;
-          prevSeatVal = currentMember.previous_seat_no || null;
-
-          if (!seatToAllot && prevSeatVal) {
-            const { data: occupant } = await supabase
-              .from('members')
-              .select('id')
-              .eq('branch', activeBranch)
-              .eq('shift', shift)
-              .eq('seat_no', prevSeatVal)
-              .eq('is_active', true)
-              .maybeSingle();
-
-            if (!occupant) {
-              seatToAllot = prevSeatVal;
-              prevSeatVal = null;
-            }
-          }
-        }
+      if (recordFound && permanentId && existingMemberState && existingMemberState.status !== 'LEFT' && !existingMemberState.left_at) {
+        seatToAllot = isReserved ? (existingMemberState.seat_no || null) : null;
       }
 
       const tomorrow = new Date();
@@ -244,11 +220,14 @@ export default function AdmissionPage() {
         targeting_exam: targetingExam || null,
       };
 
+      const isLeftMember = existingMemberState && (existingMemberState.status === 'LEFT' || !!existingMemberState.left_at);
+      const isReAdmitOrNew = !existingMemberState || isLeftMember;
+
       if (!existingMemberState) {
         payload.permanent_id = finalId;
         payload.branch = activeBranch;
-        payload.seat_no = seatToAllot;
-        payload.previous_seat_no = prevSeatVal;
+        payload.seat_no = null; // New admission: manual seat assignment from Seat Map
+        payload.previous_seat_no = null;
         payload.is_active = false; // Inactive pending initial payment
         payload.subscription_end_date = null; // Set during payment setup
         payload.pay_later = true; // Default to pay later with immediate due date
@@ -256,6 +235,10 @@ export default function AdmissionPage() {
         payload.status = 'INACTIVE';
         payload.payment_status = 'PENDING';
         payload.outstanding_dues = basePriceVal;
+        payload.left_at = null;
+        payload.left_with_dues = false;
+        payload.left_reason = null;
+        payload.loss_amount = 0;
       } else {
         // For existing member edits, check if seat category transitioned
         if (existingMemberState.permanent_id !== finalId) {
@@ -265,6 +248,23 @@ export default function AdmissionPage() {
         if (categoryChanged) {
           payload.seat_no = null;
         }
+
+        // If existing member was marked as LEFT, cleanly reset their left status for re-admission (manual seat assignment)
+        if (isLeftMember) {
+          payload.seat_no = null; // Re-admission: manual seat assignment from Seat Map
+          payload.previous_seat_no = null;
+          payload.is_active = false; // Inactive pending payment setup
+          payload.subscription_end_date = null;
+          payload.pay_later = true;
+          payload.payment_due_date = tomorrowStr;
+          payload.status = 'INACTIVE';
+          payload.payment_status = 'PENDING';
+          payload.outstanding_dues = basePriceVal;
+          payload.left_at = null;
+          payload.left_with_dues = false;
+          payload.left_reason = null;
+          payload.loss_amount = 0;
+        }
       }
 
       let memberId = "";
@@ -273,14 +273,29 @@ export default function AdmissionPage() {
         if (updErr) throw new Error(updErr.message);
         if (updatedMember) {
           memberId = updatedMember.id;
-          logActivity(activeBranch, "admission_update", `Updated profile details for existing member: ${fullName} (${existingMemberState.permanent_id})`);
+          const actionTag = isLeftMember ? "admission_reactivate" : "admission_update";
+          const actionMsg = isLeftMember 
+            ? `Re-admitted and reactivated left member: ${fullName} (${existingMemberState.permanent_id})` 
+            : `Updated profile details for existing member: ${fullName} (${existingMemberState.permanent_id})`;
+          logActivity(activeBranch, actionTag, actionMsg);
         }
       } else if (recordFound && permanentId) {
+        payload.left_at = null;
+        payload.left_with_dues = false;
+        payload.left_reason = null;
+        payload.loss_amount = 0;
+        payload.status = 'INACTIVE';
+        payload.is_active = false;
+        payload.pay_later = true;
+        payload.payment_due_date = tomorrowStr;
+        payload.outstanding_dues = basePriceVal;
+        payload.subscription_end_date = null;
+
         const { data: updatedMember, error: updErr } = await supabase.from('members').update(payload).eq('permanent_id', permanentId).eq('branch', activeBranch).select().single();
         if (updErr) throw new Error(updErr.message);
         if (updatedMember) {
           memberId = updatedMember.id;
-          logActivity(activeBranch, "admission_reactivate", `Re-activated and updated profile for member: ${fullName} (${permanentId})`);
+          logActivity(activeBranch, "admission_reactivate", `Re-admitted and reactivated left member: ${fullName} (${permanentId})`);
         }
       } else {
         const { data: insertedMember, error: insErr } = await supabase.from('members').insert([payload]).select().single();
@@ -297,12 +312,12 @@ export default function AdmissionPage() {
       // Reset profile states
       setMobile(""); setFullName(""); setFatherName(""); setDob(""); setGender(""); setAddress(""); setStudentNo(""); setAadharNo(""); setTargetingExam("");
 
-      if (!existingMemberState) {
+      if (isReAdmitOrNew) {
         if (memberId) {
           router.push(`/dashboard/record-payment?memberId=${memberId}`);
         }
       } else {
-        // If it was an edit of an existing member, redirect back to the members dashboard directory
+        // If it was just an edit of an active member, redirect back to members directory
         router.push(`/dashboard/members`);
       }
 

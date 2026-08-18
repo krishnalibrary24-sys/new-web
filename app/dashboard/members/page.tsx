@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
 import { logActivity } from "@/lib/activity";
 import { getLibrarySetting } from "@/lib/settings";
-import { getMemberStatus, checkAndReleaseSeats, formatDate } from "@/lib/utils";
+import { getMemberStatus, checkAndReleaseSeats, formatDate, calculateSubscriptionExpiryDate } from "@/lib/utils";
 import { formatWhatsAppNumber } from "@/lib/whatsapp";
 
 export default function MembersPage() {
@@ -292,35 +292,22 @@ export default function MembersPage() {
 
     let totalPayable = 0;
     let durationStr = "";
+    let newEnd: Date;
     if (isDays) {
       totalPayable = Math.max(0, (renewPrice * durationDaysVal) - renewDiscount);
       durationStr = `${durationDaysVal} day(s)`;
-      baseDate.setDate(baseDate.getDate() + durationDaysVal - 1);
+      const bDate = new Date(baseDate);
+      bDate.setDate(bDate.getDate() + durationDaysVal - 1);
+      newEnd = bDate;
     } else {
       totalPayable = Math.max(0, (renewPrice * months) - renewDiscount);
       durationStr = `${months} month(s)`;
-      baseDate.setDate(baseDate.getDate() + (months * 30) - 1);
+      newEnd = calculateSubscriptionExpiryDate(baseDate, months);
     }
-    const newEnd = baseDate;
 
-    let seatToAllot = member.seat_no || null;
-    let prevSeatVal = member.previous_seat_no || null;
-    
-    if (!seatToAllot && prevSeatVal) {
-      const { data: occupant } = await supabase
-        .from('members')
-        .select('id')
-        .eq('branch', member.branch)
-        .eq('shift', member.shift)
-        .eq('seat_no', prevSeatVal)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (!occupant) {
-        seatToAllot = prevSeatVal;
-        prevSeatVal = null;
-      }
-    }
+    const wasLeft = member.status === 'LEFT' || !!member.left_at;
+    let seatToAllot = wasLeft ? null : (member.seat_no || null);
+    let prevSeatVal = null;
     
     const updatedData = { 
       subscription_end_date: newEnd.toISOString(), 
@@ -399,7 +386,7 @@ export default function MembersPage() {
     try {
       const leftPayload = {
         is_active: false,
-        previous_seat_no: member.seat_no || member.previous_seat_no || null,
+        previous_seat_no: null,
         seat_no: null, // Release the seat!
         left_with_dues: leftWithDues,
         loss_amount: leftWithDues ? (Number(leftLossAmount) || 0) : 0,
@@ -467,6 +454,8 @@ export default function MembersPage() {
         memberPayload.status = 'ACTIVE';
         memberPayload.left_at = null;
         memberPayload.left_reason = null;
+        memberPayload.left_with_dues = false;
+        memberPayload.loss_amount = 0;
       }
 
       const { error: memberErr } = await supabase
@@ -579,30 +568,15 @@ export default function MembersPage() {
         setMembers(prev => prev.map(m => m.id === member.id ? { ...m, ...payload } : m));
         setSelectedMember({ ...member, ...payload });
       } else {
-        let seatToAllot = null;
-        let prevSeatVal = member.previous_seat_no || null;
-        
-        if (prevSeatVal) {
-          const { data: occupant } = await supabase
-            .from('members')
-            .select('id')
-            .eq('branch', member.branch)
-            .eq('shift', member.shift)
-            .eq('seat_no', prevSeatVal)
-            .eq('is_active', true)
-            .maybeSingle();
-
-          if (!occupant) {
-            seatToAllot = prevSeatVal;
-            prevSeatVal = null;
-          }
-        }
-        
         const payload = {
           is_active: true,
-          seat_no: seatToAllot,
-          previous_seat_no: prevSeatVal,
+          seat_no: null,
+          previous_seat_no: null,
           status: 'ACTIVE',
+          left_at: null,
+          left_with_dues: false,
+          left_reason: null,
+          loss_amount: 0,
           updated_at: new Date().toISOString()
         };
         const { error } = await supabase.from('members').update(payload).eq('id', member.id);
