@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from 'next/navigation';
 import { logActivity } from "@/lib/activity";
 import { getLibrarySetting } from "@/lib/settings";
-import { getMemberStatus, checkAndReleaseSeats, formatDate, calculateSubscriptionExpiryDate } from "@/lib/utils";
+import { getMemberStatus, checkAndReleaseSeats, formatDate, calculateSubscriptionExpiryDate, formatStaffLoginLabel } from "@/lib/utils";
 import { formatWhatsAppNumber } from "@/lib/whatsapp";
 
 export default function MembersPage() {
@@ -344,13 +344,17 @@ export default function MembersPage() {
       .select()
       .single();
 
+    const currentRole = typeof window !== 'undefined' ? localStorage.getItem("krishna_role") || "staff" : "staff";
+    const currentStaffId = typeof window !== 'undefined' ? localStorage.getItem("krishna_staff_id") || currentRole : currentRole;
+    const operatorLabel = formatStaffLoginLabel(currentStaffId, currentRole, activeBranch);
+
     await supabase.from('payments').insert([{
       member_id: member.id,
       invoice_id: newInv ? newInv.id : null,
       amount: totalPayable,
       branch: member.branch,
       payment_mode: renewPaymentMode,
-      notes: `Subscription Renewal — Joining: ${formatDate(joiningDateStr)}, Expiry: ${formatDate(newEnd)}. Duration: ${durationStr}. Base Price: ₹${renewPrice}/${isDays ? "day" : "mo"}, Discount: ₹${renewDiscount}`
+      notes: `Subscription Renewal — Joining: ${formatDate(joiningDateStr)}, Expiry: ${formatDate(newEnd)}. Duration: ${durationStr}. Base Price: ₹${renewPrice}/${isDays ? "day" : "mo"}, Discount: ₹${renewDiscount} [Logged by: ${operatorLabel}]`
     }]);
 
     logActivity(activeBranch, "student_renew", `Renewed subscription for ${member.full_name} (${member.permanent_id}${member.student_no ? ` [#${member.student_no}]` : ''}) by ${durationStr}`);

@@ -245,3 +245,26 @@ export async function checkAndReleaseSeats(members: any[], activeBranch: string)
   }
   return { updatedMembers, changed };
 }
+
+export function formatStaffLoginLabel(staffId?: string | null, role?: string | null, branch?: string | null): string {
+  const id = (staffId || "").trim().toUpperCase();
+  const r = (role || "").trim().toLowerCase();
+  const b = (branch || "").trim().toLowerCase();
+
+  // Admin
+  if (id === 'ADMIN' || (r === 'admin' && !id.includes('NAMNAKALA') && !id.includes('BENGALI'))) {
+    return 'Admin';
+  }
+
+  // Bengali Chowk staff
+  if (id.includes('BENGALI') || r === 'bengali-chowk' || b === 'bengali-chowk') {
+    return 'Staff - Bengali Chowk';
+  }
+
+  // Namnakala staff
+  if (id.includes('NAMNAKALA') || r === 'namnakala' || b === 'namnakala') {
+    return 'Staff - Namnakala';
+  }
+
+  return b === 'namnakala' ? 'Staff - Namnakala' : 'Staff - Bengali Chowk';
+}

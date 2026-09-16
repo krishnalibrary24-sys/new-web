@@ -7,7 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logActivity } from "@/lib/activity";
 import { getTemplate, parseTemplate, formatWhatsAppNumber } from "@/lib/whatsapp";
-import { getMemberStatus, formatDate, formatDatesInText, calculateSubscriptionExpiryDate } from "@/lib/utils";
+import { getMemberStatus, formatDate, formatDatesInText, calculateSubscriptionExpiryDate, formatStaffLoginLabel } from "@/lib/utils";
 
 function RecordPaymentInner() {
   const { activeBranch } = useBranch();
@@ -460,10 +460,16 @@ function RecordPaymentInner() {
         }
       }
 
+      // Extract operator login info
+      const currentRole = typeof window !== 'undefined' ? localStorage.getItem("krishna_role") || "staff" : "staff";
+      const currentStaffId = typeof window !== 'undefined' ? localStorage.getItem("krishna_staff_id") || currentRole : currentRole;
+      const operatorLabel = formatStaffLoginLabel(currentStaffId, currentRole, activeBranch);
+
       let finalNotes = notesText;
       if (!payLater && paymentMode === 'Split') {
         finalNotes += ` (Split Payment: Cash ₹${cashPart}, Online ₹${onlinePart})`;
       }
+      finalNotes += ` [Logged by: ${operatorLabel}]`;
 
       const paymentPayload: any = {
         member_id: selectedMember.id,

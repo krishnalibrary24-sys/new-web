@@ -3,7 +3,14 @@ import React, { useEffect, useState, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getTemplate, parseTemplate, formatWhatsAppNumber } from '@/lib/whatsapp';
-import { formatDate, ensureDDMMYYYY, formatDatesInText } from '@/lib/utils';
+import { formatDate, ensureDDMMYYYY, formatDatesInText, formatStaffLoginLabel } from '@/lib/utils';
+
+function cleanPaymentNotes(notes: string) {
+  if (!notes) return "";
+  return notes
+    .replace(/\[(?:Logged|Recorded|Processed|Collected)\s*by:\s*[^\]]+\]/gi, '')
+    .trim();
+}
 
 function parseInvoiceNotes(notes: string) {
   const info = {
@@ -47,6 +54,7 @@ function InvoiceContent() {
   const [member, setMember] = useState<any>(null);
   const [invoice, setInvoice] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
+  const [activityStaffLabel, setActivityStaffLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Settings loaded from localStorage
@@ -140,6 +148,29 @@ function InvoiceContent() {
           }
         }
       }
+
+      // Check activity_logs for staff who processed payment/admission/renew
+      const currentMem = invData ? invData.member : null;
+      if (currentMem) {
+        try {
+          const { data: actLogs } = await supabase
+            .from('activity_logs')
+            .select('staff_id, action_type')
+            .or(`details.ilike.%${currentMem.permanent_id}%,details.ilike.%${currentMem.full_name}%`)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          if (actLogs && actLogs.length > 0) {
+            const payLog = actLogs.find((l: any) => l.action_type.includes('payment') || l.action_type.includes('renew') || l.action_type.includes('admission')) || actLogs[0];
+            if (payLog?.staff_id) {
+              setActivityStaffLabel(formatStaffLoginLabel(payLog.staff_id, null, currentMem.branch));
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
       setLoading(false);
     };
     fetchData();
@@ -164,6 +195,54 @@ function InvoiceContent() {
     const notesToParse = setupPayment ? setupPayment.notes : (payments[0]?.notes || "");
     return parseInvoiceNotes(notesToParse);
   }, [payments]);
+
+  // Extract operator who processed the payment (clean format: Bengali Chowk, Namnakala, Admin)
+  const getPaymentOperator = (p: any) => {
+    let raw = "";
+    if (p?.notes) {
+      const match = p.notes.match(/\[(?:Logged|Recorded|Processed|Collected)\s*by:\s*([^\]]+)\]/i) ||
+                    p.notes.match(/(?:Logged|Recorded|Processed|Collected)\s*by:\s*([^\n\r,\.]+)/i);
+      if (match) raw = match[1].trim();
+    }
+    if (!raw && activityStaffLabel) {
+      raw = activityStaffLabel;
+    }
+    if (!raw) {
+      raw = p?.branch || member?.branch || "";
+    }
+
+    const lower = raw.toLowerCase();
+    if (lower.includes('bengali')) return 'Staff - Bengali Chowk';
+    if (lower.includes('namnakala')) return 'Staff - Namnakala';
+    if (lower.includes('admin')) return 'Admin';
+
+    return formatStaffLoginLabel(raw, null, p?.branch || member?.branch);
+  };
+
+  const processedBy = useMemo(() => {
+    let raw = "";
+    if (payments && payments.length > 0) {
+      for (const p of payments) {
+        if (p.notes) {
+          const match = p.notes.match(/\[(?:Logged|Recorded|Processed|Collected)\s*by:\s*([^\]]+)\]/i) ||
+                        p.notes.match(/(?:Logged|Recorded|Processed|Collected)\s*by:\s*([^\n\r,\.]+)/i);
+          if (match) {
+            raw = match[1].trim();
+            break;
+          }
+        }
+      }
+    }
+    if (!raw && activityStaffLabel) raw = activityStaffLabel;
+    if (!raw) raw = member?.branch || "";
+
+    const lower = raw.toLowerCase();
+    if (lower.includes('bengali')) return 'Staff - Bengali Chowk';
+    if (lower.includes('namnakala')) return 'Staff - Namnakala';
+    if (lower.includes('admin')) return 'Admin';
+
+    return formatStaffLoginLabel(null, null, member?.branch);
+  }, [payments, activityStaffLabel, member]);
 
   // Calculate pricing breakdown
   const discountAmount = useMemo(() => parsedInfo.discount || member?.discount || 0, [parsedInfo, member]);
@@ -352,10 +431,13 @@ function InvoiceContent() {
               {payments.map((p, idx) => (
                 <div key={p.id} className="flex justify-between items-center text-xs bg-[#f8fafc] border border-[#e2e8f0] px-4 py-2.5 rounded-xl font-lexend">
                   <div>
-                    <span className="font-bold text-[#1a1a2e]">Installment #{idx + 1} ({p.payment_mode})</span>
-                    <span className="text-[#64748b] text-[10px] ml-2">on {formatDate(p.paid_at)} at {new Date(p.paid_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-[#1a1a2e]">Installment #{idx + 1} ({p.payment_mode})</span>
+                      <span className="text-[#64748b] text-[10px]">on {formatDate(p.paid_at)} at {new Date(p.paid_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      <span className="text-[9px] text-slate-400 font-medium">({getPaymentOperator(p)})</span>
+                    </div>
                     {p.notes && (
-                      <p className="text-[10px] text-[#64748b] mt-0.5 italic">{formatDatesInText(p.notes.split('—')[1] || p.notes)}</p>
+                      <p className="text-[10px] text-[#64748b] mt-0.5 italic">{formatDatesInText(cleanPaymentNotes(p.notes.split('—')[1] || p.notes))}</p>
                     )}
                   </div>
                   <span className="font-bold font-mono text-[#003178] text-sm">₹{p.amount}.00</span>

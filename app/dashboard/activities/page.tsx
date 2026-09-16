@@ -37,7 +37,7 @@ export default function ActivitiesPage() {
   // Search & Filter state
   const [search, setSearch] = useState("");
   const [selectedAction, setSelectedAction] = useState("all");
-  const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "7days" | "30days" | "custom">("all");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "7days" | "30days" | "60days" | "custom">("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -45,13 +45,13 @@ export default function ActivitiesPage() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      // Auto-cleanup: delete activity logs older than 30 days from backend
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      // Auto-cleanup: delete activity logs older than 60 days from backend
+      const sixtyDaysAgo = new Date();
+      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
       await supabase
         .from('activity_logs')
         .delete()
-        .lt('created_at', thirtyDaysAgo.toISOString());
+        .lt('created_at', sixtyDaysAgo.toISOString());
 
       const { data, error } = await supabase
         .from('activity_logs')
@@ -205,6 +205,10 @@ export default function ActivitiesPage() {
       const thirtyDaysAgo = new Date(today);
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       matchesDate = logDate.getTime() >= thirtyDaysAgo.getTime();
+    } else if (dateFilter === "60days") {
+      const sixtyDaysAgo = new Date(today);
+      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+      matchesDate = logDate.getTime() >= sixtyDaysAgo.getTime();
     } else if (dateFilter === "custom") {
       if (startDate) {
         const start = new Date(startDate);
@@ -346,11 +350,12 @@ CREATE POLICY "anon_all_activity_logs" ON public.activity_logs FOR ALL TO anon, 
                   onChange={e => setDateFilter(e.target.value as any)}
                   className="w-full input-premium !py-2.5 !text-xs appearance-none [&>option]:bg-white [&>option]:text-slate-800"
                 >
-                  <option value="all">All Time</option>
+                  <option value="all">All Time (Last 60 Days)</option>
                   <option value="today">Today</option>
                   <option value="yesterday">Yesterday</option>
                   <option value="7days">Last 7 Days</option>
                   <option value="30days">Last 30 Days</option>
+                  <option value="60days">Last 60 Days</option>
                   <option value="custom">Custom Range</option>
                 </select>
               </div>
