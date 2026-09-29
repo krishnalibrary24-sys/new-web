@@ -167,11 +167,11 @@ function RecordPaymentInner() {
       setRenewIsCustomDuration(false);
       setRenewDurationDays(30);
       setPayLater(false);
-      if ((selectedMember.outstanding_dues || 0) > 0 && selectedMember.subscription_end_date) {
-        setPurpose("collect_dues");
-      } else {
-        setPurpose("renewal");
-      }
+      const targetPurpose = ((selectedMember.outstanding_dues || 0) > 0 && selectedMember.subscription_end_date)
+        ? "collect_dues"
+        : "renewal";
+      setPurpose(targetPurpose);
+
       if (selectedMember.payment_due_date) {
         setDueDate(selectedMember.payment_due_date);
       } else {
@@ -188,9 +188,8 @@ function RecordPaymentInner() {
       const todayStr = `${yyyy}-${mm}-${dd}`;
       
       let startDateStr = todayStr;
-      if (selectedMember.subscription_end_date && purpose === "renewal") {
+      if (selectedMember.subscription_end_date && targetPurpose === "renewal") {
         const endD = new Date(selectedMember.subscription_end_date);
-        endD.setDate(endD.getDate() + 1); // Start the day after it expires
         
         const todayZero = new Date(today);
         todayZero.setHours(0,0,0,0);
@@ -198,9 +197,12 @@ function RecordPaymentInner() {
         const diffDays = (todayZero.getTime() - endD.getTime()) / (1000 * 3600 * 24);
         
         // If the calculated start date is in the future, or within the last 7 days (grace period),
-        // we do a continuous extension. Otherwise, if they've been gone a long time, default to today.
+        // we do a continuous extension starting on the expiry date itself. Otherwise, default to today.
         if (diffDays <= 7) {
-          startDateStr = endD.toISOString().split('T')[0];
+          const y = endD.getFullYear();
+          const m = String(endD.getMonth() + 1).padStart(2, '0');
+          const d = String(endD.getDate()).padStart(2, '0');
+          startDateStr = `${y}-${m}-${d}`;
         }
       }
       

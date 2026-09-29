@@ -20,6 +20,9 @@ export default function SeatingPage() {
   const [loading, setLoading] = useState(true);
   const [unassignedMembers, setUnassignedMembers] = useState<any[]>([]);
   const [allActiveMembersCount, setAllActiveMembersCount] = useState(0);
+  const [unreservedCount, setUnreservedCount] = useState(0);
+  const [showAwaitingModal, setShowAwaitingModal] = useState(false);
+  const [awaitingSearch, setAwaitingSearch] = useState("");
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const [modalSearch, setModalSearch] = useState("");
@@ -97,6 +100,9 @@ export default function SeatingPage() {
     if (data) {
       const { updatedMembers } = await checkAndReleaseSeats(data, activeBranch);
       setAllActiveMembersCount(updatedMembers.length);
+      const unreservedList = updatedMembers.filter(m => m.permanent_id && m.permanent_id.includes('U'));
+      setUnreservedCount(unreservedList.length);
+
       const map: Record<string, any[]> = {};
       const unassigned: any[] = [];
       updatedMembers.forEach(m => {
@@ -327,16 +333,24 @@ export default function SeatingPage() {
             Print Seat Map (PDF)
           </button>
           {unassignedMembers.length > 0 && (
-            <div className="card-premium !py-2 !px-4 flex items-center gap-2 border-orange-500/20 text-orange-500 bg-orange-500/5">
-              <span className="material-symbols-outlined text-sm animate-pulse">info</span>
-              <span className="text-xs font-bold font-manrope">{unassignedMembers.length} Student{unassignedMembers.length > 1 ? 's' : ''} Awaiting Seats</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowAwaitingModal(true)}
+              className="card-premium !py-2 !px-4 flex items-center gap-2 border-orange-500/20 text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 hover:border-orange-500/40 transition-all cursor-pointer shadow-sm group"
+              title="Click to view students awaiting seats"
+            >
+              <span className="material-symbols-outlined text-sm animate-pulse text-orange-500">info</span>
+              <span className="text-xs font-bold font-manrope group-hover:underline">
+                {unassignedMembers.length} Student{unassignedMembers.length > 1 ? 's' : ''} Awaiting Seats
+              </span>
+              <span className="material-symbols-outlined text-xs text-orange-400 group-hover:translate-x-0.5 transition-transform">open_in_new</span>
+            </button>
           )}
         </div>
       </div>
 
       {/* 📊 Seating Dynamic Stats Tiles Panel */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         {/* Total Members (Assigned + Unassigned) */}
         <div className="card-premium !p-4 flex items-center gap-3 bg-primary/[0.02]">
           <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -378,6 +392,17 @@ export default function SeatingPage() {
           <div>
             <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider leading-none">Assigned Total</div>
             <div className="text-lg font-black text-slate-800 mt-1.5 leading-none">{assignedTotalMembers}</div>
+          </div>
+        </div>
+
+        {/* Unreserved Members */}
+        <div className="card-premium !p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+            <span className="material-symbols-outlined text-xl">airline_seat_recline_normal</span>
+          </div>
+          <div>
+            <div className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider leading-none">Unreserved</div>
+            <div className="text-lg font-black text-slate-800 mt-1.5 leading-none">{unreservedCount}</div>
           </div>
         </div>
 
@@ -924,7 +949,12 @@ export default function SeatingPage() {
                             </div>
                             <div>
                               <div className="text-slate-900 font-bold text-sm font-v-body-md">{member.full_name}</div>
-                              <div className="text-xs text-slate-500 font-v-body-sm mt-0.5 flex items-center gap-1.5">
+                              <div className="text-xs text-slate-500 font-v-body-sm mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                {member.student_no && (
+                                  <span className="bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded border border-blue-200 font-mono text-[10px]">
+                                    Allotment #{member.student_no}
+                                  </span>
+                                )}
                                 <span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 font-mono text-[10px]">{member.permanent_id}</span>
                                 <span className="w-1 h-1 rounded-full bg-slate-300" />
                                 <span className="text-blue-700 font-semibold">{member.shift}</span>
@@ -957,7 +987,7 @@ export default function SeatingPage() {
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
                         <input 
                           type="text" 
-                          placeholder="Search compatible students..."
+                          placeholder="Search compatible students by name, ID or allotment no..."
                           value={modalSearch}
                           onChange={(e) => setModalSearch(e.target.value)}
                           className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm font-v-body-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all shadow-sm"
@@ -967,7 +997,11 @@ export default function SeatingPage() {
                       <div className="space-y-2 max-h-[220px] overflow-y-auto custom-scrollbar pr-1" data-lenis-prevent="true">
                         {(() => {
                           const compatible = unassignedMembers.filter(m => m.shift === (seatMap[selectedSeat][0].shift === 'Morning' ? 'Evening' : 'Morning'));
-                          const filtered = compatible.filter(m => m.full_name.toLowerCase().includes(modalSearch.toLowerCase()) || m.permanent_id.toLowerCase().includes(modalSearch.toLowerCase()));
+                          const filtered = compatible.filter(m => 
+                            m.full_name.toLowerCase().includes(modalSearch.toLowerCase()) || 
+                            m.permanent_id.toLowerCase().includes(modalSearch.toLowerCase()) ||
+                            (m.student_no && String(m.student_no).toLowerCase().includes(modalSearch.toLowerCase()))
+                          );
                           
                           if (compatible.length === 0) return <div className="text-xs text-slate-500 italic p-4 bg-slate-50 rounded-xl text-center border border-slate-100">No compatible members available for this slot.</div>;
                           if (filtered.length === 0) return <div className="text-xs text-slate-500 italic p-4 bg-slate-50 rounded-xl text-center border border-slate-100">No matches found for &quot;{modalSearch}&quot;.</div>;
@@ -978,7 +1012,14 @@ export default function SeatingPage() {
                                 <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs">{m.full_name.charAt(0)}</div>
                                 <div>
                                   <div className="text-slate-900 font-semibold text-xs font-v-body-md">{m.full_name}</div>
-                                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">{m.permanent_id}</div>
+                                  <div className="text-[10px] text-slate-500 font-mono mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                    {m.student_no && (
+                                      <span className="bg-blue-50 text-blue-700 font-bold px-1 rounded border border-blue-100">
+                                        #{m.student_no}
+                                      </span>
+                                    )}
+                                    <span>{m.permanent_id}</span>
+                                  </div>
                                 </div>
                               </div>
                               <button disabled={isAssigning} onClick={() => { setModalSearch(""); handleAssignSeat(m.id); }} className="bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm disabled:opacity-50 hover:bg-blue-700 hover:text-white transition-all">Assign</button>
@@ -1008,7 +1049,7 @@ export default function SeatingPage() {
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base">search</span>
                         <input 
                           type="text" 
-                          placeholder="Search unassigned students by name or ID..."
+                          placeholder="Search unassigned students by name, ID or allotment no..."
                           value={modalSearch}
                           onChange={(e) => setModalSearch(e.target.value)}
                           className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm font-v-body-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all shadow-sm"
@@ -1023,7 +1064,11 @@ export default function SeatingPage() {
                       {/* List */}
                       <div className="space-y-2 overflow-y-auto custom-scrollbar pr-1 max-h-[300px]" data-lenis-prevent="true">
                         {(() => {
-                          const filtered = unassignedMembers.filter(m => m.full_name.toLowerCase().includes(modalSearch.toLowerCase()) || m.permanent_id.toLowerCase().includes(modalSearch.toLowerCase()));
+                          const filtered = unassignedMembers.filter(m => 
+                            m.full_name.toLowerCase().includes(modalSearch.toLowerCase()) || 
+                            m.permanent_id.toLowerCase().includes(modalSearch.toLowerCase()) ||
+                            (m.student_no && String(m.student_no).toLowerCase().includes(modalSearch.toLowerCase()))
+                          );
                           
                           if (filtered.length === 0) {
                             return (
@@ -1043,7 +1088,12 @@ export default function SeatingPage() {
                                 </div>
                                 <div>
                                   <div className="text-slate-900 font-bold text-sm font-v-body-md group-hover:text-blue-700 transition-colors">{m.full_name}</div>
-                                  <div className="text-[11px] text-slate-500 font-v-body-sm mt-0.5 flex items-center gap-1.5">
+                                  <div className="text-[11px] text-slate-500 font-v-body-sm mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                    {m.student_no && (
+                                      <span className="bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded border border-blue-200 font-mono text-[10px]">
+                                        Allotment #{m.student_no}
+                                      </span>
+                                    )}
                                     <span className="font-mono text-slate-400">{m.permanent_id}</span>
                                     <span className="w-1 h-1 rounded-full bg-slate-300" />
                                     <span className="font-semibold text-red-600">{m.shift}</span>
@@ -1114,6 +1164,125 @@ export default function SeatingPage() {
               >
                 <span className="material-symbols-outlined text-sm font-black">send</span>
                 Send on WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal: Students Awaiting Seats List */}
+      {showAwaitingModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 dashboard-light-theme">
+          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden animate-scale-in border border-orange-500/20 shadow-2xl flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-orange-50/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-orange-500/10 text-orange-600 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-lg">event_seat</span>
+                </div>
+                <div>
+                  <h2 className="text-base font-black text-slate-800 font-manrope flex items-center gap-2">
+                    Students Awaiting Seats
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold">
+                      {unassignedMembers.length}
+                    </span>
+                  </h2>
+                  <p className="text-[11px] text-slate-500">Active members without an allocated seat</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setShowAwaitingModal(false); setAwaitingSearch(""); }}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base">search</span>
+                <input 
+                  type="text" 
+                  placeholder="Search student name or allotment no..."
+                  value={awaitingSearch}
+                  onChange={(e) => setAwaitingSearch(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-8 text-xs font-v-body-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all shadow-sm"
+                />
+                {awaitingSearch && (
+                  <button 
+                    onClick={() => setAwaitingSearch("")} 
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-sm">close</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Student List */}
+            <div className="p-4 space-y-2 overflow-y-auto custom-scrollbar flex-1" data-lenis-prevent="true">
+              {(() => {
+                const query = awaitingSearch.trim().toLowerCase();
+                const filtered = unassignedMembers.filter(m => 
+                  m.full_name?.toLowerCase().includes(query) ||
+                  (m.student_no && String(m.student_no).toLowerCase().includes(query)) ||
+                  (m.permanent_id && m.permanent_id.toLowerCase().includes(query))
+                );
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="py-12 text-center">
+                      <span className="material-symbols-outlined text-3xl text-slate-300 mb-2">person_search</span>
+                      <p className="text-xs font-bold text-slate-600">No students found</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Try searching with a different name or number</p>
+                    </div>
+                  );
+                }
+
+                return filtered.map((m) => (
+                  <div 
+                    key={m.id}
+                    className="p-3 bg-slate-50 hover:bg-orange-50/40 rounded-2xl border border-slate-100 hover:border-orange-200 transition-all flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center font-bold text-sm shrink-0">
+                        {m.full_name?.charAt(0) || 'S'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-800 truncate font-manrope">{m.full_name}</div>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 font-mono">
+                            Allotment #{m.student_no || 'N/A'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {m.permanent_id}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg border bg-white text-slate-700 border-slate-200">
+                        {m.shift || 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-slate-100 flex justify-between items-center bg-slate-50">
+              <span className="text-[11px] text-slate-500 font-medium">
+                Total: {unassignedMembers.length} awaiting student{unassignedMembers.length > 1 ? 's' : ''}
+              </span>
+              <button 
+                onClick={() => { setShowAwaitingModal(false); setAwaitingSearch(""); }}
+                className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                Close
               </button>
             </div>
           </div>
